@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMPERIOTEX · Comercial (V9)</title>
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="logo"><b>IMPERIOTEX · SARA BQ</b><span>ERP - Comercial (V9)</span></div>
+  <nav id="nav"></nav>
+  <div class="foot">Prototipo funcional · Ventas y caja sobre Logística V9<br>
+    <button class="btn-link" style="color:#fff;padding:4px 0" onclick="Store.reiniciar()">↺ Reiniciar datos de demo</button></div>
+</aside>
+
+<div id="main">
+  <div id="topbar">
+    <div id="breadcrumb">Comercial</div>
+    <div class="spacer"></div>
+    <a class="homebtn" href="../index.html" title="Volver a la portada de módulos">⌂ Inicio</a>
+    <div class="company-sel"><label>Módulo:</label>
+      <select onchange="if(this.value)location.href=this.value">
+        <option value="../Prototipo_GI.html">Inventarios (GI)</option>
+        <option value="../Prototipo_CO.html">Compras (CO)</option>
+        <option value="../Prototipo_GP.html">Gestión de Pedido (GP)</option>
+        <option value="../PRODUCCION/index.html">Producción (PRODUCCION)</option>
+        <option value="" selected>Comercial (CM)</option>
+      </select>
+    </div>
+    <div class="company-sel"><label>Empresa:</label>
+      <select onchange="UI.toast('La demo comercial trae datos de IMPERIOTEX');this.value='IMPERIOTEX'">
+        <option value="IMPERIOTEX" selected>IMPERIOTEX</option>
+        <option value="CATINNA NOW">CATINNA NOW</option>
+      </select>
+    </div>
+    <div class="company-sel" title="Usuario de la demo: cambia el perfil de permisos y la tienda asignada"><label>Usuario:</label>
+      <select id="user-sel" onchange="App.cambiarUsuario(this.value)"></select>
+    </div>
+    <div class="userchip"><div class="avatar" id="user-avatar">U</div><span id="user-sede"></span></div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<div id="modales"></div>
+<div class="toast" id="toast"></div>
+
+<!-- núcleo (orden obligatorio) -->
+<script src="js/core/ui.js"></script>
+<script src="js/data/maestros.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/precios.js"></script>
+<script src="js/core/stock.js"></script>
+<script src="js/core/ventas.js"></script>
+<script src="js/core/caja.js"></script>
+<script src="js/core/config.js"></script>
+<script src="js/data/demo.js"></script>
+<script src="js/core/app.js"></script>
+<!-- pantallas -->
+<script src="js/modules/buscador.js"></script>
+<script src="js/modules/documento.js"></script>
+<script src="js/modules/cotizaciones.js"></script>
+<script src="js/modules/ventas.js"></script>
+<script src="js/modules/devoluciones.js"></script>
+<script src="js/modules/caja.js"></script>
+<script src="js/modules/consultas.js"></script>
+<script src="js/modules/clientes.js"></script>
+<script src="js/modules/listas.js"></script>
+<script src="js/modules/configuracion.js"></script>
+<script>App.iniciar();</script>
+</body>
+</html>
