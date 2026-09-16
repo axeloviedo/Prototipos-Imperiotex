@@ -1,10 +1,11 @@
 /* COMERCIAL V9 — registro de pantallas, navegación, usuario activo y ejecución segura de acciones */
 const App = {
   P: {}, actual: null, params: null,
-  /* cada ítem: [id, icono, título, permiso que lo muestra] */
+  /* cada ítem: [id, icono, título, permiso que lo muestra] · códigos visibles CL-xx en docs/15-codigos-pantallas.md */
   MENU: [
     { g: 'Ventas', items: [['cm01', '✎', 'Cotizaciones', 'ver_cotizacion'], ['cm02', '▤', 'Ventas', 'ver_venta'], ['cm03', '↩', 'Devoluciones', 'ver_devolucion_venta']] },
     { g: 'Caja', items: [['cm04', '▣', 'Caja de la tienda', 'ver_caja'], ['cm05', '☷', 'Historial de cajas', 'ver_caja']] },
+    { g: 'Abastecimiento', items: [['cm11', '✂', 'Solicitudes de Fabricación', 'ver_solicitud_fabricacion'], ['cm12', '⇆', 'Solicitudes de Materiales', 'crear_solicitud_materiales']] },
     { g: 'Consultas', items: [['cm06', '▦', 'Existencias y movimientos', 'ver_existencias']] },
     { g: 'Maestros', items: [['cm07', '☺', 'Clientes', 'ver_cliente'], ['cm08', '$', 'Listas de precios', 'ver_venta'], ['cm09', '≡', 'Artículos de venta', 'ver_venta'], ['cm10', '⚙', 'Configuración', 'ver_venta']] }
   ],

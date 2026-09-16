@@ -1,4 +1,4 @@
-/* COMERCIAL V9 · CM-03 Devoluciones de venta (solo productos): listado y ficha (registrar, editar, finalizar, anular) */
+/* COMERCIAL V9 · CL-13 Devoluciones de venta (solo productos, solo de ventas con salida de stock) · CL-15 ficha (registrar, editar, finalizar, anular) · modales CL-14, CL-16, CL-17 */
 const CM03 = {
   f: { q: '', est: '', desde: '', hasta: '' },
   lista() {
@@ -10,7 +10,7 @@ const CM03 = {
     const ds = Store.d.devs, mes = UI.hoy().slice(3), f = CM03.f;
     const finMes = ds.filter(x => x.estado === 'Finalizada' && x.finalizada && x.finalizada.f.slice(3, 10) === mes);
     const pend = ds.map(Dev.reembolso).filter(r => r && r.estado === 'Pendiente');
-    return '<div class="screen-head"><h1>Devoluciones</h1><span class="code">CM-03</span><div class="spacer"></div>' +
+    return '<div class="screen-head"><h1>Devoluciones</h1><span class="code">CL-13</span><div class="spacer"></div>' +
       '<button class="btn btn-secondary" onclick="CM03.excel()">⇩ Excel</button>' +
       (Store.puede('crear_devolucion_venta') ? '<button class="btn btn-primary" onclick="CM03.nueva()">+ Nueva devolución</button>' : '') + '</div>' +
       UI.kpis([
@@ -25,10 +25,10 @@ const CM03 = {
       UI.campo('Desde', '<input type="date" value="' + f.desde + '" onchange="CM03.f.desde=this.value;CM03.pintar()">') +
       UI.campo('Hasta', '<input type="date" value="' + f.hasta + '" onchange="CM03.f.hasta=this.value;CM03.pintar()">') +
       '</div></div><div id="cm03-body"></div>' +
-      '<p class="hint">Pendiente = editable, sin efecto. <b>Finalizar</b> registra el Ingreso de almacén (GI-09, «Devoluciones de Clientes»): Normal y Cambio vuelven al almacén de la venta; Mal estado va al almacén de remate. Si el cliente ya había pagado, la devolución del dinero queda pendiente en Caja; si no, se descuenta del saldo.</p>';
+      '<p class="hint">Solo se devuelve lo que ya salió: la venta debe tener su Salida de stock (pago confirmado completo); mientras el stock está comprometido la venta se anula. Pendiente = editable, sin efecto. <b>Finalizar</b> registra el Ingreso de almacén (GI-09, «Devoluciones de Clientes»): Normal y Cambio vuelven al almacén de la venta; Mal estado va al almacén de remate. Si el cliente ya había pagado, la devolución del dinero queda pendiente en Caja; si no, se descuenta del saldo.</p>';
   },
   pintar() {
-    document.getElementById('cm03-body').innerHTML = UI.tabla(['Devolución', 'Fecha', 'Venta', 'Cliente', 'Sustento', ['Unidades', 'num'], ['Total', 'num'], 'Dinero', 'Estado'], CM03.lista().map(x => {
+    document.getElementById('cm03-body').innerHTML = UI.tabla(['Devolución', 'Fecha de creación', 'Venta', 'Cliente', 'Sustento', ['Unidades', 'num'], ['Total', 'num'], 'Dinero', 'Estado'], CM03.lista().map(x => {
       const re = Dev.reembolso(x);
       return '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td>' +
         '<td><button class="btn-link" style="padding:0" onclick="event.stopPropagation();App.go(\'cm02v\',{id:\'' + x.venta + '\'})">' + x.venta + '</button></td>' +
@@ -37,12 +37,12 @@ const CM03 = {
     }), { vacio: 'No hay devoluciones con esos filtros' });
   },
   nueva() {
-    const recientes = Store.d.ventas.filter(v => v.estado === 'Registrada' && Dev.candidatas(v).length).slice(0, 8);
+    const recientes = Store.d.ventas.filter(v => v.estado === 'Registrada' && v.salida && Dev.candidatas(v).length).slice(0, 8);
     UI.modal({
-      lg: true, titulo: 'Nueva devolución · elegir la venta',
+      lg: true, titulo: 'Nueva devolución · elegir la venta', code: 'CL-14',
       cuerpo: '<div class="filters">' + UI.campo('N° de venta o comprobante', '<input id="nd-v" placeholder="Ej. VEN-2026-000230 o B001-002308">') +
-        '<button class="btn btn-primary" onclick="CM03.ir(UI.v(\'nd-v\'))">Continuar</button></div><div class="sec">Ventas recientes con productos</div>' +
-        UI.tabla(['Venta', 'Comprobante', 'Fecha', 'Cliente', ['Total', 'num'], ['', '', '80px']], recientes.map(v => '<tr><td><b>' + v.id + '</b></td><td class="mini">' + v.compNum + '</td><td class="mini">' + v.fecha + '</td><td>' + UI.esc(v.cliente.nom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td>' +
+        '<button class="btn btn-primary" onclick="CM03.ir(UI.v(\'nd-v\'))">Continuar</button></div><div class="sec">Ventas recientes con productos ya entregados (con salida de stock)</div>' +
+        UI.tabla(['Venta', 'Comprobante', 'Fecha de creación', 'Cliente', ['Total', 'num'], ['', '', '80px']], recientes.map(v => '<tr><td><b>' + v.id + '</b></td><td class="mini">' + v.compNum + '</td><td class="mini">' + v.fecha + '</td><td>' + UI.esc(v.cliente.nom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td>' +
           '<td><button class="btn btn-secondary btn-sm" onclick="CM03.ir(\'' + v.id + '\')">Elegir</button></td></tr>'), { vacio: 'Sin ventas' })
     });
   },
@@ -53,13 +53,14 @@ const CM03 = {
     if (!v) { UI.toast('No existe la venta ' + t); return; }
     if (v.estado !== 'Registrada') { UI.toast(v.id + ' está ' + v.estado + ': solo se devuelve una venta Registrada'); return; }
     if (!Dev.candidatas(v).length) { UI.toast(v.id + ' solo tiene servicios: no se devuelve'); return; }
+    if (!v.salida) { UI.toast(v.id + ' aún no tiene salida de stock (está comprometido hasta confirmar el pago completo): no se devuelve, se anula'); return; }
     UI.cerrar();
     App.go('cm03f', { venta: v.id, nuevo: Date.now() });
   },
   excel() {
     const filas = [];
     CM03.lista().forEach(x => x.lineas.forEach(l => filas.push([x.id, x.fecha, x.venta, x.cliente.nom, x.sustTipo, x.sustNum, l.art, l.nom, l.um, l.cant, l.tipo, l.precio, l.total, x.total, x.mon, x.estado])));
-    UI.csv('devoluciones', ['Devolución', 'Fecha', 'Venta', 'Cliente', 'Sustento', 'N° sustento', 'Código', 'Artículo', 'UM', 'Cantidad', 'Tipo', 'Precio neto', 'Total línea', 'Total devolución', 'Moneda', 'Estado'], filas);
+    UI.csv('devoluciones', ['Devolución', 'Fecha de creación', 'Venta', 'Cliente', 'Sustento', 'N° sustento', 'Código', 'Artículo', 'UM', 'Cantidad', 'Tipo', 'Precio neto', 'Total línea', 'Total devolución', 'Moneda', 'Estado'], filas);
   }
 };
 App.pantalla('cm03', { titulo: 'Devoluciones', permiso: 'ver_devolucion_venta', render: CM03.render, despues: CM03.pintar });
@@ -77,6 +78,8 @@ const CM03F = {
     const dev = CM03F.dev(), v = CM03F.venta();
     if (p.id && !dev) return UI.aviso('No existe la devolución ' + UI.esc(p.id), 'err');
     if (!v) return UI.aviso('No existe la venta ' + UI.esc(p.venta || ''), 'err');
+    if (!dev && !v.salida) return UI.aviso('La venta ' + UI.esc(v.id) + ' aún no tiene salida de stock: su stock está <b>comprometido</b> hasta que los pagos validados cubran el total. Solo se devuelve lo que ya salió; si la venta ya no va, anúlela.', 'err') +
+      '<button class="btn btn-secondary" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})">Volver a la venta</button>';
     const clave = p.id || (p.venta + '|' + p.nuevo);
     if (CM03F.clave !== clave) {
       CM03F.clave = clave;
@@ -84,7 +87,7 @@ const CM03F = {
         : { lineas: {}, sustTipo: 'Nota de crédito', sustNum: '', dcto: 0, obs: '', voucher: '' };
       if (dev) dev.lineas.forEach(l => { CM03F.x.lineas[l.n] = { cant: l.cant, tipo: l.tipo }; });
     }
-    const x = CM03F.x, ed = Store.puede('crear_devolucion_venta') && (!dev || dev.estado === 'Pendiente') && v.estado === 'Registrada';
+    const x = CM03F.x, ed = Store.puede('crear_devolucion_venta') && (!dev || dev.estado === 'Pendiente') && v.estado === 'Registrada' && !!v.salida;
     let prev = dev, err = '';
     if (ed) { try { prev = Dev._armar(v, CM03F.datos(), dev ? dev.id : null); } catch (e) { prev = null; err = e.message; } }
 
@@ -95,7 +98,7 @@ const CM03F = {
     if (dev && dev.estado === 'Finalizada' && Dev.tieneCambio(dev) && Store.puede('crear_venta')) b.push('<button class="btn btn-primary" onclick="App.go(\'cm02f\',{cli:\'' + v.cli + '\',obs:\'Cambio de ' + dev.id + '\',nuevo:Date.now()})">Registrar venta del cambio</button>');
     b.push(dev ? '<button class="btn btn-secondary" onclick="App.go(\'cm03\')">Volver</button>' : '<button class="btn btn-secondary" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})">Cancelar</button>');
 
-    let html = '<div class="screen-head"><h1>' + (dev ? dev.id : 'Nueva devolución') + '</h1>' + (dev ? UI.estado(dev.estado) : '') + '<span class="code">CM-03</span><div class="spacer"></div>' + b.join('') + '</div>';
+    let html = '<div class="screen-head"><h1>' + (dev ? dev.id : 'Nueva devolución') + '</h1>' + (dev ? UI.estado(dev.estado) : '') + '<span class="code">CL-15</span><div class="spacer"></div>' + b.join('') + '</div>';
     if (dev && dev.estado === 'Pendiente' && !Store.puede('editar_devolucion_venta')) html += UI.aviso('Pendiente de finalizar por un supervisor (permiso editar_devolucion_venta).', 'info');
     html += '<div class="card"><div class="formgrid c4">' +
       UI.dato('Venta', '<button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})">' + v.id + '</button><br><span class="mini">' + M.comp(v.comp).nom + ' ' + v.compNum + ' · ' + v.fecha.slice(0, 10) + '</span>') +
@@ -124,7 +127,7 @@ const CM03F = {
         UI.campo('Voucher / imagen', (x.voucher ? '<span class="mini">📎 ' + UI.esc(x.voucher) + '</span>' : '') + '<input type="file" accept="image/*,.pdf" onchange="CM03F.cab(\'voucher\',this.files[0]?this.files[0].name:\'\')">') +
         UI.campo('Observación', '<input value="' + UI.esc(x.obs) + '" onchange="CM03F.cab(\'obs\',this.value)">', { full: true })
         : UI.dato('Documento de sustento', UI.esc(dev.sustTipo + ' ' + dev.sustNum)) + UI.dato('Descuento', UI.m(dev.dcto, dev.mon)) + UI.dato('Voucher', dev.voucher ? '📎 ' + UI.esc(dev.voucher) : '') +
-        UI.dato('Registrada', dev.fecha + '<br><span class="mini">' + UI.esc(dev.usuario) + '</span>') + (dev.obs ? UI.dato('Observación', UI.esc(dev.obs), { full: true }) : '')) +
+        UI.dato('Fecha de creación', dev.fecha + '<br><span class="mini">' + UI.esc(dev.usuario) + '</span>') + (dev.obs ? UI.dato('Observación', UI.esc(dev.obs), { full: true }) : '')) +
       '</div></div>';
 
     if (err && Object.keys(x.lineas).some(n => x.lineas[n].cant > 0)) html += UI.aviso(UI.esc(err), 'err');
@@ -170,12 +173,12 @@ const CM03F = {
         d => d.id + ' finalizada' + (d.reembolso ? ': dinero por devolver en Caja' : ''));
       CM03F.clave = null;
       if (r) App.refrescar(); else App.refrescar();
-    }, 'Finalizar');
+    }, 'Finalizar', 'CL-16');
   },
   anular() {
     const dev = CM03F.dev();
     UI.motivo('Anular ' + dev.id, '<p>La devolución no movió stock: queda Anulada y sus cantidades vuelven a estar disponibles para devolver.</p>', null,
-      mot => { if (App.accion(() => Dev.anular(dev, mot), dev.id + ' anulada')) { UI.cerrar(); CM03F.clave = null; App.refrescar(); } }, 'Anular');
+      mot => { if (App.accion(() => Dev.anular(dev, mot), dev.id + ' anulada')) { UI.cerrar(); CM03F.clave = null; App.refrescar(); } }, 'Anular', 'CL-17');
   }
 };
 App.pantalla('cm03f', {

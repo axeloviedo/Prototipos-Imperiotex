@@ -1,5 +1,6 @@
 /* COMERCIAL V9 — caja: una ABIERTA por tienda y moneda. Es de la tienda (no de quien la abre): la opera su personal.
-   Cobros (pagos de las ventas, se validan), ingresos, egresos y devoluciones de dinero; cierre con conteo ciego. */
+   Cobros (pagos de las ventas, se validan: validar el pago que completa el total saca el stock de la venta),
+   ingresos, egresos y devoluciones de dinero; cierre con conteo ciego. */
 const Caja = {
   abierta(sede, mon) { return Store.d.sesiones.find(s => s.sede === sede && s.mon === mon && s.estado === 'Abierta'); },
   ultima(cajaCod) { return Store.d.sesiones.find(s => s.caja === cajaCod); },

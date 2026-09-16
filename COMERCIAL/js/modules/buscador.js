@@ -1,4 +1,4 @@
-/* COMERCIAL V9 · Buscadores en modal de artículos (con precio resuelto y disponible) y de clientes */
+/* COMERCIAL V9 · Buscadores en modal: CL-39 artículos (con precio resuelto y disponible) y CL-38 clientes */
 const BUS = {
   _cb: null, _d: null,
 
@@ -8,12 +8,12 @@ const BUS = {
     const grupos = [...new Set(Store.d.arts.filter(a => a.venta && a.activo).map(a => a.grupo))];
     const cli = Store.cli(d.cli), sede = Store.sede(d.sede);
     UI.modal({
-      ancho: '980px', titulo: 'Agregar artículos o servicios',
+      ancho: '980px', titulo: 'Agregar artículos o servicios', code: 'CL-39',
       cuerpo: '<div class="filters" style="margin-bottom:10px">' +
         UI.campo('Código, nombre o atributo', '<input id="bus-q" placeholder="Ej. ZULEIKA 28, NEGRO, bordado…" oninput="BUS.pintarArt()" style="min-width:280px">') +
         UI.campo('Grupo de Artículo', '<select id="bus-g" onchange="BUS.pintarArt()">' + UI.opts(grupos, '', 'Todos') + '</select>') + '</div>' +
         '<div id="bus-body"></div>' +
-        '<p class="hint">Precio según la lista de precios para ' + (cli ? 'un cliente <b>' + cli.tipo + '</b>' : 'un cliente sin tipo (elija el cliente primero)') + ' en <b>' + UI.esc(sede.nom) + '</b>, en ' + d.mon + '. Disponible = Actual − Comprometido (T1) en el almacén de la tienda.</p>',
+        '<p class="hint">Precio según la lista de precios para ' + (cli ? 'un cliente <b>' + cli.tipo + '</b>' : 'un cliente sin tipo (elija el cliente primero)') + ' en <b>' + UI.esc(sede.nom) + '</b>, en ' + d.mon + '. Disponible = Actual − Comprometido (T1) en el almacén de la tienda; lo comprometido incluye las ventas pendientes de pago.</p>',
       pie: '<button class="btn btn-primary" onclick="UI.cerrar()">Listo</button>'
     });
     BUS.pintarArt();
@@ -37,12 +37,12 @@ const BUS = {
   cliente(cb) {
     BUS._cb = cb;
     UI.modal({
-      lg: true, titulo: 'Buscar cliente',
+      lg: true, titulo: 'Buscar cliente', code: 'CL-38',
       cuerpo: '<div class="filters" style="margin-bottom:10px">' +
         UI.campo('Documento, nombre o teléfono', '<input id="bus-q" placeholder="Buscar…" oninput="BUS.pintarCli()" style="min-width:260px">') +
         UI.campo('Tipo de cliente', '<select id="bus-t" onchange="BUS.pintarCli()">' + UI.opts(M.TIPOS_CLIENTE, '', 'Todos') + '</select>') +
         (Store.puede('crear_cliente') ? '<button class="btn btn-secondary btn-sm" onclick="const cb=BUS._cb;CLIQ.abrir(cb)">+ Nuevo cliente</button>' : '') + '</div><div id="bus-body"></div>' +
-        '<p class="hint">Solo clientes activos. Un cliente inactivo se reactiva desde su ficha (CM-07).</p>',
+        '<p class="hint">Solo clientes activos. Un cliente inactivo se reactiva desde su ficha (CL-35).</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cerrar</button>'
     });
     BUS.pintarCli();

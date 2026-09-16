@@ -1,4 +1,4 @@
-/* COMERCIAL V9 · CM-01 Cotizaciones: listado y ficha (nueva, edición línea por línea, clonar, anular, convertir) */
+/* COMERCIAL V9 · CL-01 Cotizaciones (listado) · CL-02 ficha (nueva, edición línea por línea, clonar, anular, convertir) · modales CL-03, CL-04 */
 const CM01 = {
   f: { q: '', est: '', sede: '', desde: '', hasta: '' },
   lista() {
@@ -14,7 +14,7 @@ const CM01 = {
     Cot.barrer();
     const cs = Store.d.cots, vig = cs.filter(c => c.estado === 'Vigente'), f = CM01.f;
     const conv = cs.filter(c => c.estado === 'Convertida'), cerradas = cs.filter(c => ['Convertida', 'Vencida', 'Anulada'].indexOf(c.estado) >= 0);
-    return '<div class="screen-head"><h1>Cotizaciones</h1><span class="code">CM-01</span><div class="spacer"></div>' +
+    return '<div class="screen-head"><h1>Cotizaciones</h1><span class="code">CL-01</span><div class="spacer"></div>' +
       '<button class="btn btn-secondary" onclick="CM01.excel(false)">⇩ Excel general</button><button class="btn btn-secondary" onclick="CM01.excel(true)">⇩ Excel detalle</button>' +
       (Store.puede('crear_cotizacion') ? '<button class="btn btn-primary" onclick="App.go(\'cm01f\',{nuevo:Date.now()})">+ Nueva cotización</button>' : '') + '</div>' +
       UI.kpis([
@@ -30,7 +30,7 @@ const CM01 = {
       UI.campo('Desde', '<input type="date" value="' + f.desde + '" onchange="CM01.f.desde=this.value;CM01.pintar()">') +
       UI.campo('Hasta', '<input type="date" value="' + f.hasta + '" onchange="CM01.f.hasta=this.value;CM01.pintar()">') +
       '</div></div><div id="cm01-body"></div>' +
-      '<p class="hint">La cotización no reserva ni mueve stock. Se edita línea por línea mientras está Vigente, vence sola al pasar su fecha de validez y, al convertirse en venta, queda Convertida con el número de la venta (no se convierte dos veces).</p>';
+      '<p class="hint">La cotización no reserva ni mueve stock (la venta es la que lo compromete). Se edita línea por línea mientras está Vigente, vence sola al pasar su fecha de validez y, al convertirse en venta, queda Convertida con el número de la venta (no se convierte dos veces).</p>';
   },
   pintar() {
     const filas = CM01.lista().map(c => {
@@ -38,22 +38,22 @@ const CM01 = {
       return '<tr class="clickable" onclick="App.go(\'cm01f\',{id:\'' + c.id + '\'})"><td><b>' + c.id + '</b></td><td class="mini">' + c.fecha + '</td>' +
         '<td>' + c.validez + (c.estado === 'Vigente' ? '<br><span class="' + (dias <= 2 ? 'warn-t' : 'mini') + '">' + (dias === 0 ? 'vence hoy' : 'vence en ' + dias + ' día(s)') + '</span>' : '') + '</td>' +
         '<td class="mini">' + UI.esc(c.sedeNom) + '</td><td>' + UI.esc(c.cliente.nom) + '<br><span class="mini">' + UI.esc(c.cliente.doc) + ' · ' + c.cliente.tipo + '</span></td>' +
-        '<td class="mini">' + UI.esc(DOCUI.vendedor(c.asesor)) + '</td><td class="mini">' + Doc.tipoDoc(c) + '</td><td class="num">' + UI.m(c.total, c.mon) + '</td><td>' + UI.estado(c.estado) + '</td>' +
+        '<td class="mini">' + UI.esc(DOCUI.vendedor(c.asesor)) + '</td><td class="num">' + UI.m(c.total, c.mon) + '</td><td>' + UI.estado(c.estado) + '</td>' +
         '<td>' + (c.venta ? '<button class="btn-link" onclick="event.stopPropagation();App.go(\'cm02v\',{id:\'' + c.venta + '\'})">' + c.venta + '</button>' : '') + '</td>' +
         '<td onclick="event.stopPropagation()">' + (c.estado === 'Vigente' && Store.puede('crear_venta') ? '<button class="btn btn-primary btn-sm" onclick="App.go(\'cm02f\',{cot:\'' + c.id + '\',nuevo:Date.now()})">Convertir</button>' : '') + '</td></tr>';
     });
-    document.getElementById('cm01-body').innerHTML = UI.tabla(['N°', 'Fecha', 'Válida hasta', 'Tienda', 'Cliente', 'Vendedor', 'Tipo', ['Total', 'num'], 'Estado', 'Venta', ['', '', '90px']], filas, { vacio: 'No hay cotizaciones con esos filtros' });
+    document.getElementById('cm01-body').innerHTML = UI.tabla(['N°', 'Fecha de creación', 'Válida hasta', 'Tienda', 'Cliente', 'Vendedor', ['Total', 'num'], 'Estado', 'Venta', ['', '', '90px']], filas, { vacio: 'No hay cotizaciones con esos filtros' });
   },
   excel(detalle) {
     const l = CM01.lista();
     if (!detalle) {
-      UI.csv('cotizaciones-generales', ['N°', 'Fecha', 'Válida hasta', 'Tienda', 'Cliente', 'Documento', 'Tipo de cliente', 'Vendedor', 'Condición', 'Moneda', 'Op. gravada', 'Op. exonerada', 'IGV', 'Total', 'Estado', 'Venta'],
+      UI.csv('cotizaciones-generales', ['N°', 'Fecha de creación', 'Válida hasta', 'Tienda', 'Cliente', 'Documento', 'Tipo de cliente', 'Vendedor', 'Condición', 'Moneda', 'Op. gravada', 'Op. exonerada', 'IGV', 'Total', 'Estado', 'Venta'],
         l.map(c => [c.id, c.fecha, c.validez, c.sedeNom, c.cliente.nom, c.cliente.doc, c.cliente.tipo, DOCUI.vendedor(c.asesor), M.cond(c.cond).nom, c.mon, c.gravada, c.exonerada, c.igv, c.total, c.estado, c.venta || '']));
       return;
     }
     const filas = [];
     l.forEach(c => c.lineas.forEach((x, i) => filas.push([c.id, c.fecha, c.cliente.nom, i + 1, x.art, x.nom, x.desc, x.um, x.cant, x.precio, x.dcto, x.obsequio ? 'Sí' : '', x.total, c.mon, c.estado])));
-    UI.csv('cotizaciones-detalle', ['N°', 'Fecha', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Cantidad', 'Precio', 'Dcto. unit.', 'Obsequio', 'Total', 'Moneda', 'Estado'], filas);
+    UI.csv('cotizaciones-detalle', ['N°', 'Fecha de creación', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Cantidad', 'Precio', 'Dcto. unit.', 'Obsequio', 'Total', 'Moneda', 'Estado'], filas);
   }
 };
 App.pantalla('cm01', { titulo: 'Cotizaciones', permiso: 'ver_cotizacion', render: CM01.render, despues: CM01.pintar });
@@ -87,12 +87,12 @@ const CM01F = {
     const rev = ed ? Cot.revisar(c) : { e: [], w: [] };
     return '<div class="screen-head"><h1>' + (nueva ? 'Nueva cotización' : c.id) + '</h1>' + (nueva ? '' : UI.estado(c.estado)) +
       (c.venta ? ' <span class="mini">convertida en</span> <button class="btn-link" onclick="App.go(\'cm02v\',{id:\'' + c.venta + '\'})">' + c.venta + '</button>' : '') +
-      '<span class="code">CM-01</span><div class="spacer"></div>' + b.join('') + '</div>' +
+      '<span class="code">CL-02</span><div class="spacer"></div>' + b.join('') + '</div>' +
       (!nueva && c.estado === 'Vigente' && !ed ? UI.aviso('Solo lectura: su perfil no edita cotizaciones.', 'info') : '') +
       '<div class="card"><div class="formgrid c4">' +
       UI.dato('Tienda', UI.esc(Store.sede(c.sede).nom)) +
-      UI.dato('Fecha', nueva ? UI.hoy() : c.fecha + '<br><span class="mini">' + UI.esc(c.usuario) + '</span>') +
-      (ed ? UI.campo('Válida hasta', '<input type="date" value="' + UI.dIso(c.validez) + '" min="' + UI.dIso(UI.hoy()) + '" onchange="CM01F.cab(\'validez\',UI.dTxt(this.value))">', { req: true, hint: 'Por defecto ' + Store.d.cfg.diasValidez + ' días (CM-10)' }) : UI.dato('Válida hasta', c.validez)) +
+      UI.dato('Fecha de creación', nueva ? UI.hoy() : c.fecha + '<br><span class="mini">' + UI.esc(c.usuario) + '</span>') +
+      (ed ? UI.campo('Válida hasta', '<input type="date" value="' + UI.dIso(c.validez) + '" min="' + UI.dIso(UI.hoy()) + '" onchange="CM01F.cab(\'validez\',UI.dTxt(this.value))">', { req: true, hint: 'Por defecto ' + Store.d.cfg.diasValidez + ' días (CL-45)' }) : UI.dato('Válida hasta', c.validez)) +
       (ed ? UI.campo('Moneda', sel('mon', M.MONEDAS.map(m => ({ v: m.cod, t: m.cod + ' · ' + m.nom })), c.mon), { req: true }) : UI.dato('Moneda', c.mon)) +
       (ed ? UI.campo('Condición de pago', sel('cond', M.CONDICIONES.map(x => ({ v: x.cod, t: x.nom })), c.cond), { req: true }) : UI.dato('Condición de pago', M.cond(c.cond).nom)) +
       (ed && Store.puede('asignar_vendedor') ? UI.campo('Vendedor', sel('asesor', DOCUI.vendedores(), c.asesor)) : UI.dato('Vendedor', UI.esc(DOCUI.vendedor(c.asesor)))) +
@@ -102,7 +102,7 @@ const CM01F = {
       '<div class="card"><div class="sec">Detalle' + (ed ? '<div class="spacer"></div><button class="btn btn-secondary btn-sm" onclick="BUS.articulo(CM01F.doc(), cod => CM01F.agregar(cod))">+ Agregar artículos</button>' : '') + '</div>' +
       DOCUI.lineas('CM01F', c, { editable: ed, modo: 'cot' }) + DOCUI.totales(c) + '</div>' +
       (ed && rev.e.length ? UI.aviso('<b>' + (nueva ? 'Para guardar falta:' : 'Revise:') + '</b><ul class="errlist">' + rev.e.slice(0, 6).map(x => '<li>' + UI.esc(x) + '</li>').join('') + '</ul>', 'err') : '') +
-      UI.aviso('La cotización <b>no reserva ni mueve stock</b>: la disponibilidad es solo referencia y se vuelve a revisar al convertirla en venta. ' +
+      UI.aviso('La cotización <b>no reserva ni mueve stock</b>: la disponibilidad es solo referencia y se vuelve a revisar al convertirla en venta, que es la que compromete el stock. ' +
         (nueva ? 'Al guardar queda Vigente; desde entonces cada cambio de línea se guarda al instante.' : 'Cada cambio se guarda al instante; no se puede quitar la última línea.'), 'info') +
       (nueva ? '' : DOCUI.historial(c));
   },
@@ -129,7 +129,7 @@ const CM01F = {
     const r = Cot.revisar(d);
     if (r.e.length) { UI.toast(r.e[0]); App.refrescar(); return; }
     const go = () => { const c = App.accion(() => Cot.crear(d), x => 'Cotización ' + x.id + ' creada (Vigente)'); if (c) { CM01F.d = null; App.go('cm01f', { id: c.id }); } };
-    if (r.w.length) UI.confirmar('Guardar con avisos', '<p>La cotización no reserva stock; al convertirla en venta se vuelve a revisar.</p><ul class="errlist">' + r.w.map(x => '<li>' + UI.esc(x) + '</li>').join('') + '</ul>', go, 'Guardar');
+    if (r.w.length) UI.confirmar('Guardar con avisos', '<p>La cotización no reserva stock; al convertirla en venta se vuelve a revisar contra el Disponible.</p><ul class="errlist">' + r.w.map(x => '<li>' + UI.esc(x) + '</li>').join('') + '</ul>', go, 'Guardar', 'CL-03');
     else go();
   },
   clonar() {
@@ -139,7 +139,7 @@ const CM01F = {
   anular() {
     const c = CM01F.doc();
     UI.motivo('Anular ' + c.id, '<p>La cotización queda Anulada (no se borra) y ya no se puede convertir en venta.</p>', null,
-      mot => { if (App.accion(() => Cot.anular(c, mot), c.id + ' anulada')) { UI.cerrar(); App.refrescar(); } }, 'Anular');
+      mot => { if (App.accion(() => Cot.anular(c, mot), c.id + ' anulada')) { UI.cerrar(); App.refrescar(); } }, 'Anular', 'CL-04');
   }
 };
 App.pantalla('cm01f', {

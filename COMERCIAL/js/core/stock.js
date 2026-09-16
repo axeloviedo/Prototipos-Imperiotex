@@ -1,6 +1,9 @@
 /* COMERCIAL V9 — existencias por (almacén, código de artículo) con Actual / Comprometido (T1, T5)
    y movimientos V7 separados (T2): la venta es una SALIDA de GI-10 y la devolución un INGRESO de GI-09.
-   Costo promedio ponderado por almacén. Comercial no compromete stock: lo comprometido viene de otros módulos. */
+   Costo promedio ponderado por almacén.
+   DECISIÓN CERRADA (2026-09-16): la venta pendiente de pago COMPROMETE stock (Disponible = Actual − Comprometido);
+   cuando el pago confirmado (validado) cubre el total se registra la Salida, que baja el Actual y libera lo comprometido.
+   Lo demás comprometido viene de otros módulos (transferencias GI-11, solicitudes). */
 const Stock = {
   /* tipo de movimiento (textos de GI-09 / GI-10) -> concepto contable del Grupo de Artículo (pestaña Finanzas) */
   CONCEPTO: {
@@ -28,7 +31,18 @@ const Stock = {
     return mov;
   },
 
-  /* {det, alm, destino, ndoc, obs, lineas:[{art, cant (UM inventario), bloquear}]} — solo las líneas con bloquear exigen disponible */
+  /* compromete (signo +1) o libera (signo −1) cantidades en UM de inventario: lineas [{alm, art, cant}] */
+  comprometer(lineas, signo) {
+    const s = signo < 0 ? -1 : 1;
+    lineas.filter(l => l.cant > 0).forEach(l => {
+      const f = Stock.fila(l.alm, l.art);
+      if (s < 0 && f.comp + 0.00005 < l.cant) throw new Error('No se puede liberar ' + UI.n(l.cant, 0) + ' de ' + l.art + ' en ' + l.alm + ': solo hay ' + UI.n(f.comp, 0) + ' comprometido');
+      f.comp = UI.r4(f.comp + s * l.cant);
+    });
+  },
+
+  /* {det, alm, destino, ndoc, obs, lineas:[{art, cant (UM inventario), bloquear, liberar}]}
+     solo las líneas con bloquear exigen disponible; liberar = cantidad comprometida que se libera al salir */
   salida(o) {
     const lin = o.lineas.filter(l => l.cant > 0);
     const req = {};
@@ -39,6 +53,7 @@ const Stock = {
     lin.forEach(l => {
       const f = Stock.fila(o.alm, l.art);
       f.act = UI.r4(f.act - l.cant);
+      if (l.liberar > 0) f.comp = UI.r4(f.comp - l.liberar);
       const v = UI.r2(l.cant * f.costo);
       mov.valor = UI.r2(mov.valor + v);
       mov.lineas.push({ art: l.art, cant: l.cant, costo: f.costo, valor: v, alm: o.alm, signo: -1, saldo: f.act });

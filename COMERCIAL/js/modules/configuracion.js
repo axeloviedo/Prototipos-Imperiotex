@@ -1,17 +1,18 @@
-/* COMERCIAL V9 · CM-10 Configuración: parámetros comerciales, categorías de caja, tiendas/cajas/series, medios de pago y permisos */
+/* COMERCIAL V9 · CL-45 Configuración: parámetros comerciales, categorías de caja, tiendas/cajas/series, medios de pago y permisos */
 const CM10 = {
   PERMISOS: [
     ['ver_cotizacion', 'Ver cotizaciones'], ['crear_cotizacion', 'Crear cotizaciones'], ['editar_cotizacion', 'Editar cotizaciones (línea por línea)'], ['eliminar_cotizacion', 'Anular cotizaciones'],
     ['ver_venta', 'Ver ventas, listas y artículos de venta'], ['crear_venta', 'Registrar ventas y pagos'], ['anular_venta', 'Anular ventas'], ['asignar_vendedor', 'Asignar el vendedor'],
     ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar y anular devoluciones'], ['editar_devolucion_venta', 'Finalizar devoluciones'],
-    ['ver_caja', 'Ver caja e historial'], ['crear_caja', 'Abrir caja, ingresos, egresos y devolver dinero'], ['editar_caja', 'Cerrar caja y editar o anular movimientos'], ['valid_payments', 'Validar o rechazar pagos'],
+    ['ver_caja', 'Ver caja e historial'], ['crear_caja', 'Abrir caja, ingresos, egresos y devolver dinero'], ['editar_caja', 'Cerrar caja y editar o anular movimientos'], ['valid_payments', 'Validar o rechazar pagos (validar el que completa el total saca el stock de la venta)'],
     ['ver_cliente', 'Ver clientes'], ['crear_cliente', 'Crear clientes'], ['editar_cliente', 'Editar y desactivar clientes'],
-    ['ver_existencias', 'Ver existencias y movimientos'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)']
+    ['ver_existencias', 'Ver existencias y movimientos'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)'],
+    ['ver_solicitud_fabricacion', 'Solicitudes de Fabricación: ver, crear, editar y enviar (pantalla compartida GI-21/GI-22/GI-23 de Inventarios)'], ['crear_solicitud_materiales', 'Solicitudes de Materiales: crear y consultar (pantalla compartida GI-13 de Inventarios)']
   ],
   render() {
     const c = Store.d.cfg, ed = Store.puede('configurar_comercial');
     const dis = ed ? '' : ' disabled';
-    let html = '<div class="screen-head"><h1>Configuración comercial</h1><span class="code">CM-10</span><div class="spacer"></div>' + (ed ? '<button class="btn btn-primary" onclick="CM10.guardar()">Guardar parámetros</button>' : '') + '</div>';
+    let html = '<div class="screen-head"><h1>Configuración comercial</h1><span class="code">CL-45</span><div class="spacer"></div>' + (ed ? '<button class="btn btn-primary" onclick="CM10.guardar()">Guardar parámetros</button>' : '') + '</div>';
     if (!ed) html += UI.aviso('Solo lectura: los parámetros los cambia un perfil con configurar_comercial.', 'info');
     html += '<div class="card"><div class="sec">Parámetros de la empresa</div><div class="formgrid c3">' +
       UI.campo('IGV (%)', '<input id="cf-igv" type="number" min="0" max="30" step="any" value="' + c.igv + '"' + dis + '>', { hint: 'Los precios de venta lo incluyen; cada documento guarda la tasa con la que se emitió' }) +

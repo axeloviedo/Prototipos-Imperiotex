@@ -2,7 +2,8 @@
 
 > 2026-09-15 · `PROTOTIPOS V9/COMERCIAL/`. Prototipo navegable del área comercial que encaja con Inventarios (GI), Compras (CO), Gestión de Pedido (GP) y Producción (GPV7).
 > Los documentos `01`–`11` de esta carpeta describen un sistema de ventas que ya funciona. Son el **lineamiento funcional**, no la fuente de verdad: dentro de V9 manda lo que se decide aquí y en `../00_DECISIONES_CERRADAS.md`.
-> El modelo de datos está en `13-modelo-datos-v9.md` y los contratos funcionales en `14-contratos-funcionales.md`.
+> El modelo de datos está en `13-modelo-datos-v9.md`, los contratos funcionales en `14-contratos-funcionales.md` y los códigos de pantallas y modales (CL-xx) en `15-codigos-pantallas.md`.
+> **Revisión 2026-09-16:** ver §10 «Decisiones cerradas de la revisión 2026-09-16». Se aplican sobre el código que está en el repo (Cotización → Venta → Devolución, con pagos por validar en caja y sin orden de venta cargada). Donde choquen con K1–K17, manda §10.
 > **Tercera versión (2026-09-15), simplificada a pedido del usuario:** «debe ser más simple, tal como lo hace SAP B1». Reemplaza la versión anterior, en la que la venta tenía estados de orden y de entrega, el comprobante iba aparte y los pagos se validaban.
 
 ---
@@ -17,7 +18,7 @@
 | Pantallas | `js/modules/*.js`: una por submódulo; `documento.js` reúne las piezas compartidas |
 
 - En Chrome o Edge se abre con doble clic. Dentro del panel del ERP hay que servir la carpeta `PROTOTIPOS V9` por HTTP y entrar a `/COMERCIAL/index.html`, igual que con GPV7.
-- Lo registrado se guarda en `localStorage`. **↺ Reiniciar datos de demo** vuelve al escenario inicial.
+- Lo registrado se guarda en `localStorage`. **↺ Reiniciar todo el prototipo** borra todas las claves `imperiotex.*` (Inventarios, Compras, Producción y Comercial) y vuelve Comercial a su escenario inicial (§10, R6).
 - Las fechas de la demo son **relativas al día en que se arma** (ayer, hoy, hace 20 días). Así la validez de las cotizaciones y el plazo de anulación siempre tienen sentido.
 - El selector **Usuario** de la barra superior cambia de perfil y de tienda para probar los permisos.
 
@@ -63,23 +64,26 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 
 ## 4. Pantallas
 
+Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, está en `15-codigos-pantallas.md`.
+
 | Código | Pantalla | Qué hace |
 |---|---|---|
-| CM-01 | Cotizaciones | Listado, nueva, edición línea por línea, clonar, cancelar, PDF y **Copiar a orden de venta** |
-| CM-13 | Órdenes de venta | Listado con % atendido, nueva (directa o copiada de una cotización, con entrega) y ficha: Pedido/Atendido/Pendiente/Comprometido, **Copiar a venta**, Cerrar, Cancelar, PDF |
-| CM-02 | Ventas | Listado con saldo, **Desde orden de venta** y **+ Venta directa**. Formulario con comprobante y cobros. Ficha: Cobrar, Devolución, Anular y PDF, con las pestañas Detalle, Cobros, Devoluciones, Movimientos de stock e Historial |
-| CM-03 | Devoluciones | Listado, nueva desde una venta Pagada, ficha con ingreso de almacén y estado del dinero |
-| CM-04 | Caja de la tienda | Abrir, por cobrar, cobros, ingresos y egresos, devolver dinero, reporte del día, cerrar |
-| CM-05 | Historial de cajas | Detalle, PDF y Excel |
-| CM-06 | Existencias y movimientos | Actual, Comprometido, Disponible y Kardex (motor V9) |
-| CM-07 | Clientes | Listado, ficha (cotizaciones, órdenes, ventas, devoluciones) y alta rápida |
-| CM-08 | Listas de precios | Filas por nivel, simulador de la cascada |
-| CM-09 | Artículos de venta | Precio sugerido, mínimo, descuento, IGV, control de stock |
-| CM-10 | Configuración | Parámetros, categorías de caja, tiendas/cajas/series, medios de pago, perfiles y permisos |
-| CM-11 | Solicitudes de Pedido | **Misma pantalla GP-01/GP-03 de Logística**: crear, editar, enviar, V°B°, aprobar, rechazar |
-| CM-12 | Solicitudes de Materiales | **Misma pantalla GI-13 de Logística**: Comercial crea y consulta; Logística aprueba y define Compra o Transferencia |
+| CL-01 · CL-02 | Cotizaciones · ficha | Listado, nueva, edición línea por línea, clonar, anular, PDF y **Convertir en venta** |
+| CL-05 · CL-07 · CL-09 | Ventas · nueva venta · ficha | Listado con saldo y estado del stock, **Desde cotización** y **+ Nueva venta**. Formulario con comprobante y pagos. Ficha: Pago, Devolución (solo con salida), Anular y PDF, con las pestañas Detalle, Pagos, Devoluciones, Movimientos de stock e Historial |
+| CL-13 · CL-15 | Devoluciones · ficha | Listado, nueva desde una venta **con salida de stock**, ficha con ingreso de almacén y estado del dinero |
+| CL-18 | Caja de la tienda | Abrir, cobros (validar o rechazar), por cobrar, ingresos y egresos, devolver dinero, reporte del día, cerrar |
+| CL-28 | Historial de cajas | Detalle, PDF y Excel |
+| CL-30 | Solicitudes de Fabricación | **Misma pantalla GI-21 / GI-22 / GI-23 de Inventarios** (documentos SF-000001): crear, editar, enviar, V°B°, aprobar, rechazar |
+| CL-31 | Solicitudes de Materiales | **Misma pantalla GI-13 de Inventarios**: Comercial crea y consulta; Logística aprueba y define Compra o Transferencia |
+| CL-32 | Existencias y movimientos | Actual, Comprometido (con lo que comprometen las ventas pendientes), Disponible y Kardex (motor V9) |
+| CL-34 · CL-35 | Clientes · ficha | Listado, ficha (ventas, cotizaciones, devoluciones) y alta rápida |
+| CL-40 | Listas de precios | Filas por nivel, simulador de la cascada |
+| CL-43 | Artículos de venta | Precio sugerido, mínimo, descuento, IGV, control de stock |
+| CL-45 | Configuración | Parámetros, categorías de caja, tiendas/cajas/series, medios de pago, perfiles y permisos |
 
-**Vista compartida (2026-09-15).** CM-11 y CM-12 no duplican código. Abren las pantallas de `INVENTARIOS/index.html` sin su menú (antes `Prototipo_GP.html`) (`?vista=comercial&usuario=…`). Las Solicitudes de Pedido y de Materiales, con el comprometido que dejan, se guardan en `localStorage` (`imperiotex.v9.solicitudes`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos nuevos son `ver_solicitud_pedido` y `crear_solicitud_materiales` (Vendedor y Supervisor comercial). En el listado GP-01 se quitó la columna «Artículos solicitados».
+> La pantalla de Órdenes de venta (antes CM-13, `js/modules/ordenes.js`) es de otra versión: `index.html` no la carga y no tiene código CL.
+
+**Vista compartida (2026-09-15, actualizada 2026-09-16).** CL-30 y CL-31 no duplican código. Están en el menú **Abastecimiento** y abren las pantallas de `INVENTARIOS/index.html` sin su menú (`?vista=comercial&usuario=…#gi21` y `#gi13`). Las Solicitudes de Fabricación y de Materiales, con el comprometido que dejan, se guardan en `localStorage` (`imperiotex.v9.solicitudes`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos son `ver_solicitud_fabricacion` (antes `ver_solicitud_pedido`) y `crear_solicitud_materiales`, para Vendedor y Supervisor comercial.
 
 Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen **PDF** (vista de impresión).
 
@@ -117,7 +121,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | **GI** | Usa los mismos artículos, grupos, unidades y almacenes (`SB-ALM-PT`, `SB-TDA-01/02`, `SB-ALM-REM`). La venta pagada es la Salida «Venta al por menor / por mayor» de GI-10 y la devolución el Ingreso «Devoluciones de Clientes» de GI-09 (T2). Precio sugerido, precio mínimo y afectación IGV vienen de la pestaña **Venta** de GI-02. |
 | **Existencias (T1/T7)** | Disponible = Actual − Comprometido. La **orden de venta** compromete igual que la Solicitud de Pedido aprobada o la transferencia aprobada, así le quita disponible a las demás. |
 | **GPV7** | El producto terminado que se vende es el que recibe Producción. El costo de salida es el costo promedio que dejan los recibos. |
-| **GP** | La Solicitud de Pedido es una pantalla compartida (CM-11). Comercial crea Solicitudes de Materiales (CM-12). Producción solo ve las aprobadas (PR-03). |
+| **GI · Solicitudes** | La Solicitud de Fabricación (GI-21 / GI-22 / GI-23, documentos SF-000001) es una pantalla compartida (CL-30). Comercial crea Solicitudes de Materiales (CL-31, GI-13). Producción solo ve las aprobadas (PR-03). |
 | **CO** | Del catálogo de condiciones de pago de CO-02 solo se usa **Contado**. El cliente no se unifica con el proveedor (T6). |
 | **Backend `comercial`** | Toma del MS real la caja de la tienda (V47), el plazo de anulación congelado (V33), varios cobros por venta (V31), el cobro que sabe su caja (V44) y el rastro de la devolución de dinero (V46). |
 
@@ -187,9 +191,35 @@ Escenario:
 | # | Pregunta |
 |---|---|
 | Q-C1 | ✅ **Resuelta (2026-09-15):** cuatro documentos. La orden compromete, la venta es el comprobante y el cobro completo saca el stock (K1–K8). |
-| Q-C2 | Si una orden de venta mayorista no tiene producto terminado, ¿se genera la **Solicitud de Pedido** de GP desde la orden? |
+| Q-C2 | Si una orden de venta mayorista no tiene producto terminado, ¿se genera la **Solicitud de Fabricación** (GI-21) desde la orden? |
 | Q-C3 | ¿La **reposición a tienda** (transferencia GI-11 pedida por la tienda) se prototipa aquí o en GI? |
 | Q-C4 | ¿Se prototipan SUNAT, envíos, cambios y liquidaciones que ya existen en el backend? |
 | Q-C5 | ¿Un cliente puede pagar en la caja de **otra tienda**? Hoy el cobro entra a la caja de la tienda de la venta. |
 | Q-C6 | Tipos de cliente: el prototipo usa 4 y el backend tiene 7 (incluye los de servicios). ¿Se unifican? |
 | Q-C7 | ✅ **Resuelta:** no hay validación de pagos; registrar el cobro es cobrado (K8). |
+
+---
+
+## 10. Decisiones cerradas · revisión 2026-09-16
+
+> Se aplican al prototipo que está en el repo (`index.html` carga Cotizaciones, Ventas, Devoluciones, Caja, Consultas, Maestros, Configuración y Solicitudes). En esa versión la venta tiene estado **Registrada / Anulada**, los pagos entran a caja **Por validar** y existe la condición de crédito.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| R1 | **DECISIÓN CERRADA · la venta pendiente compromete y el pago confirmado completo saca el stock** | Al registrar la venta, cada línea inventariable **compromete** su cantidad (UM de inventario) en su almacén: sube el Comprometido y baja el Disponible (Disponible = Actual − Comprometido). No se crea ningún movimiento. El pago confirmado es el pago **validado** en caja. Cuando la suma de pagos validados cubre el total, se registra la **Salida** GI-10 («Venta al por menor / al por mayor», concepto 21), una por almacén. La Salida baja el Actual, libera lo comprometido de la venta y guarda el costo. Un pago parcial validado no mueve stock. Un pago por validar tampoco. |
+| R1.a | Avisos y bloqueo al registrar | El control de stock del artículo se revisa contra el **Disponible**, que ya descuenta lo comprometido por otras ventas pendientes. *Bloquear* impide registrar. *Avisar y permitir* deja registrar con aviso (CL-08): el comprometido puede superar al Actual y, al salir, el Actual puede quedar negativo. La Salida no vuelve a bloquear, porque dispararla es validar un pago en caja. |
+| R1.b | Crédito | Misma regla que el contado. La condición de pago solo fija el vencimiento del saldo: el stock queda comprometido hasta que lo validado cubra el total. Si el negocio necesita entregar mercadería a crédito antes de cobrar, queda como pregunta abierta (Q-C8). |
+| R1.c | Anular venta | Sin salida: **libera lo comprometido**, sin plazo y sin movimientos. Con salida: solo dentro del plazo (`plazoAnular`) y devuelve el stock con un Ingreso «Devoluciones de Clientes», como antes. En ambos casos los pagos por validar se anulan y lo validado queda **por devolver** en caja. |
+| R1.d | Rechazar pago | Anula el pago y no toca el stock: la venta sigue con su stock comprometido. |
+| R1.e | Devoluciones | Solo de lo que **ya salió**: la venta debe tener su Salida. Mientras el stock está comprometido no hay nada que devolver; si la venta ya no va, se anula. |
+| R1.f | Consultas | CL-32 dice que Comercial sí compromete y muestra cuánto comprometido es de ventas pendientes. El Kardex solo muestra el Actual. La ficha de la venta muestra el estado del stock (**Stock comprometido / entregado / liberado / devuelto**) y el listado se filtra por él. El estado de pago suma «Por validar» (lo registrado cubre el total pero aún no está validado). |
+| R1.g | Demo (versión 4) | Se arma con los mismos servicios. Ayer, cuatro ventas validadas con su salida. La mayorista a crédito tiene un pago parcial validado y el stock comprometido. La venta mixta tiene el Yape por validar y el stock comprometido. Una venta anulada liberó su compromiso. La devolución pendiente en mal estado es de una factura que ya salió. Comprometido = inicial de otros módulos + ventas pendientes, sin negativos. |
+| R2 | **Sin tipo de cotización** | Se quitó «Tipo» (Productos / Servicios / Mixta, función `Doc.tipoDoc`) de listados, filtros, CSV y fichas de cotización. Como salía de la misma función, también se quitó de Ventas: columna, filtro y subtítulo del total. El filtro se reemplazó por «Stock». |
+| R3 | **«Fecha de creación»** | Es la etiqueta de la fecha de cotizaciones, ventas, devoluciones, pagos, devoluciones de dinero y movimientos de caja, en listados, fichas, modales, PDF y CSV. La fecha de la venta la pone el sistema al registrar: el formulario ya no permite elegir una fecha anterior. Los movimientos de stock (documentos de Inventarios) conservan «Fecha». |
+| R4 | **Códigos CL-xx** | Cada pantalla, ficha/formulario y modal tiene un código único correlativo (CL-01 … CL-46), visible en su encabezado. Reemplaza a CM-01…CM-12. Los ids de ruta (`cm01`, `cm02v`, …) no cambian. Tabla completa en `15-codigos-pantallas.md`. |
+| R5 | **Solicitudes compartidas** | Menú **Abastecimiento**: Solicitudes de Fabricación (CL-30, `#gi21` de Inventarios; GI-21 listado, GI-22 formulario, GI-23 ficha; documentos SF-000001) y Solicitudes de Materiales (CL-31, `#gi13`). Permisos `ver_solicitud_fabricacion` (renombra `ver_solicitud_pedido`) y `crear_solicitud_materiales` para Vendedor y Supervisor comercial, también en la tabla de permisos de CL-45. Producción solo ve las aprobadas (PR-03). |
+| R6 | **Reinicio global** | `Store.reiniciar()` («↺ Reiniciar todo el prototipo», modal CL-46) borra de `localStorage` todas las claves que empiezan con `imperiotex.` (Inventarios, Compras, Producción y Comercial) y recarga la demo de Comercial. Los otros módulos arman su escenario inicial al abrirse. |
+
+| # | Pregunta abierta |
+|---|---|
+| Q-C8 | ¿Una venta a crédito debe entregar (sacar stock) antes de cobrar? Hoy sigue la misma regla que el contado (R1.b). |

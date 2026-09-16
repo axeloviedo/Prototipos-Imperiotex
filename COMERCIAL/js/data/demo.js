@@ -1,7 +1,7 @@
 /* COMERCIAL V9 — escenario de demo (IMPERIOTEX). Las fechas son relativas al día en que se arma la demo,
    y todo se registra ejecutando los mismos servicios que usan las pantallas: stock, caja y saldos cuadran. */
 const Demo = {
-  VERSION: 3,
+  VERSION: 4, /* 4: la venta pendiente compromete stock y la salida ocurre al confirmarse el pago completo (2026-09-16) */
   clon(x) { return JSON.parse(JSON.stringify(x)); },
 
   /* arma y registra una venta; o = {sede, cli, mon, cond, comp, lineas:[[art, cant, um, dcto, desc]], pagos:[{met, monto|'resto', banco, nop, voucher}], entrega, obs, cot} */
@@ -56,7 +56,7 @@ const Demo = {
     Store.d.listas = M.LISTAS.map(x => ({ id: Store.sig('lp', 'LP-', 4), art: x[0], um: x[1], sede: x[2], tipo: x[3], mon: x[4], precio: x[5] }));
 
     /* existencias iniciales de producto terminado (costo promedio de lo producido en PRODUCCION).
-       Lo comprometido viene de transferencias aprobadas en GI-11 (T7): Comercial no compromete. */
+       Lo comprometido inicial viene de transferencias aprobadas en GI-11 (T7); las ventas pendientes de pago suman el suyo al registrarse. */
     [['SB-ALM-PT', 'PT-0001', 120, 10, 52.30], ['SB-ALM-PT', 'PT-0002', 80, 0, 53.10], ['SB-ALM-PT', 'PT-0003', 60, 0, 54.20], ['SB-ALM-PT', 'PT-0004', 24, 0, 54.20],
      ['SB-ALM-PT', 'PT-0020', 40, 0, 71.80], ['SB-ALM-PT', 'PT-0021', 30, 0, 71.80], ['SB-ALM-PT', 'MERC-0001', 50, 0, 14.50],
      ['SB-TDA-01', 'PT-0001', 18, 0, 52.30], ['SB-TDA-01', 'PT-0002', 12, 0, 53.10], ['SB-TDA-01', 'PT-0003', 6, 2, 54.20], ['SB-TDA-01', 'PT-0004', 2, 0, 54.20],
@@ -73,7 +73,7 @@ const Demo = {
     const cE = Demo.cotizacion({ sede: 'TDA-01', cli: 'CLI-000004', lineas: [['PT-0003', 1]] });
     T(-7, '09:30', 'USER12'); Cot.anular(cE, 'Cliente desistió de la compra');
 
-    /* 3) mayorista: cotización en docenas → venta al crédito con factura y envío por agencia */
+    /* 3) mayorista: cotización en docenas → venta al crédito con factura y envío por agencia (compromete stock en SB-ALM-PT) */
     T(-6, '11:00', 'USER13');
     const cA = Demo.cotizacion({ sede: 'MAY-01', cli: 'CLI-000002', cond: 'CRED30', lineas: [['PT-0001', 2, 'DOC'], ['PT-0002', 12], ['PT-0003', 12]], obs: 'Campaña de fiestas patrias' });
     T(-4, '16:00', 'USER13');
@@ -87,7 +87,7 @@ const Demo = {
     T(-2, '15:00', 'USER10');
     Demo.cotizacion({ sede: 'TDA-01', cli: 'CLI-000001', lineas: [['PT-0001', 1], ['SERV-0001', 1, null, 0, 'Nombre "MAFE" en el bolsillo trasero']] });
 
-    /* 6) ayer en Tienda Gamarra 1: caja completa (abrir, vender, validar, egreso y cierre con diferencia) */
+    /* 6) ayer en Tienda Gamarra 1: caja completa (abrir, vender, validar = sale el stock, egreso y cierre con diferencia) */
     T(-1, '09:00', 'USER11');
     const s1 = Caja.abrir('CJ-TDA01-PEN', 200);
     T(-1, '10:15', 'USER10');
@@ -109,14 +109,15 @@ const Demo = {
     T(0, '09:00', 'USER14'); const sMay = Caja.abrir('CJ-MAY01-PEN', 100);
     T(0, '09:10', 'USER11'); const sTda = Caja.abrir('CJ-TDA01-PEN', 150);
 
-    /* 8) venta anulada el mismo día (el pago por validar se anula y el stock vuelve) */
+    /* 8) venta anulada el mismo día sin pago confirmado: el pago por validar se anula y se libera lo comprometido */
     T(0, '09:40', 'USER10');
     const v6 = Demo.venta({ sede: 'TDA-01', cli: 'CLI-000004', comp: 'BV', lineas: [['PT-0002', 2]], pagos: [{ met: 'EFE', monto: 'resto' }] });
     T(0, '09:50', 'USER12'); Ventas.anular(v6, 'Precio o cantidad equivocados');
 
-    /* 9) pago a cuenta de la venta al crédito, por validar en la caja mayorista */
+    /* 9) pago a cuenta de la venta al crédito, validado en la caja mayorista: es parcial, así que el stock sigue comprometido */
     T(0, '10:05', 'USER14');
-    Ventas.agregarPago(v5, { met: 'TRF', banco: 'BBVA', nop: 'BBVA-771204', voucher: 'transferencia_andina.pdf', monto: 1000 });
+    const p5 = Ventas.agregarPago(v5, { met: 'TRF', banco: 'BBVA', nop: 'BBVA-771204', voucher: 'transferencia_andina.pdf', monto: 1000 });
+    T(0, '10:10', 'USER14'); Ventas.validarPago(v5, p5.id);
 
     /* 10) cambio de prenda: devolución finalizada, dinero devuelto en caja y nueva venta */
     T(0, '10:30', 'USER10');
@@ -131,11 +132,12 @@ const Demo = {
     T(0, '11:20', 'USER10');
     Demo.venta({ sede: 'TDA-01', cli: 'CLI-000007', comp: 'FA', cond: 'CRED15', lineas: [['SERV-0001', 10, null, 0, 'Bordado "LA MODERNA" en la pretina'], ['SERV-0003', 10]] });
 
-    /* 12) devolución pendiente de la venta mayorista (mal estado → almacén de remate al finalizar) */
-    T(0, '11:30', 'USER13');
-    Dev.crear(v5.id, { lineas: [{ n: 3, cant: 2, tipo: 'Mal estado' }], sustTipo: 'Nota de crédito', sustNum: 'FC03-000021', obs: 'Costura abierta en 2 unidades' });
+    /* 12) devolución pendiente de la factura de ayer, que ya tuvo salida (mal estado → almacén de remate al finalizar).
+       La venta mayorista v5 no se puede devolver: su stock sigue comprometido hasta completar el pago */
+    T(0, '11:30', 'USER10');
+    Dev.crear(v3.id, { lineas: [{ n: 1, cant: 2, tipo: 'Mal estado' }], sustTipo: 'Nota de crédito', sustNum: 'FC01-000021', obs: 'Costura abierta en 2 unidades' });
 
-    /* 13) venta mixta con dos medios de pago: el Yape queda por validar */
+    /* 13) venta mixta con dos medios de pago: el Yape queda por validar, así que el stock sigue comprometido */
     T(0, '12:00', 'USER10');
     const v9 = Demo.venta({ sede: 'TDA-01', cli: 'CLI-000005', comp: 'BV', lineas: [['PT-0001', 2], ['SERV-0002', 2]], pagos: [{ met: 'YAPE', nop: '930112', voucher: 'yape_930112.jpg', monto: 100 }, { met: 'EFE', monto: 'resto' }] });
     T(0, '12:05', 'USER11'); Ventas.validarPago(v9, v9.pagos[1].id);

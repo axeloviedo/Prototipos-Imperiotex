@@ -52,7 +52,7 @@ body{background:var(--fondo-app);color:var(--texto);font-size:13.5px;display:fle
 
 .screen-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .screen-head h1{font-size:18px;font-weight:600}
-.screen-head .code{font-size:11px;color:var(--texto-sec);background:var(--superficie);border:1px solid var(--borde);border-radius:4px;padding:2px 7px}
+.screen-head .code,.modal-h .code{font-size:11px;color:var(--texto-sec);background:var(--superficie);border:1px solid var(--borde);border-radius:4px;padding:2px 7px}
 .screen-head .spacer{flex:1}
 
 .btn{border:none;border-radius:6px;padding:8px 15px;font-size:13px;cursor:pointer;font-weight:500}

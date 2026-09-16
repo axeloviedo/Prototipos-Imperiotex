@@ -4,6 +4,7 @@
 > Cada tabla indica su equivalente en la documentación del sistema actual (`02-modelo-datos.md`) y en el backend real (`comercial_db`).
 > Notación: **PK** clave primaria · **FK** clave foránea · *(calc)* no se persiste · *(snap)* copia congelada al crear.
 > Multiempresa: todas las tablas llevan `empresa` (FK). Se omite abajo para no repetirla.
+> **Revisión 2026-09-16:** el prototipo del repo (venta Registrada / Anulada con pagos por validar, sin orden de venta cargada) sigue la regla de stock de `12-prototipo-diseno.md` §10 (R1). Sus campos están en §3 «Venta · prototipo del repo» y en §5.
 
 ---
 
@@ -134,6 +135,29 @@ Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* +
 | **línea:** comprometido | Unidades comprometidas mientras está Pendiente de pago; 0 al pagar o anular | — | — |
 | **línea:** costo_unitario | Costo promedio del almacén al salir | — | — |
 
+### Venta · prototipo del repo (revisión 2026-09-16)
+
+Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a la tabla anterior.
+
+| Campo | Notas |
+|---|---|
+| id, comp, compNum | `VEN-AAAA-NNNNNN` · NV / BV / FA · `serie-correlativo` |
+| fecha | **Fecha de creación**, la pone el sistema al registrar (no se elige) |
+| cond | Condición de pago (contado o crédito): solo fija el vencimiento del saldo, no cambia la regla de stock |
+| estado | **Registrada / Anulada** |
+| salida | `null` mientras el stock está comprometido. Al cubrirse el total con pagos validados: `{f, u, pago, movs[]}` (fecha, usuario, pago que completó el total y salidas GI-10) |
+| plazoAnular | fecha_creacion + parámetro, congelado. Solo aplica si hay `salida` |
+| movs | Salidas al confirmarse el pago completo; ingresos si se anula con salida |
+| anulacion | fecha, usuario, motivo |
+| confirmado | *(calc)* Σ pagos **Validados** |
+| pagado, deuda, devuelto, porDevolver | *(calc)* pagado cuenta Por validar y Validado, menos devoluciones de dinero entregadas |
+| estadoPago | *(calc)* Pagado / **Por validar** (lo registrado cubre el total pero no todo está validado) / Parcial / Pendiente de pago / Por devolver / Anulada |
+| estadoStock | *(calc)* vacío (solo servicios) / **Stock comprometido** / **Stock entregado** / **Stock liberado** (anulada sin salida) / **Stock devuelto** (anulada con salida) |
+| **línea:** comp | Unidades de inventario comprometidas (cant × factor) desde el registro hasta la salida o la anulación; luego 0 |
+| **línea:** costo | Costo promedio del almacén al salir (por UM de venta) |
+
+> Ya no hay `tipo` de documento (productos / servicios / mixta) en cotización ni en venta.
+
 ### Cobro · *SAP B1 pago recibido `ORCT`, objeto 24*
 
 | Campo | Notas | Doc actual | `comercial_db` |
@@ -218,6 +242,20 @@ Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* +
 Comercial **no toca el Pedido** (OnOrder). Coincide con la hoja *Stock Comprometido y Pedido* de `Tablas.xlsx`: orden de venta = «Pedido de cliente» (+ IsCommited), cerrar o cancelar = «Cancelación / cierre de pedido» (− IsCommited). La venta pagada hace de «Entrega de mercancía» (− Actual, − IsCommited).
 
 **Invariante:** Comprometido de cada existencia = compromisos de otros módulos + Σ `comprometido` de líneas de órdenes Abiertas + Σ `comprometido` de líneas de ventas Pendientes de pago.
+
+### Prototipo del repo (revisión 2026-09-16, DECISIÓN CERRADA)
+
+| Evento | Movimiento T2 | Existencias (T1) |
+|---|---|---|
+| Registrar venta | — | **Comprometido +** (cant × factor por línea inventariable, en su almacén) |
+| Validar un pago que **no** completa el total | — | Sin cambio |
+| Validar el pago que completa el total (Σ validados ≥ total) | **Salida** «Venta al por menor / al por mayor», una por almacén; objeto base = venta | **Actual −, Comprometido −** |
+| Rechazar pago | — | Sin cambio (sigue comprometido) |
+| Anular venta sin salida | — | **Comprometido −** (sin plazo) |
+| Anular venta con salida (en plazo) | **Entrada** «Devoluciones de Clientes» | Actual + |
+| Finalizar devolución (solo ventas con salida) | **Entrada** «Devoluciones de Clientes»; mal estado → `SB-ALM-REM` | Actual + |
+
+**Invariante del prototipo:** Comprometido de cada existencia = comprometido inicial de otros módulos + Σ `linea.comp` de ventas Registradas sin `salida`. Nunca negativo.
 
 ---
 

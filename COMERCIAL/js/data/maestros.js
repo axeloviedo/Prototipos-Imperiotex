@@ -1,7 +1,7 @@
 /* COMERCIAL V9 — maestros de la demo.
    Artículos, almacenes, grupos y conversiones son los de PROTOTIPOS V9 (GI-02 / PRODUCCION): PT-0001..0003 tienen lista de
    materiales en Producción. Lo propio de Comercial (tiendas, cajas, medios de pago, comprobantes, perfiles) se marca aquí.
-   Los artículos, clientes y listas de precios se copian al estado de la demo (se editan en CM-07/08/09). */
+   Los artículos, clientes y listas de precios se copian al estado de la demo (se editan en CL-11, CL-13 y CL-14). */
 const M = {
   EMPRESAS: ['IMPERIOTEX', 'CATINNA NOW'],
 
@@ -126,11 +126,13 @@ const M = {
   ],
   /* permisos finos por acción (ver_*, crear_*, editar_*, eliminar_*) de la documentación */
   PERFILES: {
-    'Vendedor': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'ver_venta', 'crear_venta', 'ver_devolucion_venta', 'crear_devolucion_venta', 'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'ver_caja'],
+    'Vendedor': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'ver_venta', 'crear_venta', 'ver_devolucion_venta', 'crear_devolucion_venta', 'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'ver_caja',
+      'ver_solicitud_fabricacion', 'crear_solicitud_materiales'],
     'Cajero': ['ver_cotizacion', 'ver_venta', 'ver_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments', 'ver_cliente', 'ver_existencias'],
     'Supervisor comercial': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'eliminar_cotizacion', 'ver_venta', 'crear_venta', 'anular_venta', 'asignar_vendedor',
       'ver_devolucion_venta', 'crear_devolucion_venta', 'editar_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments',
-      'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'editar_precios', 'configurar_comercial']
+      'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'editar_precios', 'configurar_comercial',
+      'ver_solicitud_fabricacion', 'crear_solicitud_materiales']
   }
 };
 

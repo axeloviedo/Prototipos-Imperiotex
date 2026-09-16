@@ -23,6 +23,7 @@ Documentación funcional, de modelo de datos, API y arquitectura para el **proce
 | 12 | [`12-prototipo-diseno.md`](./12-prototipo-diseno.md) | **V9** · Diseño del prototipo Comercial: decisiones K1–K18, pantallas, flujos, encaje con GI/CO/GP/GPV7, mejoras aplicadas y preguntas abiertas. |
 | 13 | [`13-modelo-datos-v9.md`](./13-modelo-datos-v9.md) | **V9** · Modelo de datos con equivalencias al sistema documentado y a `comercial_db`. |
 | 14 | [`14-contratos-funcionales.md`](./14-contratos-funcionales.md) | **V9** · Operaciones funcionales equivalentes a `08-contratos-api.md` con rutas sugeridas según ARNÉS. |
+| 15 | [`15-codigos-pantallas.md`](./15-codigos-pantallas.md) | **V9** · Códigos CL-xx de cada pantalla, ficha y modal del prototipo, con su ruta y archivo. |
 
 > **Prototipo navegable:** [`index.html`](./index.html). Los documentos 01–11 describen un sistema que ya funciona y son el lineamiento funcional; lo que manda en V9 está en 12–14.
 

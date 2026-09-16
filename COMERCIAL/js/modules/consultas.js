@@ -1,10 +1,10 @@
-/* COMERCIAL V9 · CM-06 Existencias y movimientos: lo que Comercial ve de Inventarios (T1) y lo que mueve (T2) */
+/* COMERCIAL V9 · CL-32 Existencias y movimientos: lo que Comercial ve de Inventarios (T1), lo que compromete y lo que mueve (T2) · modal CL-33 */
 const CM06 = {
   tab: 'ex', f: { alm: '', grupo: '', q: '', cero: false, tipo: '', mq: '', art: 'PT-0001', kalm: '' },
   render() {
     const t = CM06.tab;
     const tabs = [['ex', 'Existencias'], ['mov', 'Movimientos (' + Store.d.movs.length + ')'], ['kar', 'Kardex']];
-    return '<div class="screen-head"><h1>Existencias y movimientos</h1><span class="code">CM-06</span></div>' +
+    return '<div class="screen-head"><h1>Existencias y movimientos</h1><span class="code">CL-32</span></div>' +
       '<div class="tabs">' + tabs.map(x => '<div class="tab' + (x[0] === t ? ' active' : '') + '" onclick="CM06.tab=\'' + x[0] + '\';App.refrescar()">' + x[1] + '</div>').join('') + '</div>' +
       (t === 'ex' ? CM06.existencias() : t === 'mov' ? CM06.movimientos() : CM06.kardex());
   },
@@ -20,12 +20,12 @@ const CM06 = {
       UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM06.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       '<label class="check"><input type="checkbox"' + (f.cero ? ' checked' : '') + ' onchange="CM06.f.cero=this.checked;App.refrescar()"> Mostrar en cero</label></div></div>' +
       UI.tabla(['Almacén', 'Código', 'Artículo', 'UM', ['Actual', 'num'], ['Comprometido', 'num'], ['Disponible', 'num']].concat(sup ? [['Costo prom.', 'num'], ['Valor', 'num']] : []), filas.map(s => {
-        const disp = UI.r4(s.act - s.comp), a = Store.art(s.art) || {};
+        const disp = UI.r4(s.act - s.comp), a = Store.art(s.art) || {}, cv = Ventas.comprometidoVentas(s.alm, s.art);
         return '<tr><td class="mini">' + s.alm + '</td><td>' + s.art + '</td><td>' + UI.esc(M.nomArt(s.art)) + '</td><td>' + (a.u || '') + '</td>' +
-          '<td class="num"><span class="' + (s.act < 0 ? 'err-t' : '') + '">' + UI.n(s.act, 0) + '</span></td><td class="num">' + (s.comp ? UI.n(s.comp, 0) : '') + '</td>' +
+          '<td class="num"><span class="' + (s.act < 0 ? 'err-t' : '') + '">' + UI.n(s.act, 0) + '</span></td><td class="num">' + (s.comp ? UI.n(s.comp, 0) + (cv ? '<br><span class="mini">' + UI.n(cv, 0) + ' por ventas pendientes</span>' : '') : '') + '</td>' +
           '<td class="num"><b class="' + (disp <= 0 ? 'err-t' : '') + '">' + UI.n(disp, 0) + '</b></td>' + (sup ? '<td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' : '') + '</tr>';
       }), { foot: sup ? '<tr><td colspan="8" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td></tr>' : '' }) +
-      '<p class="hint">Disponible = Actual − Comprometido (T1). Comercial no compromete stock: la venta baja el Actual con su salida y la devolución lo sube con su ingreso. Lo comprometido que se ve aquí viene de transferencias aprobadas (GI-11) o de las solicitudes de GP (T7). El producto terminado entra por los recibos de Producción (PRODUCCION).</p>';
+      '<p class="hint">Disponible = Actual − Comprometido (T1). <b>Comercial sí compromete stock</b>: la venta pendiente de pago sube el Comprometido de cada línea en su almacén; cuando los pagos validados cubren el total se registra su Salida, que baja el Actual y libera lo comprometido. La devolución sube el Actual con su ingreso. El resto del comprometido viene de transferencias aprobadas (GI-11) o de las solicitudes (T7). El producto terminado entra por los recibos de Producción (PRODUCCION).</p>';
   },
   movimientos() {
     const f = CM06.f;
@@ -36,7 +36,7 @@ const CM06 = {
       UI.tabla(['Movimiento', 'Fecha', 'Tipo', 'Detalle', 'Documento', 'Origen → destino', 'Concepto contable', ['Líneas', 'num'], ['Valor', 'num']], lista.map(m =>
         '<tr class="clickable" onclick="CM06.verMov(\'' + m.id + '\')"><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '</td><td>' + UI.badge(m.tipo, m.tipo === 'Ingreso' ? 'var(--confirmado)' : 'var(--parcial)') + '</td>' +
         '<td>' + UI.esc(m.det) + '</td><td>' + CM06.linkDoc(m.ndoc) + '</td><td class="mini">' + UI.esc(m.od) + '</td><td class="mini">' + UI.esc(m.concepto) + '</td><td class="num">' + m.lineas.length + '</td><td class="num">' + UI.s(m.valor) + '</td></tr>'), { vacio: 'Sin movimientos' }) +
-      '<p class="hint">Movimientos V7 separados (T2): la venta genera una <b>Salida</b> (GI-10 «Venta al por menor / por mayor») y la devolución o la anulación un <b>Ingreso</b> (GI-09 «Devoluciones de Clientes»), con la venta o la devolución como documento de origen. Aparecen igual en GI-07 y en el Kardex GI-06.</p>';
+      '<p class="hint">Movimientos V7 separados (T2): la venta genera su <b>Salida</b> (GI-10 «Venta al por menor / por mayor») cuando el pago confirmado cubre el total y la devolución o la anulación un <b>Ingreso</b> (GI-09 «Devoluciones de Clientes»), con la venta o la devolución como documento de origen. Aparecen igual en GI-07 y en el Kardex GI-06.</p>';
   },
   linkDoc(nd) {
     if (/^VEN-/.test(nd)) return '<button class="btn-link" style="padding:0" onclick="event.stopPropagation();App.go(\'cm02v\',{id:\'' + nd + '\'})">' + nd + '</button>';
@@ -54,13 +54,13 @@ const CM06 = {
       UI.tabla(['Fecha', 'Movimiento', 'Detalle', 'Documento', 'Almacén', ['Entrada', 'num'], ['Salida', 'num'], ['Costo', 'num'], ['Saldo en almacén', 'num']], filas.map(k =>
         '<tr><td class="mini">' + k.fecha + '</td><td><button class="btn-link" onclick="CM06.verMov(\'' + k.id + '\')">' + k.id + '</button></td><td>' + UI.esc(k.det) + '</td><td>' + CM06.linkDoc(k.ndoc) + '</td><td class="mini">' + k.alm + '</td>' +
         '<td class="num">' + (k.ent ? UI.n(k.ent, 0) : '') + '</td><td class="num">' + (k.sal ? UI.n(k.sal, 0) : '') + '</td><td class="num">' + UI.n(k.costo, 4) + '</td><td class="num">' + UI.n(k.saldo, 0) + '</td></tr>'), { vacio: 'Sin movimientos de este artículo' }) +
-      '<p class="hint">Solo los movimientos registrados en esta demo comercial; el saldo inicial viene del inventario de producto terminado.</p>';
+      '<p class="hint">Solo los movimientos registrados en esta demo comercial; el saldo inicial viene del inventario de producto terminado. El Kardex muestra el Actual: lo comprometido por ventas pendientes no aparece aquí hasta que sale.</p>';
   },
   verMov(id) {
     const m = Store.d.movs.find(x => x.id === id);
     if (!m) { UI.toast('Movimiento no encontrado'); return; }
     UI.modal({
-      titulo: m.id + ' · ' + m.tipo, lg: true,
+      titulo: m.id + ' · ' + m.tipo, lg: true, code: 'CL-33',
       cuerpo: '<div class="formgrid c3">' + UI.dato('Detalle', UI.esc(m.det), { estilo: 'grid-column:span 2' }) + UI.dato('Estado', m.est) + UI.dato('Fecha', m.fecha) +
         UI.dato('Documento de origen', m.ndoc) + UI.dato('Usuario', UI.esc(m.usuario)) + UI.dato('Origen → destino', UI.esc(m.od), { estilo: 'grid-column:span 2' }) +
         UI.dato('Concepto contable', UI.esc(m.concepto)) + (m.obs ? UI.dato('Observación', UI.esc(m.obs), { full: true }) : '') + '</div>' +

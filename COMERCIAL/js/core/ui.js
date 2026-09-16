@@ -44,7 +44,7 @@ const UI = {
     'Registrada': 'var(--confirmado)', 'Pendiente': 'var(--pendiente)', 'Finalizada': 'var(--completada)',
     'Abierta': 'var(--aprobado-sol)', 'Cerrada': 'var(--borrador)',
     'Pagado': 'var(--completada)', 'Parcial': 'var(--parcial)', 'Pendiente de pago': 'var(--pendiente)', 'Por devolver': 'var(--rechazado-sol)',
-    'Por validar': 'var(--pendiente)', 'Validado': 'var(--confirmado)', 'Procesado': 'var(--confirmado)',
+    'Por validar': 'var(--pendiente)', 'Stock comprometido': 'var(--pendiente)', 'Stock entregado': 'var(--completada)', 'Stock liberado': 'var(--borrador)', 'Stock devuelto': 'var(--rechazado-sol)', 'Validado': 'var(--confirmado)', 'Procesado': 'var(--confirmado)',
     'Nuevo': 'var(--prp)', 'Activo': 'var(--confirmado)', 'Por recuperar': 'var(--parcial)', 'Sin compras': 'var(--borrador)', 'Inactivo': 'var(--borrador)'
   },
   estado(t) { return UI.badge(t, UI.COLORES[t] || 'var(--borrador)'); },
@@ -79,20 +79,21 @@ const UI = {
   modal(o) {
     document.getElementById('modales').innerHTML =
       '<div class="overlay open"><div class="modal' + (o.lg ? ' lg' : '') + '"' + (o.ancho ? ' style="width:min(' + o.ancho + ',95vw)"' : '') + '>' +
-      '<div class="modal-h"><b>' + o.titulo + '</b><span class="x" onclick="UI.cerrar()">&#10005;</span></div>' +
+      '<div class="modal-h"><b>' + o.titulo + '</b>' + (o.code ? '<span class="code">' + o.code + '</span>' : '') + '<span class="x" onclick="UI.cerrar()">&#10005;</span></div>' +
       '<div class="modal-b">' + o.cuerpo + '</div>' +
       '<div class="modal-f">' + (o.pie || '<button class="btn btn-secondary" onclick="UI.cerrar()">Cerrar</button>') + '</div></div></div>';
   },
   cerrar() { document.getElementById('modales').innerHTML = ''; },
-  confirmar(titulo, html, accion, txtOk) {
+  /* code: código CL-xx del modal (se muestra en el encabezado) */
+  confirmar(titulo, html, accion, txtOk, code) {
     UI._acc = accion;
-    UI.modal({ titulo, cuerpo: html, pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="const f=UI._acc;UI.cerrar();f()">' + (txtOk || 'Confirmar') + '</button>' });
+    UI.modal({ titulo, code, cuerpo: html, pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="const f=UI._acc;UI.cerrar();f()">' + (txtOk || 'Confirmar') + '</button>' });
   },
   /* confirmación con motivo obligatorio (lista o texto libre) */
-  motivo(titulo, html, opciones, accion, txtOk) {
+  motivo(titulo, html, opciones, accion, txtOk, code) {
     UI._accMot = accion;
     const ctrl = opciones ? '<select id="mot-v">' + UI.opts(opciones, '', 'Seleccionar…') + '</select>' : '<input id="mot-v" placeholder="Escriba el motivo">';
-    UI.modal({ titulo, cuerpo: html + '<div class="formgrid" style="margin-top:10px">' + UI.campo('Motivo', ctrl, { req: true, full: true }) + '</div>', pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-danger" onclick="UI._accMot(UI.v(\'mot-v\'))">' + (txtOk || 'Confirmar') + '</button>' });
+    UI.modal({ titulo, code, cuerpo: html + '<div class="formgrid" style="margin-top:10px">' + UI.campo('Motivo', ctrl, { req: true, full: true }) + '</div>', pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-danger" onclick="UI._accMot(UI.v(\'mot-v\'))">' + (txtOk || 'Confirmar') + '</button>' });
   },
   v(id) { const e = document.getElementById(id); return e ? e.value : ''; },
   f(id) { return parseFloat(UI.v(id)) || 0; },
