@@ -171,7 +171,9 @@ for a in mp + srv:
         a['provDef'] = por_nombre.get(n.upper().replace('AVIOS', 'AVÍOS'), '')
 
 # ---------------- estructura organizativa (docx) ----------------
-# ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx manda sobre los grupos de proveedores del Excel.
+# Se lee la versión ACTUALIZADA del Word (COMPARTIDO/herramientas/actualizar_estructura_word.py), corregida con los Excel.
+# LOS EXCEL MANDAN: almacenes, sedes, empresas y grupos de proveedores salen del Excel; del Word solo se toma lo que el Excel no tiene
+# (compartida de la sede, organización y grupos de compras, grupos y tipos de movimiento).
 import docx
 from docx.table import Table
 
@@ -190,7 +192,7 @@ def buscar(tablas, cabecera):
 
 
 estructura = {}
-ARCH_EST = 'ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx'
+ARCH_EST = 'ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx'
 if os.path.exists(os.path.join(PL, ARCH_EST)):
     T = tablas_docx(ARCH_EST)
     sedes_doc = {r[0]: r for r in buscar(T, ['Código', 'Sede', 'Compartida', 'Contenido'])}
@@ -199,13 +201,8 @@ if os.path.exists(os.path.join(PL, ARCH_EST)):
         if r:
             s['compartida'] = r[2] == 'Sí'
     estructura['organizacionesCompra'] = [{'cod': r[0], 'centro': r[1], 'nom': r[2]} for r in buscar(T, ['Org. Compras', 'Centro', 'Descripción'])]
-    grupos_compra = []
-    for tb in T:
-        if tb and tb[0] == ['Código', 'Descripción'] and not grupos_compra:
-            grupos_compra = [{'cod': r[0], 'nom': r[1]} for r in tb[1:]]
-        elif tb and tb[0] == ['Código', 'Descripción'] and grupos_compra:
-            grupos_prov = [{'cod': r[0], 'nom': r[1]} for r in tb[1:]]
-    estructura['gruposCompra'] = grupos_compra
+    grupos_compra = next(tb[1:] for tb in T if tb and tb[0] == ['Código', 'Descripción'])
+    estructura['gruposCompra'] = [{'cod': r[0], 'nom': r[1]} for r in grupos_compra]
     estructura['gruposMovimiento'] = [{'cod': r[0], 'nom': r[1], 'desc': r[2]} for r in buscar(T, ['Código', 'Grupo de Movimiento', 'Propósito'])]
     tipos_mov = []
     for tb in T:
@@ -213,16 +210,11 @@ if os.path.exists(os.path.join(PL, ARCH_EST)):
             for r in tb[1:]:
                 tipos_mov.append({'cod': r[0], 'grupo': r[0].split('-')[0], 'nom': r[1], 'desc': r[2]})
     estructura['tiposMovimiento'] = tipos_mov
-    # grupos de proveedor de la plantilla Excel → los del documento
-    MAPA_GRUPO = {'Telas': 'MP1', 'Avíos': 'MP1', 'Servicios': 'SRV', 'Generales': 'GEN'}
-    for pr in proveedores:
-        if pr['tipo'] == 'Internacional':
-            pr['grupo'] = 'IMP'
-        elif 'LAVANDERIA' in pr['nom'].upper():
-            pr['grupo'] = 'SRV'  # en el Excel figura como Avíos
-        else:
-            pr['grupo'] = MAPA_GRUPO.get(pr['grupo'], pr['grupo'])
-    estructura['gruposProveedor'] = grupos_prov
+
+# grupo del proveedor: el código del grupo del Excel (Telas → TEL, Avíos → AVI…), tal como está en la plantilla
+por_nombre_grupo = {g['nom'].upper(): g['cod'] for g in grupos_prov}
+for pr in proveedores:
+    pr['grupo'] = por_nombre_grupo.get(pr['grupo'].upper(), pr['grupo'])
 
 datos = {
     'fuente': 'docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO',

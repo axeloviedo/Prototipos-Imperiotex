@@ -34,10 +34,9 @@ const BD_COMPLEMENTOS = (() => {
     Acabado: ['PIEZAS CORTADAS', 'CRUDO', 'LAVADO', 'TERMINADO'], Material: ['DENIM CONFORT', 'DENIM RIGIDO', 'DENIM STRECH'], Composición: [], Género: ['DAMA', 'CABALLERO']
   };
 
-  /* Almacén de producto en proceso: la plantilla indica que Zárate guarda PPT pero no trae el almacén */
-  const almacenes = [
-    { emp: 'SB', cod: 'SB-ZARATE-PP', nom: 'Almacén Zárate Producto en Proceso', cat: 'Común', sede: 'Zárate', fisico: 'Físico', contenido: 'Productos en Proceso', estado: 'Activo', kardexValorizado: false, transito: false, obs: 'Piezas cortadas, crudos y lavados en planta (solo cantidades en contabilidad)', origen: C, aConfirmar: true }
-  ];
+  /* Almacén de producto en proceso: creado el 2026-09-16 por decisión del usuario (las plantillas no lo traían);
+     figura en ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx */
+  const almacenes = ['SB', 'CN'].map(emp => ({ emp, cod: emp + '-ZARATE-PP', nom: 'Almacén Zárate Producto en Proceso', cat: 'Común', sede: 'Zárate', fisico: 'Físico', contenido: 'Productos en Proceso', estado: 'Activo', kardexValorizado: false, transito: false, obs: 'Piezas cortadas, crudos y lavados en planta (solo cantidades en contabilidad)', origen: C }));
 
   /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto */
   const ajustesArticulos = {

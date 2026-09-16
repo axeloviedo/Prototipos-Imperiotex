@@ -44,15 +44,12 @@ const BD_LOGISTICA = (() => {
     { art: 'MP-0070', alm: 'SB-ZARATE-MP', cant: 50 }, { art: 'MP-0071', alm: 'SB-ZARATE-MP', cant: 50 },
     { art: 'MP-0102', alm: 'SB-ZARATE-MP', cant: 100 }, { art: 'MP-0103', alm: 'SB-ZARATE-MP', cant: 600 }
   ];
-  /* GI-09 / GI-10 · tipos de movimiento manual (el detalle queda como «Ingreso - …» / «Salida - …») */
-  const tiposIngreso = ['Compra', 'Devoluciones de Clientes', 'Carga inicial de stock', 'Regularización de inventario (sobrante)', 'Reacondicionamiento de productos', 'Donaciones o intercambios', 'Producto fallado', 'Otros'];
-  const tiposSalida = ['Retiros internos', 'Venta al por mayor', 'Venta al por menor', 'Devoluciones a proveedores', 'Muestras gratuitas', 'Donaciones', 'Desperdicio o eliminación', 'Regularización de inventario (faltante)', 'Producto fallado', 'Otros'];
   /* GI-15 · datos de la guía */
   const transportistas = ['TRANSPORTES GAMARRA EXPRESS SAC · RUC 20456789123', 'LOGISTICA ANDINA SAC · RUC 20321654987'];
   const ubigeos = ['LIMA / Lima / 150115 - La Victoria', 'LIMA / Lima / 150132 - San Juan de Lurigancho', 'LIMA / Lima / 150101 - Lima', 'LAMBAYEQUE / Chiclayo / 140101 - Chiclayo'];
 
   return {
-    maestros: { configLogistica, conceptosFinanzas, finanzasGrupo, seriesInternas, seriesGRE, minimos, tiposIngreso, tiposSalida, transportistas, ubigeos },
+    maestros: { configLogistica, conceptosFinanzas, finanzasGrupo, seriesInternas, seriesGRE, minimos, transportistas, ubigeos },
     /* notas internas impresas: id de movimiento → número de nota (NI-000001) */
     colecciones: { notasInternas: {} }
   };

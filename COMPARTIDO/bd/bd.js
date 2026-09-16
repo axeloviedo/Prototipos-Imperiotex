@@ -80,7 +80,7 @@ const BD = {
       seq: {},
       maestros: BD.maestrosIniciales(),
       stock: [], movs: [],
-      sfs: [], sols: [], ocs: [], facturas: [], gres: [], ofs: [],
+      sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [],
       config: { nombreRef: 'N° Referencia' }
     };
     /* colecciones propias de un área (p. ej. clientes y ventas de Comercial) declaradas en su archivo de datos */
@@ -168,6 +168,7 @@ const BD = {
   fac(id) { return BD.d.facturas.find(x => x.id === id); },
   of(id) { return BD.d.ofs.find(x => x.id === id); },
   gre(id) { return BD.d.gres.find(x => x.id === id); },
+  trf(id) { return (BD.d.trfs || []).find(x => x.id === id); },
   mov(id) { return BD.d.movs.find(x => x.id === id); },
   tipoMov(cod) { return (BD.d.maestros.tiposMovimiento || []).find(t => t.cod === cod); }
 };

@@ -2,8 +2,11 @@
    Movimientos separados (Ingresos, Salidas y Transferencias) con numeración compartida ING- / SAL- / TRF-.
    Disponible = Actual − Comprometido. Lo usan los cuatro módulos: nadie modifica BD.d.stock ni BD.d.movs por fuera de aquí.
    No guarda: quien llama debe ejecutar BD.guardar() al terminar la operación (Docs.* ya lo hace).
-   Cada movimiento lleva su TIPO DE MOVIMIENTO de la estructura organizativa (o.tipoMov: ING-COMPRA, SAL-USOPROD, TRF-FABRIC, AJU-FALTANTE…,
-   maestro BD.d.maestros.tiposMovimiento) y su grupo (ING, SAL, TRF, AJU). Los ajustes (AJU) mueven stock como ingreso o salida. */
+   Cada movimiento lleva su TIPO DE MOVIMIENTO de la estructura organizativa (o.tipoMov: ING-COMPRA, SAL-USOPROD, TRF-FABRIC…,
+   maestro BD.d.maestros.tiposMovimiento) y su grupo (ING, SAL, TRF).
+   Decisión cerrada J1: NO existe el tipo Ajuste; regularizar = Ingreso (ING-REGULARIZ) o Salida (SAL-REGULARIZ) con motivo y observación.
+   Decisión cerrada T1: Stock Actual, Comprometido y Pedido (mercadería en camino, informativo). Disponible = Actual − Comprometido.
+   Decisión cerrada T2/T7: la transferencia es en dos pasos (Docs.trf): aprobar compromete en origen y suma Pedido en destino; recibir mueve. */
 const Stock = {
   /* concepto contable por tipo de movimiento (pestaña Finanzas del Grupo de Artículo); se puede pasar o.concepto */
   CONCEPTO: {
@@ -18,11 +21,12 @@ const Stock = {
   buscar(alm, art) { return BD.d.stock.find(x => x.alm === alm && x.art === art); },
   fila(alm, art) {
     let f = Stock.buscar(alm, art);
-    if (!f) { const a = BD.art(art); f = { alm, art, act: 0, comp: 0, costo: a ? (a.costo || 0) : 0 }; BD.d.stock.push(f); }
+    if (!f) { const a = BD.art(art); f = { alm, art, act: 0, comp: 0, ped: 0, costo: a ? (a.costo || 0) : 0 }; BD.d.stock.push(f); }
     return f;
   },
   act(alm, art) { const f = Stock.buscar(alm, art); return f ? f.act : 0; },
   comp(alm, art) { const f = Stock.buscar(alm, art); return f ? f.comp : 0; },
+  ped(alm, art) { const f = Stock.buscar(alm, art); return f ? (f.ped || 0) : 0; },
   disp(alm, art) { const f = Stock.buscar(alm, art); return f ? BD.r4(f.act - f.comp) : 0; },
   costo(alm, art) { const f = Stock.buscar(alm, art); return f ? f.costo : ((BD.art(art) || {}).costo || 0); },
   totalAct(art) { return BD.r4(BD.d.stock.filter(s => s.art === art).reduce((t, s) => t + s.act, 0)); },
@@ -31,6 +35,8 @@ const Stock = {
 
   comprometer(alm, art, cant) { if (!(cant > 0)) return; const f = Stock.fila(alm, art); f.comp = BD.r4(f.comp + cant); },
   liberar(alm, art, cant) { if (!(cant > 0)) return; const f = Stock.fila(alm, art); f.comp = BD.r4(Math.max(0, f.comp - cant)); },
+  /* Pedido (T1): signo +1 suma mercadería en camino al almacén, −1 la descuenta (nunca queda negativo) */
+  pedido(alm, art, cant, signo) { if (!(cant > 0) || !alm) return; const f = Stock.fila(alm, art); f.ped = BD.r4(Math.max(0, (f.ped || 0) + (signo < 0 ? -1 : 1) * cant)); },
   /* compromete (signo +1) o libera (signo −1) varias líneas [{alm, art, cant}]; liberar más de lo comprometido es error */
   comprometerLineas(lineas, signo) {
     const s = signo < 0 ? -1 : 1;
@@ -47,7 +53,7 @@ const Stock = {
     const cod = o.tipoMov || Stock.TIPO_DEF[tipo], t = BD.tipoMov(cod);
     if (o.tipoMov && (BD.d.maestros.tiposMovimiento || []).length && !t) BD.error('Tipo de movimiento no válido: ' + o.tipoMov);
     const grupo = cod.split('-')[0];
-    const esperado = { Ingreso: ['ING', 'AJU'], Salida: ['SAL', 'AJU'], Transferencia: ['TRF'] }[tipo];
+    const esperado = { Ingreso: ['ING'], Salida: ['SAL'], Transferencia: ['TRF'] }[tipo];
     if (!esperado.includes(grupo)) BD.error('El tipo ' + cod + ' no corresponde a un movimiento de ' + tipo.toLowerCase());
     return { cod, grupo, nom: t ? t.nom : '' };
   },
@@ -107,7 +113,8 @@ const Stock = {
     return { ok: true, mov };
   },
   /* Transferencia en un paso: sale del origen y entra al destino al mismo costo.
-     o = {det, origen, destino, ndoc, doc, obs, modulo, lineas:[{art, cant, liberar}]} */
+     Normalmente la llama Docs.trf.recibir (paso 2 de la transferencia).
+     o = {det, tipoMov, origen, destino, ndoc, doc, obs, modulo, lineas:[{art, cant, liberar (comprometido en origen), pedido (Pedido en destino)}]} */
   transferencia(o) {
     const lin = o.lineas.filter(l => Number(l.cant) > 0 && Stock.inventariable(l.art));
     if (!BD.alm(o.origen) || !BD.alm(o.destino)) return { ok: false, error: 'Almacén de origen o destino no válido' };
@@ -122,23 +129,13 @@ const Stock = {
       if (Number(l.liberar) > 0) fo.comp = BD.r4(Math.max(0, fo.comp - Number(l.liberar)));
       mov.lineas.push({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.origen, signo: -1, saldo: fo.act });
       const fd = Stock.fila(o.destino, l.art);
+      if (Number(l.pedido) > 0) fd.ped = BD.r4(Math.max(0, (fd.ped || 0) - Number(l.pedido)));
       fd.costo = fd.act > 0 ? BD.r4((fd.act * fd.costo + cant * c) / (fd.act + cant)) : c;
       fd.act = BD.r4(fd.act + cant);
       mov.lineas.push({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.destino, signo: 1, saldo: fd.act });
       mov.valor = BD.r2(mov.valor + cant * c);
     });
     return { ok: true, mov };
-  },
-  /* Ajuste de inventario (grupo AJU). o = {tipoMov:'AJU-SOBRANTE'|'AJU-FALTANTE'|'AJU-OBSERV', alm, obs (obligatoria), ndoc, modulo, lineas:[{art, cant, costo}]}
-     SOBRANTE y OBSERV ingresan (al costo indicado o al vigente); FALTANTE sale. */
-  ajuste(o) {
-    if (!String(o.obs || '').trim()) return { ok: false, error: 'Indique el motivo del ajuste en la observación' };
-    const det = (BD.tipoMov(o.tipoMov) || {}).nom || 'Ajuste de inventario';
-    if (o.tipoMov === 'AJU-FALTANTE') return Stock.salida(Object.assign({}, o, { det, destino: 'Ajuste por faltante' }));
-    if (o.tipoMov === 'AJU-SOBRANTE' || o.tipoMov === 'AJU-OBSERV')
-      return Stock.ingreso(Object.assign({}, o, { det, origen: o.tipoMov === 'AJU-SOBRANTE' ? 'Ajuste por sobrante' : 'Recepción no conforme',
-        lineas: o.lineas.map(l => Object.assign({}, l, { costo: l.costo != null && l.costo !== '' ? l.costo : Stock.costo(o.alm, l.art) })) }));
-    return { ok: false, error: 'Tipo de ajuste no válido: ' + o.tipoMov };
   },
   /* diferencia de costo al cerrar una orden: se reparte en el costo promedio de lo que hay */
   revalorizar(alm, art, monto) { const f = Stock.fila(alm, art); if (f.act > 0) f.costo = BD.r4(f.costo + monto / f.act); },

@@ -43,37 +43,43 @@ const BD_PLANTILLAS = {
    "cod": "YA",
    "nom": "Galeria \"Ya\"",
    "dir": "Gamarra, YA 1043",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   },
   {
    "cod": "DAM",
    "nom": "Galeria \"Damero\"",
    "dir": "Gamarra, Damero 939",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   },
   {
    "cod": "PAR",
    "nom": "Galeria \"Paraíso\"",
    "dir": "Gamarra, Paraíso 1556",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   },
   {
    "cod": "SANP",
    "nom": "Galería \"San Pedro\"",
    "dir": "Gamarra, San Pedro 1160",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   },
   {
    "cod": "ENC",
    "nom": "Galería \"Encanto\"",
    "dir": "Gamarra, Encanto 460",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   },
   {
    "cod": "JEA",
    "nom": "Galería \"Jeans\"",
    "dir": "Gamarra, Jeans 327",
-   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)"
+   "contenido": "Productos Terminados, Mercadería Liq. (Tiendas)",
+   "compartida": false
   }
  ],
  "almacenes": [
@@ -2807,7 +2813,7 @@ const BD_PLANTILLAS = {
    "doc": "20456123789",
    "nom": "TEXTIL SAN JACINTO SAC",
    "comercial": "TEXTIL SAN JACINTO",
-   "grupo": "MP1",
+   "grupo": "TEL",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "ventas@sanjacinto.com.pe",
@@ -2828,7 +2834,7 @@ const BD_PLANTILLAS = {
    "doc": "20321654987",
    "nom": "AVÍOS DEL SUR EIRL",
    "comercial": "AVÍOS DEL SUR",
-   "grupo": "MP1",
+   "grupo": "AVI",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "ventas@aviosdelsur.pe",
@@ -2849,7 +2855,7 @@ const BD_PLANTILLAS = {
    "doc": "20567891234",
    "nom": "LAVANDERIA INDUSTRIAL DEL SUR SAC",
    "comercial": "LAVANDERIA DEL SUR",
-   "grupo": "SRV",
+   "grupo": "AVI",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "servicios@lavanderiadelsur.com",
@@ -2870,7 +2876,7 @@ const BD_PLANTILLAS = {
    "doc": "BR-33.013.545/0001",
    "nom": "YKK DO BRASIL LTDA",
    "comercial": "YKK",
-   "grupo": "IMP",
+   "grupo": "TEL",
    "tipo": "Internacional",
    "estado": "Activo",
    "email": "export@ykk.com.br",
@@ -2888,24 +2894,24 @@ const BD_PLANTILLAS = {
  ],
  "gruposProveedor": [
   {
-   "cod": "MP1",
-   "nom": "Telas y Avíos"
+   "cod": "TEL",
+   "nom": "Telas",
+   "desc": "Proveedores de telas y géneros textiles"
+  },
+  {
+   "cod": "AVI",
+   "nom": "Avíos",
+   "desc": "Botones, cierres, hilos, etiquetas, empaque"
   },
   {
    "cod": "SRV",
-   "nom": "Servicios de Producción (lavandería, confección, corte, acabados, bordado)"
-  },
-  {
-   "cod": "IMP",
-   "nom": "Importación (cierres exteriores)"
-  },
-  {
-   "cod": "ADU",
-   "nom": "Agentes de Aduana"
+   "nom": "Servicios",
+   "desc": "Servicios tercerizados: lavandería, bordado, corte, confección"
   },
   {
    "cod": "GEN",
-   "nom": "Generales / Varios"
+   "nom": "Generales",
+   "desc": "Suministros generales, útiles de oficina, mantenimiento"
   }
  ],
  "condicionesPago": [
@@ -2991,11 +2997,6 @@ const BD_PLANTILLAS = {
    "cod": "TRF",
    "nom": "Transferencias",
    "desc": "Mueve stock entre almacenes (sale de uno, entra a otro)"
-  },
-  {
-   "cod": "AJU",
-   "nom": "Ajustes",
-   "desc": "Corrige stock por inventario o auditoría"
   }
  ],
  "tiposMovimiento": [
@@ -3042,6 +3043,24 @@ const BD_PLANTILLAS = {
    "desc": "Stock Existente -> Almacén"
   },
   {
+   "cod": "ING-REGULARIZ",
+   "grupo": "ING",
+   "nom": "Ingreso por regularización de inventario (sobrante)",
+   "desc": "Conteo > sistema -> Almacén"
+  },
+  {
+   "cod": "ING-OBSERV",
+   "grupo": "ING",
+   "nom": "Ingreso con observación (recepción no conforme)",
+   "desc": "Proveedor -> Almacén (deja observación trazada)"
+  },
+  {
+   "cod": "ING-FALLADO",
+   "grupo": "ING",
+   "nom": "Ingreso del artículo fallado (producto fallado)",
+   "desc": "Artículo original -> Artículo FALLADO, mismo almacén y costo"
+  },
+  {
    "cod": "SAL-VENTA",
    "grupo": "SAL",
    "nom": "Salida por venta (tienda / online)",
@@ -3066,6 +3085,18 @@ const BD_PLANTILLAS = {
    "desc": "MP -> Proveedor"
   },
   {
+   "cod": "SAL-REGULARIZ",
+   "grupo": "SAL",
+   "nom": "Salida por regularización de inventario (faltante)",
+   "desc": "Almacén -> Conteo < sistema"
+  },
+  {
+   "cod": "SAL-FALLADO",
+   "grupo": "SAL",
+   "nom": "Salida por producto fallado",
+   "desc": "Artículo original -> Artículo FALLADO"
+  },
+  {
    "cod": "TRF-REPTIENDA",
    "grupo": "TRF",
    "nom": "Reposición a tienda",
@@ -3087,31 +3118,13 @@ const BD_PLANTILLAS = {
    "cod": "TRF-FABRIC",
    "grupo": "TRF",
    "nom": "Tránsito de fabricación",
-   "desc": "PPT -> Transición -> Proveedor y retorno"
+   "desc": "Almacén propio -> Almacén en Transición (proveedor del servicio); el retorno es el recibo de producción de la OF"
   },
   {
    "cod": "TRF-INTERNO",
    "grupo": "TRF",
    "nom": "Traslado interno entre almacenes / sedes",
    "desc": "Almacén A -> Almacén B"
-  },
-  {
-   "cod": "AJU-SOBRANTE",
-   "grupo": "AJU",
-   "nom": "Ajuste por sobrante de inventario",
-   "desc": "Suma la diferencia (conteo > sistema)"
-  },
-  {
-   "cod": "AJU-FALTANTE",
-   "grupo": "AJU",
-   "nom": "Ajuste por faltante de inventario",
-   "desc": "Resta la diferencia (conteo < sistema)"
-  },
-  {
-   "cod": "AJU-OBSERV",
-   "grupo": "AJU",
-   "nom": "Ingreso con observación (recepción no conforme)",
-   "desc": "Ingresa y deja observación trazada"
   }
  ]
 };

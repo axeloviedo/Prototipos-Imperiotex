@@ -4,6 +4,7 @@
    - Docs.sol  Solicitud de Materiales (SOL-000001): cualquier área pide qué y a dónde; Logística define por línea Transferencia o Compra.
    - Docs.oc   Orden de Compra (OC-000001): de bienes (se recibe con Ingreso) o de servicio (se da conformidad, sin stock).
    - Docs.fac  Factura de proveedor (FC-000001).
+   - Docs.trf  Solicitud de Transferencia (ST-000001) en dos pasos (decisiones T2/T7): aprobar compromete origen y suma Pedido en destino; recibir mueve.
    - Docs.gre  Guía de Remisión Electrónica (T001-000001) de traslados (p. ej. envío a un servicio de terceros).
    Las órdenes de fabricación (BD.d.ofs) las maneja Producción; aquí solo se enlazan. */
 const Docs = (() => {
@@ -100,7 +101,7 @@ const Docs = (() => {
 
   /* ================= Solicitud de Materiales ================= */
   /* estados: Borrador → Pendiente → Aprobada (Logística definió el propósito de cada línea) → En proceso → Atendida | Rechazada | Anulada
-     estado de línea: Pendiente → Transferido | En compra → Recibido */
+     estado de línea: Pendiente → En transferencia → Transferido | En compra → Recibido */
   const sol = {
     ESTADOS: ['Borrador', 'Pendiente', 'Aprobada', 'En proceso', 'Atendida', 'Rechazada', 'Anulada'],
     PROPOSITOS: ['Transferencia', 'Compra'],
@@ -165,17 +166,27 @@ const Docs = (() => {
       s.estado = 'Anulada'; BD.hist(s, 'Anulada', motivo || '', 'no');
       g(); return s;
     },
-    /* Logística ejecuta la transferencia de las líneas con ese origen (GI-11) */
+    /* Logística crea la Solicitud de Transferencia (GI-11) de las líneas con ese origen; queda APROBADA (compromete origen, Pedido en destino).
+       La línea pasa a «Transferido» cuando se confirma la recepción en GI-11 (Docs.trf.recibir). */
     transferir(id, origen) {
       const s = BD.sol(id); exigir(s && (s.estado === 'Aprobada' || s.estado === 'En proceso'), 'La solicitud no está aprobada');
       const ls = s.lineas.filter(l => l.prop === 'Transferencia' && l.origen === origen && l.estado === 'Pendiente');
       exigir(ls.length, 'No hay líneas pendientes para transferir desde ' + origen);
-      const r = Stock.transferencia({ det: 'Transferencia - Atención de ' + s.id, tipoMov: (BD.alm(s.destino) || {}).transito ? 'TRF-FABRIC' : 'TRF-INTERNO', origen, destino: s.destino, ndoc: s.of || s.id, doc: s.id, modulo: 'Inventarios', obs: 'Atiende ' + s.id, lineas: ls.map(l => ({ art: l.art, cant: l.cant })) });
-      exigir(r.ok, r.error);
-      ls.forEach(l => { l.estado = 'Transferido'; l.doc = r.mov.id; });
-      BD.hist(s, 'Transferencia ' + r.mov.id, origen + ' → ' + s.destino);
+      const t = trf.crear({ origen, destino: s.destino, tipoMov: (BD.alm(s.destino) || {}).transito ? 'TRF-FABRIC' : 'TRF-INTERNO', sol: s.id, of: s.of, obs: 'Atiende ' + s.id, lineas: ls.map(l => ({ art: l.art, cant: l.cant })) });
+      trf.aprobar(t.id);
+      ls.forEach(l => { l.estado = 'En transferencia'; l.doc = t.id; });
+      BD.hist(s, 'Solicitud de transferencia ' + t.id, origen + ' → ' + s.destino);
       sol._actualizar(s);
-      g(); return r.mov;
+      g(); return t;
+    },
+    /* la llama Docs.trf al confirmar la recepción */
+    _transferido(solId, art, cant, trfId) {
+      const s = BD.sol(solId); if (!s) return;
+      const l = s.lineas.find(x => x.art === art && x.doc === trfId && x.estado === 'En transferencia');
+      if (!l) return;
+      l.recibido = BD.r4((l.recibido || 0) + cant);
+      if (l.recibido + 0.00005 >= l.cant) l.estado = 'Transferido';
+      sol._actualizar(s);
     },
     /* Logística crea la OC de las líneas de Compra pendientes. d = {prov, precios:{art: pu}, cond, mon, tc, obs} */
     crearOC(id, d) {
@@ -264,6 +275,8 @@ const Docs = (() => {
       if (!(o.valLog && o.valGer)) return;
       o.est = 'Para Recibir y Pagar';
       BD.hist(o, 'Aprobada', 'Lista para recibir y facturar');
+      /* T1/M13: la mercadería de una OC de bienes aprobada suma Pedido en su almacén destino */
+      if (o.almDestino) o.items.filter(i => !BD.esServicio(i.art)).forEach(i => Stock.pedido(o.almDestino, i.art, i.cant, 1));
       /* servicio de una orden de fabricación: la OC queda en su pestaña Costo para el contraste con el estándar */
       if (o.of) o.items.filter(i => BD.esServicio(i.art)).forEach(i => oc._aOF(o.of, { tipo: 'OC', doc: o.id, rec: i.art, prov: o.prov, cant: i.cant, importe: BD.r2(i.cant * i.pu * (o.mon === 'USD' ? o.tc : 1)) }));
     },
@@ -274,6 +287,7 @@ const Docs = (() => {
     },
     cancelar(id, motivo) {
       const o = BD.oc(id); exigir(o && ['Borrador', 'Pendiente de Validar', 'Para Recibir y Pagar'].includes(o.est) && !o.recepciones.length && !o.facturas.length, 'Solo se cancela una OC sin recepciones ni facturas');
+      if (o.est === 'Para Recibir y Pagar' && o.almDestino) o.items.filter(i => !BD.esServicio(i.art)).forEach(i => Stock.pedido(o.almDestino, i.art, BD.r4(i.cant - i.recq), -1));
       o.est = 'Cancelada'; BD.hist(o, 'Cancelada', motivo || '', 'no');
       if (o.sol) { const s = BD.sol(o.sol); if (s) { s.lineas.forEach(l => { if (l.doc === o.id && l.estado === 'En compra') { l.estado = 'Pendiente'; l.doc = ''; } }); sol._actualizar(s); } }
       g(); return o;
@@ -304,7 +318,12 @@ const Docs = (() => {
       const r = Stock.ingreso({ det: intl ? 'Ingreso - Importación' : 'Ingreso - Compra', tipoMov: intl ? 'ING-IMPORT' : 'ING-COMPRA', alm, origen: BD.provNom(o.prov), ndoc: o.id, doc: o.id, modulo: 'Inventarios', obs: d.obs || '',
         lineas: lineas.map(l => ({ art: l.art, cant: l.cant, costo: BD.r4(o.items.find(i => i.art === l.art).pu * factor) })) });
       exigir(r.ok, r.error);
-      lineas.forEach(l => { const it = o.items.find(i => i.art === l.art); it.recq = BD.r4(it.recq + Number(l.cant)); if (o.sol) sol._recibido(o.sol, l.art, Number(l.cant), o.id); });
+      lineas.forEach(l => {
+        const it = o.items.find(i => i.art === l.art);
+        if (o.almDestino) Stock.pedido(o.almDestino, l.art, Math.min(Number(l.cant), BD.r4(it.cant - it.recq)), -1);
+        it.recq = BD.r4(it.recq + Number(l.cant));
+        if (o.sol) sol._recibido(o.sol, l.art, Number(l.cant), o.id);
+      });
       o.recepciones.push({ tipo: 'Ingreso', fecha: BD.ahora(), mov: r.mov.id, alm, lineas: lineas.map(l => ({ art: l.art, cant: BD.r4(l.cant) })) });
       BD.hist(o, 'Ingreso ' + r.mov.id, alm);
       oc._estado(o);
@@ -362,6 +381,78 @@ const Docs = (() => {
     total(f) { return BD.r2(f.items.reduce((t, i) => t + i.cant * i.pu * (1 + (i.igv || 0) / 100), 0)); }
   };
 
+  /* ================= Solicitud de Transferencia (GI-11, dos pasos · decisiones T2/T7) ================= */
+  /* estados: Borrador → Aprobada (compromete en origen, suma Pedido en destino) → Parcial → Recibida · Cancelada (libera lo pendiente) */
+  const trf = {
+    ESTADOS: ['Borrador', 'Aprobada', 'Parcial', 'Recibida', 'Cancelada'],
+    TIPOS: ['TRF-INTERNO', 'TRF-REPTIENDA', 'TRF-ENTRETIENDA', 'TRF-LIQUID', 'TRF-FABRIC'],
+    /* d = {origen, destino, tipoMov, obs, sol, of, lineas:[{art, cant}]} */
+    crear(d) {
+      exigir(BD.alm(d.origen) && BD.alm(d.destino), 'Elija el almacén de origen y el de destino');
+      exigir(d.origen !== d.destino, 'El origen y el destino no pueden ser el mismo almacén');
+      const tipoMov = d.tipoMov || 'TRF-INTERNO';
+      exigir(trf.TIPOS.includes(tipoMov), 'Tipo de transferencia no válido: ' + tipoMov);
+      const lineas = (d.lineas || []).filter(l => l.art).map(l => ({ art: l.art, cant: BD.r4(num(l.cant)), recibido: 0 }));
+      exigir(lineas.length, 'Agregue al menos un artículo');
+      lineas.forEach(l => { exigir(Stock.inventariable(l.art), BD.nomArt(l.art) + ' no maneja stock'); exigir(l.cant > 0, 'Cantidad no válida en ' + BD.nomArt(l.art)); });
+      const t = { id: BD.sig('st', 'ST-', 6), fecha: d.fecha || BD.ahora(), origen: d.origen, destino: d.destino, tipoMov, estado: 'Borrador', obs: d.obs || '', sol: d.sol || '', of: d.of || '', movs: [], lineas, hist: [] };
+      (BD.d.trfs = BD.d.trfs || []).unshift(t);
+      BD.hist(t, 'Creada', d.origen + ' → ' + d.destino);
+      g(); return t;
+    },
+    /* paso 1: aprobar compromete el stock del origen (debe estar disponible) y suma Pedido en el destino */
+    aprobar(id) {
+      const t = BD.trf(id); exigir(t && t.estado === 'Borrador', 'Solo se aprueba una solicitud de transferencia en Borrador');
+      const falt = Stock.faltantes(t.origen, t.lineas, true);
+      if (falt.length) BD.error('No se puede aprobar. ' + Stock.textoFaltantes(t.origen, falt));
+      t.lineas.forEach(l => { Stock.comprometer(t.origen, l.art, l.cant); Stock.pedido(t.destino, l.art, l.cant, 1); });
+      t.estado = 'Aprobada';
+      BD.hist(t, 'Aprobada', 'Comprometido en ' + t.origen + ' y Pedido en ' + t.destino);
+      g(); return t;
+    },
+    pendiente(l) { return BD.r4(l.cant - (l.recibido || 0)); },
+    /* paso 2: confirmar la recepción (parcial o total). lineas: [{art, cant}]; sin lineas recibe todo lo pendiente */
+    recibir(id, lineas, obs) {
+      const t = BD.trf(id); exigir(t && (t.estado === 'Aprobada' || t.estado === 'Parcial'), 'La solicitud de transferencia no está aprobada');
+      const rec = (lineas || t.lineas.map(l => ({ art: l.art, cant: trf.pendiente(l) }))).filter(x => Number(x.cant) > 0);
+      exigir(rec.length, 'Nada pendiente de recibir');
+      rec.forEach(x => {
+        const l = t.lineas.find(y => y.art === x.art);
+        exigir(l, BD.nomArt(x.art) + ' no está en ' + id);
+        exigir(Number(x.cant) <= trf.pendiente(l) + 0.00005, 'No se recibe más de lo pendiente: ' + BD.nomArt(x.art));
+      });
+      const r = Stock.transferencia({ det: 'Transferencia ' + t.id, tipoMov: t.tipoMov, origen: t.origen, destino: t.destino, ndoc: t.of || t.sol || t.id, doc: t.id, obs: obs || t.obs, modulo: 'Inventarios',
+        lineas: rec.map(x => ({ art: x.art, cant: Number(x.cant), liberar: Number(x.cant), pedido: Number(x.cant) })) });
+      exigir(r.ok, r.error);
+      rec.forEach(x => {
+        const l = t.lineas.find(y => y.art === x.art);
+        l.recibido = BD.r4((l.recibido || 0) + Number(x.cant));
+        if (t.sol) sol._transferido(t.sol, x.art, Number(x.cant), t.id);
+      });
+      t.movs.push(r.mov.id);
+      t.estado = t.lineas.every(l => trf.pendiente(l) <= 0.00005) ? 'Recibida' : 'Parcial';
+      BD.hist(t, 'Recepción confirmada ' + r.mov.id, t.estado);
+      g(); return r.mov;
+    },
+    /* cancelar lo pendiente: libera el comprometido en origen y el Pedido en destino */
+    cancelar(id, motivo) {
+      const t = BD.trf(id); exigir(t && ['Borrador', 'Aprobada', 'Parcial'].includes(t.estado), 'No hay nada pendiente que cancelar');
+      if (t.estado !== 'Borrador') t.lineas.forEach(l => { const p = trf.pendiente(l); Stock.liberar(t.origen, l.art, p); Stock.pedido(t.destino, l.art, p, -1); });
+      t.estado = t.lineas.some(l => (l.recibido || 0) > 0) ? 'Recibida' : 'Cancelada';
+      BD.hist(t, 'Pendientes cancelados', motivo || '', 'no');
+      if (t.sol) {
+        const s = BD.sol(t.sol);
+        if (s) {
+          s.lineas.forEach(l => { if (l.doc === t.id && l.estado === 'En transferencia') { if ((l.recibido || 0) > 0) l.estado = 'Transferido'; else { l.estado = 'Pendiente'; l.doc = ''; } } });
+          sol._actualizar(s);
+        }
+      }
+      g(); return t;
+    },
+    /* crear, aprobar y recibir en seguida (p. ej. envío al proveedor del servicio: el almacén de tránsito es virtual) */
+    directa(d) { const t = trf.crear(d); trf.aprobar(t.id); const mov = trf.recibir(t.id); return { trf: BD.trf(t.id), mov }; }
+  };
+
   /* ================= Guía de remisión ================= */
   const gre = {
     MOTIVOS: ['Traslado entre establecimientos de la misma empresa', 'Traslado de bienes para transformación', 'Venta', 'Compra', 'Devolución', 'Otros'],
@@ -377,5 +468,5 @@ const Docs = (() => {
     }
   };
 
-  return { sf, sol, oc, fac, gre };
+  return { sf, sol, oc, fac, trf, gre };
 })();

@@ -1,7 +1,7 @@
 # 16 · Base de datos compartida del prototipo
 
 > Rama `feat/datos-compartidos` · 2026-09-16. Contrato para Inventarios, Compras, Producción y Comercial.
-> Fuentes de datos: plantillas Excel y `ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx` (almacenes, sedes, organización y grupos de compras, grupos de proveedores, grupos y tipos de movimiento), ambos en `docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO`.
+> Fuentes de datos (decisión K3): **mandan las plantillas Excel**. Del Word solo se usa la copia `ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx` (corregida con los Excel y las decisiones cerradas) para organización y grupos de compras y grupos y tipos de movimiento. Decisiones de esta base: K1–K10 en `00_DECISIONES_CERRADAS.md`.
 > Objetivo: probar el flujo **Producción masiva con stock suficiente** (incluida la compra del servicio tercerizado) pasando por los cuatro módulos con **los mismos datos**.
 
 ## 1. Idea general
@@ -36,7 +36,7 @@ Cada módulo, al arrancar: `BD.iniciar('USER05 · Producción')` (fija el usuari
 
 ```
 { version, escenario: 'maestros'|'operacion', creado, seq: {serie: siguiente},
-  maestros: {...}, stock: [], movs: [], sfs: [], sols: [], ocs: [], facturas: [], gres: [], ofs: [], config: {nombreRef},
+  maestros: {...}, stock: [], movs: [], sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], config: {nombreRef},
   ...colecciones propias de un área (declaradas en BD_LOGISTICA / BD_COMERCIAL) }
 ```
 
@@ -50,7 +50,7 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 |---|---|---|
 | `empresas` | `{cod:'SB01', nom:'IMPERIOTEX', marca, abrev:'SB'}` | plantilla almacenes |
 | `sedes` | `{cod:'G', nom:'Gamarra', dir, contenido}` | plantilla almacenes |
-| `almacenes` | `{emp:'SB', cod:'SB-CENTRAL', nom, cat:'Común'\|'Transición'\|'Tienda'\|'Tienda Liquidación', sede, fisico, contenido, estado, kardexValorizado, transito, obs, origen}` | plantilla + `SB-ZARATE-PP` (complemento) |
+| `almacenes` | `{emp:'SB', cod:'SB-CENTRAL', nom, cat:'Común'\|'Transición'\|'Tienda'\|'Tienda Liquidación', sede, fisico, contenido, estado, kardexValorizado, transito, obs, origen}` | plantilla + `SB-ZARATE-PP` / `CN-ZARATE-PP` (almacén de producto en proceso, K5) |
 | `unidades` | `{cod:'UND', nom}` | plantilla + HORA, DÍA |
 | `conversiones` | `{de:'DOC', a:'UND', factor:12}` | complemento |
 | `grupos` | `{cod:'MP'\|'SRV'\|'PPT'\|'PT'\|'MERC', nom, prefijo, asignacion, inv}` | complemento |
@@ -64,12 +64,12 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `recursos` | `{cod, nom, tipo, activo, u, costo (estándar), cuenta (mayor), prov?}` — un servicio de terceros usa **el mismo código del artículo SRV** | complemento |
 | `operarios` | `{cod:'OPE-001', nom, rec, activo}` | complemento |
 | `proveedores` | `{cod:'PROV-0001', tipoDoc, doc, nom, comercial, grupo, tipo, estado, email, dir, ubigeo, tel, cel, mon, cond, dias, retencion, detraccion, servicio?, alm?, diasEst?, origen, aConfirmar?}` | 4 de plantilla + 17 de servicios (complemento) |
-| `gruposProveedor` | `{cod:'MP1'\|'SRV'\|'IMP'\|'ADU'\|'GEN', nom}` — el `grupo` del proveedor es este código | **estructura organizativa (docx)** |
+| `gruposProveedor` | `{cod:'TEL'\|'AVI'\|'SRV'\|'GEN', nom, desc}` — el `grupo` del proveedor es este código | plantilla proveedores (Excel) |
 | `condicionesPago` | `{nom:'Crédito 30 días', dias}` | plantilla proveedores |
 | `organizacionesCompra` | `{cod:'SB'\|'CN', centro, nom}` | estructura organizativa |
 | `gruposCompra` | `{cod:'MP1'\|'SRV'\|'IMP'\|'EE1'\|'MSC'\|'SG1', nom}` — cada artículo de compra lleva `grupoCompra` | estructura organizativa |
-| `gruposMovimiento` | `{cod:'ING'\|'SAL'\|'TRF'\|'AJU', nom, desc}` | estructura organizativa |
-| `tiposMovimiento` | `{cod:'ING-COMPRA', grupo:'ING', nom, desc}` — 19 tipos | estructura organizativa |
+| `gruposMovimiento` | `{cod:'ING'\|'SAL'\|'TRF', nom, desc}` — sin Ajustes (J1) | Word actualizado |
+| `tiposMovimiento` | `{cod:'ING-COMPRA', grupo:'ING', nom, desc}` — 21 tipos (K6) | Word actualizado |
 
 Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de servicios, costos estándar, precios de referencia).
 
@@ -95,10 +95,10 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 
 ### 3.3 Stock y movimientos
 
-- `stock`: `{alm, art, act, comp, costo}` — Disponible = `act − comp`. Costo promedio ponderado por almacén.
+- `stock`: `{alm, art, act, comp, ped, costo}` — Actual, Comprometido y Pedido (T1). Disponible = `act − comp` (el Pedido es informativo). Costo promedio ponderado por almacén. `Stock.pedido(alm, art, cant, signo)`, `Stock.ped(alm, art)`.
 - `movs`: `{id:'ING-000001'|'SAL-…'|'TRF-…', tipo:'Ingreso'|'Salida'|'Transferencia', det, concepto, fecha, usuario, modulo, est, alm, destino?, od, ndoc, doc, obs, valor, lineas:[{art, cant, costo, valor, alm, signo:+1|-1, saldo}]}`.
-- Cada movimiento lleva `tipoMov` (código de `tiposMovimiento`), `grupoMov` y `tipoMovNom`. Se pasa en `o.tipoMov`; si falta se usa ING-INICIAL / SAL-USOPROD / TRF-INTERNO. Los **ajustes** (grupo AJU: AJU-SOBRANTE, AJU-FALTANTE, AJU-OBSERV) se registran con `Stock.ajuste({tipoMov, alm, obs, lineas})` y mueven stock como ingreso o salida.
-- Tipos que usa cada paso: compra recibida **ING-COMPRA** (proveedor extranjero **ING-IMPORT**) · emisión a producción **SAL-USOPROD** · recibo de producción **ING-PROD** · envío y retorno del servicio tercerizado **TRF-FABRIC** · salida de material a maquila **SAL-MAQUILA** · atención de solicitud / traslado entre sedes **TRF-INTERNO** · reposición a tienda **TRF-REPTIENDA** · entre tiendas **TRF-ENTRETIENDA** · a liquidación **TRF-LIQUID** · venta **SAL-VENTA** · devolución de cliente **ING-DEVCLI** · devolución a proveedor **SAL-DEVPROV** · reposición del proveedor **ING-CAMBIO** · cancelación de servicio **ING-CANCEL** · carga inicial **ING-INICIAL**.
+- Cada movimiento lleva `tipoMov` (código de `tiposMovimiento`), `grupoMov` y `tipoMovNom`. Se pasa en `o.tipoMov`; si falta se usa ING-INICIAL / SAL-USOPROD / TRF-INTERNO. **No existe el grupo Ajuste (J1)**: regularizar es ING-REGULARIZ o SAL-REGULARIZ con motivo y observación; producto fallado es SAL-FALLADO + ING-FALLADO (J2).
+- Tipos por paso: compra recibida **ING-COMPRA** (extranjero **ING-IMPORT**) · recepción no conforme **ING-OBSERV** · emisión a producción **SAL-USOPROD** · consumo de material en poder del proveedor **SAL-MAQUILA** · recibo de producción **ING-PROD** · envío al servicio tercerizado **TRF-FABRIC** · abastecimiento o traslado entre sedes **TRF-INTERNO** · reposición a tienda **TRF-REPTIENDA** · entre tiendas **TRF-ENTRETIENDA** · a liquidación **TRF-LIQUID** · venta **SAL-VENTA** · devolución de cliente **ING-DEVCLI** · devolución a proveedor **SAL-DEVPROV** · reposición del proveedor **ING-CAMBIO** · cancelación de servicio **ING-CANCEL** · carga inicial **ING-INICIAL**.
 - **Solo `Stock` modifica** `stock` y `movs`: `Stock.ingreso`, `Stock.salida`, `Stock.transferencia` devuelven `{ok, mov}` o `{ok:false, error}`. `Stock.comprometer/liberar/comprometerLineas`, `Stock.kardex(art, alm)`, `Stock.saldoA(art, alm, fecha)`, `Stock.disp/act/comp/costo/totalDisp`. `Stock` **no guarda**: el que llama ejecuta `BD.guardar()`.
 
 ### 3.4 Documentos (`Docs`, siempre guardan)
@@ -107,9 +107,9 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 Estados: Borrador → Pendiente Aprobar → Aprobada (V°B° Logística + Gerencia; compromete la materia prima bruta) → Convertida en Orden (Producción crea las órdenes) → Fabricada · Rechazada.
 `Docs.sf.crear/guardar/enviar/darVB/aprobar/rechazar/devolver/convertir(id, ofs, ref)/fabricada(id)`.
 
-**Solicitud de Materiales** `sols`: `{id:'SOL-000001', fecha, area, solicita, destino, fechaReq, obs, of, ref, sf, estado, lineas:[{art, cant, prop:''|'Transferencia'|'Compra', origen, doc, estado:'Pendiente'|'Transferido'|'En compra'|'Recibido', recibido}], nota, hist}`
+**Solicitud de Materiales** `sols`: `{id:'SOL-000001', fecha, area, solicita, destino, fechaReq, obs, of, ref, sf, estado, lineas:[{art, cant, prop:''|'Transferencia'|'Compra', origen, doc, estado:'Pendiente'|'En transferencia'|'Transferido'|'En compra'|'Recibido', recibido}], nota, hist}`
 Estados: Borrador → Pendiente → Aprobada (Logística define el propósito por línea) → En proceso → Atendida · Rechazada · Anulada.
-`Docs.sol.crear(d, enviar)/guardar/enviar/aprobar(id, [{prop, origen}])/rechazar/anular/transferir(id, origen)/crearOC(id, {prov, precios})`.
+`Docs.sol.crear(d, enviar)/guardar/enviar/aprobar(id, [{prop, origen}])/rechazar/anular/transferir(id, origen)` (crea una Solicitud de Transferencia aprobada) `/crearOC(id, {prov, precios})`.
 Una línea puede ser un **servicio** (SRV-xxxx): solo se compra.
 
 **Orden de Compra** `ocs`: `{id:'OC-000001', est, tipo:'Bienes'|'Servicio', fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer, items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}`
@@ -118,6 +118,9 @@ Estados: Borrador → Pendiente de Validar → Para Recibir y Pagar (V°B° + ap
 Si la OC tiene `of` y es de servicio: al aprobarse se agrega `{tipo:'OC'}` a `of.compras`; al facturarse `{tipo:'Factura'}` (pestaña Costo de la orden, contraste con el estándar).
 
 **Factura** `facturas`: `{id:'FC-000001', oc, prov, ndoc, fecha, cond, mon, tc, est:'Impagado'|'Pagado', items:[{art, cant, pu, igv}], obs, hist}` · `Docs.fac.crear({oc, ndoc, lineas?})/pagar(id)`.
+
+**Solicitud de Transferencia** `trfs` (T2/T7, K7): `{id:'ST-000001', fecha, origen, destino, tipoMov, estado:'Borrador'|'Aprobada'|'Parcial'|'Recibida'|'Cancelada', obs, sol, of, movs:[], lineas:[{art, cant, recibido}], hist}`
+Paso 1 `Docs.trf.aprobar(id)`: exige disponible en origen, **compromete en origen y suma Pedido en destino**. Paso 2 `Docs.trf.recibir(id, lineas?)`: confirma la recepción (parcial o total) con un movimiento TRF que libera comprometido y Pedido. `Docs.trf.cancelar(id)` libera lo pendiente. `Docs.trf.directa(d)` crea, aprueba y recibe en seguida (solo envío al almacén de tránsito virtual y traslados automáticos). `Docs.sol.transferir` crea una ST aprobada: la línea queda «En transferencia» y pasa a «Transferido» al recibirse. `Docs.oc` suma Pedido al aprobar una OC de bienes y lo descuenta al recibir.
 
 **Guía de remisión** `gres`: `{id:'T001-000001', fecha, motivo, origen, destino, prov, transportista, mov, of, estado, lineas, hist}` · `Docs.gre.crear(d)`.
 
@@ -129,7 +132,7 @@ Correlativos compartidos (`BD.sig`): `sf, sol, oc, fac, gre, ing, sal, trf, of, 
 
 | # | Paso | Módulo · pantalla | Documento / servicio |
 |---|---|---|---|
-| 0 | (Solo maestros) Comprar la materia prima: OC de bienes → aprobar → recibir en SB-CENTRAL-MP → transferir a SB-ZARATE-MP → factura | Compras CO-07 · Inventarios GI-09 / GI-11 · Compras CO-10 | `Docs.oc.*`, `Stock.transferencia`, `Docs.fac.crear` |
+| 0 | (Solo maestros) Comprar la materia prima: OC de bienes → aprobar (Pedido) → recibir en SB-CENTRAL-MP → Solicitud de Transferencia a SB-ZARATE-MP (aprobar y confirmar recepción) → factura | Compras CO-07 · Inventarios GI-09 / GI-11 · Compras CO-10 | `Docs.oc.*`, `Docs.trf.*`, `Docs.fac.crear` |
 | 1 | Crear la Solicitud de Fabricación (PT-0001..0004 × cantidades) y enviarla | Comercial CL-30 o Inventarios GI-22 | `Docs.sf.crear/enviar` |
 | 2 | V°B° Logística y aprobación Gerencia → compromete materia prima | Inventarios GI-23 | `Docs.sf.darVB/aprobar` |
 | 3 | Crear las órdenes por fase (piezas → crudo → lavado → final), Liberadas, un N° Referencia | Producción PR-03 | `Prod.generarDesdeSF` + `Docs.sf.convertir` |
@@ -137,11 +140,11 @@ Correlativos compartidos (`BD.sig`): `sf, sol, oc, fac, gre, ing, sal, trf, of, 
 | 5 | Lavado: Producción pide el servicio → Solicitud de Materiales con la línea SRV-0001 × cantidad, destino SB-TRANSITO | Producción PR-02 / PR-05 | `Docs.sol.crear(…, true)` |
 | 6 | Logística aprueba la línea como Compra y crea la OC de servicio (Lavandería Landeo, PROV-0005) | Inventarios GI-13 | `Docs.sol.aprobar`, `Docs.sol.crearOC` |
 | 7 | Compras envía, valida y aprueba la OC de servicio → aparece en la pestaña Costo de la orden | Compras CO-07 | `Docs.oc.enviar/validar/aprobar` |
-| 8 | Envío al proveedor: transferencia SB-ZARATE-PP → SB-TRANSITO con GRE «Traslado de bienes para transformación» | Producción PR-02 (se ve en Inventarios GI-07 / GI-14) | `Stock.transferencia`, `Docs.gre.crear` |
+| 8 | Envío al proveedor: transferencia TRF-FABRIC SB-ZARATE-PP → SB-TRANSITO (en el mismo momento, tránsito virtual) con GRE «Traslado de bienes para transformación» | Producción PR-02 (se ve en Inventarios GI-07 / GI-11 / GI-14) | `Docs.trf.directa`, `Docs.gre.crear` |
 | 9 | Retorno: emisión del crudo en tránsito y recibo del lavado (consume el servicio) → SB-ZARATE-PP | Producción PR-02 | `Stock.salida/ingreso` |
 | 10 | Conformidad del servicio y factura del proveedor → contraste en Costo de la orden | Compras CO-07 / CO-10 | `Docs.oc.conformidad`, `Docs.fac.crear` |
 | 11 | Producto final: emisión del lavado y recibo (acabados) → SB-CENTRAL; cerrar órdenes; la SF queda Fabricada | Producción PR-02 / PR-09 | `Prod.cerrar`, `Docs.sf.fabricada` |
-| 12 | Ver existencias, kardex, movimientos y guías con todo lo anterior; transferir PT a tienda y vender | Inventarios GI-05/06/07/14 · GI-11 · Comercial | `Stock.*` |
+| 12 | Ver existencias, kardex, movimientos y guías con todo lo anterior; reponer PT a tienda en dos pasos (TRF-REPTIENDA) y vender | Inventarios GI-05/06/07/14 · GI-11 · Comercial | `Docs.trf.*`, `Stock.*` |
 
 ## 5. Alcance por módulo
 
