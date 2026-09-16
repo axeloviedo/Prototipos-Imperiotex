@@ -587,12 +587,23 @@ const Dev = {
     if (!v.salida) throw new Error('La venta ' + v.id + ' no tiene salida de stock: solo se devuelve lo que ya salió');
     Dev._armar(v, { lineas: d.lineas.map(l => ({ n: l.n, cant: l.cant, tipo: l.tipo })), sustTipo: d.sustTipo, sustNum: d.sustNum, dcto: d.dcto }, d.id);
     const netoAntes = Ventas.neto(v), pagado = Ventas.pagado(v), pendiente = Ventas.porDevolver(v);
-    /* todo vuelve con un Ingreso ING-DEVCLI al almacén de la venta; lo que llega en mal estado sigue con un traslado TRF-LIQUID al almacén de liquidación */
+    /* todo vuelve con un Ingreso ING-DEVCLI al almacén de la venta; lo que llega en mal estado sigue con un traslado TRF-LIQUID al almacén de liquidación.
+       DECISIÓN: ese traslado es una Solicitud de Transferencia DIRECTA (Docs.trf.directa: crea, aprueba y recibe en el acto), la única excepción
+       a la transferencia en dos pasos (T2/T7): es automático al finalizar la devolución y no hay nadie que confirme la recepción en ese momento. */
     const almMal = Store.cfg().almMalEstado, porAlm = {}, malPorAlm = {};
     const linStock = l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) });
     d.lineas.forEach(l => {
       (porAlm[l.alm] = porAlm[l.alm] || []).push(l);
       if (l.tipo === 'Mal estado' && almMal && almMal !== l.alm) (malPorAlm[l.alm] = malPorAlm[l.alm] || []).push(l);
+    });
+    /* antes de mover nada: lo que se traslada a liquidación debe quedar disponible en la tienda tras el ingreso */
+    Object.keys(malPorAlm).forEach(alm => {
+      const req = {};
+      malPorAlm[alm].forEach(l => { req[l.art] = UI.r4((req[l.art] || 0) + l.cant * l.factor); });
+      Object.keys(req).forEach(art => {
+        const entra = porAlm[alm].filter(l => l.art === art).reduce((t, l) => t + l.cant * l.factor, 0);
+        if (Stock.disp(alm, art) + entra + 0.00005 < req[art]) throw new Error('No se puede trasladar a liquidación ' + BD.nomArt(art) + ': en ' + alm + ' lo disponible está comprometido');
+      });
     });
     Object.keys(porAlm).forEach(alm => {
       const r = Stock.ingreso({ tipoMov: 'ING-DEVCLI', det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + d.cliente.nom, ndoc: d.id, doc: 'Devolución', modulo: 'Comercial', obs: d.sustTipo + ' ' + d.sustNum + ' · venta ' + v.id, lineas: porAlm[alm].map(linStock) });
@@ -600,8 +611,8 @@ const Dev = {
       d.movs.push(r.mov.id);
     });
     Object.keys(malPorAlm).forEach(alm => {
-      const r = Stock.transferencia({ tipoMov: 'TRF-LIQUID', det: 'Transferencia - Devolución en mal estado a liquidación', origen: alm, destino: almMal, ndoc: d.id, doc: 'Devolución', modulo: 'Comercial', obs: 'Devolución en mal estado de la venta ' + v.id, lineas: malPorAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor) })) });
-      if (!r.ok) throw new Error(r.error);
+      const r = Docs.trf.directa({ tipoMov: 'TRF-LIQUID', origen: alm, destino: almMal, obs: 'Devolución en mal estado ' + d.id + ' de la venta ' + v.id, lineas: malPorAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor) })) });
+      d.trfs = (d.trfs || []).concat(r.trf.id);
       d.movs.push(r.mov.id);
     });
     d.estado = 'Finalizada';

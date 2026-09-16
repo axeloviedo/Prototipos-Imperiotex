@@ -18,7 +18,7 @@ const CM06 = {
   enAlm(cod, f) { return !f || (f === '_venta' ? M.ALMACENES.some(a => a.cod === cod) : cod === f); },
   existencias() {
     const f = CM06.f, q = f.q.toLowerCase(), sup = Store.puede('configurar_comercial');
-    const filas = Store.d.stock.filter(s => (f.cero || s.act || s.comp) && CM06.enAlm(s.alm, f.alm) && (!f.grupo || (Store.art(s.art) || {}).grupo === f.grupo) &&
+    const filas = Store.d.stock.filter(s => (f.cero || s.act || s.comp || s.ped) && CM06.enAlm(s.alm, f.alm) && (!f.grupo || (Store.art(s.art) || {}).grupo === f.grupo) &&
       (!q || s.art.toLowerCase().includes(q) || M.nomArt(s.art).toLowerCase().includes(q)))
       .sort((a, b) => a.alm.localeCompare(b.alm) || a.art.localeCompare(b.art));
     const valor = filas.reduce((a, s) => a + s.act * s.costo, 0);
@@ -27,13 +27,25 @@ const CM06 = {
       UI.campo('Grupo de artículo', '<select onchange="CM06.f.grupo=this.value;App.refrescar()">' + UI.opts(Store.d.maestros.grupos.filter(g => g.inv).map(g => ({ v: g.cod, t: g.nom })), f.grupo, 'Todos') + '</select>') +
       UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM06.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       '<label class="check"><input type="checkbox"' + (f.cero ? ' checked' : '') + ' onchange="CM06.f.cero=this.checked;App.refrescar()"> Mostrar en cero</label></div></div>' +
-      UI.tabla(['Almacén', 'Código', 'Artículo', 'UM', ['Actual', 'num'], ['Comprometido', 'num'], ['Disponible', 'num']].concat(sup ? [['Costo prom.', 'num'], ['Valor', 'num']] : []), filas.map(s => {
+      UI.tabla(['Almacén', 'Código', 'Artículo', 'UM', ['Actual', 'num'], ['Comprometido', 'num'], ['Disponible', 'num'], ['Pedido', 'num']].concat(sup ? [['Costo prom.', 'num'], ['Valor', 'num']] : []), filas.map(s => {
         const disp = UI.r4(s.act - s.comp), a = Store.art(s.art) || {}, cv = Ventas.comprometidoVentas(s.alm, s.art);
         return '<tr><td class="mini"><b>' + s.alm + '</b><br>' + UI.esc(M.almNom(s.alm)) + '</td><td>' + s.art + '</td><td>' + UI.esc(M.nomArt(s.art)) + '</td><td>' + (a.u || '') + '</td>' +
           '<td class="num"><span class="' + (s.act < 0 ? 'err-t' : '') + '">' + UI.q(s.act) + '</span></td><td class="num">' + (s.comp ? UI.q(s.comp) + (cv ? '<br><span class="mini">' + UI.q(cv) + ' por ventas pendientes</span>' : '') : '') + '</td>' +
-          '<td class="num"><b class="' + (disp <= 0 ? 'err-t' : '') + '">' + UI.q(disp) + '</b></td>' + (sup ? '<td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' : '') + '</tr>';
-      }), { vacio: 'Sin existencias con estos filtros' + (Store.d.stock.length ? '' : ' (la base aún no tiene stock: escenario «Solo maestros»)'), foot: sup ? '<tr><td colspan="8" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td></tr>' : '' }) +
-      '<p class="hint">Es el stock único de la base compartida: lo mismo que ven Inventarios (GI-05) y Producción. Disponible = Actual − Comprometido. <b>Comercial sí compromete stock</b>: la venta pendiente de pago sube el Comprometido de cada línea en su almacén; cuando los pagos validados cubren el total se registra su Salida, que baja el Actual y libera lo comprometido. La devolución sube el Actual con su ingreso. El resto del comprometido viene de otros módulos (p. ej. materia prima de Solicitudes de Fabricación aprobadas). El producto terminado entra a SB-CENTRAL por los recibos de Producción y llega a las tiendas por transferencia.</p>';
+          '<td class="num"><b class="' + (disp <= 0 ? 'err-t' : '') + '">' + UI.q(disp) + '</b></td><td class="num">' + (s.ped ? UI.q(s.ped) : '') + '</td>' + (sup ? '<td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' : '') + '</tr>';
+      }), { vacio: 'Sin existencias con estos filtros' + (Store.d.stock.length ? '' : ' (la base aún no tiene stock: escenario «Solo maestros»)'), foot: sup ? '<tr><td colspan="9" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td></tr>' : '' }) +
+      CM06.trfPendientes() +
+      '<p class="hint">Es el stock único de la base compartida: lo mismo que ven Inventarios (GI-05) y Producción. Disponible = Actual − Comprometido. <b>Pedido</b> = lo que viene en camino por Solicitudes de Transferencia aprobadas y aún no recibidas (no suma al Disponible hasta que la tienda confirma la recepción). <b>Comercial sí compromete stock</b>: la venta pendiente de pago sube el Comprometido de cada línea en su almacén; cuando los pagos validados cubren el total se registra su Salida, que baja el Actual y libera lo comprometido. La devolución sube el Actual con su ingreso. El resto del comprometido viene de otros módulos (p. ej. materia prima de Solicitudes de Fabricación aprobadas). El producto terminado entra a SB-CENTRAL por los recibos de Producción y llega a las tiendas por transferencia en dos pasos (aprobar compromete en origen y suma Pedido en destino; recibir mueve el stock).</p>';
+  },
+  /* Solicitudes de Transferencia aprobadas y no recibidas hacia almacenes de venta (se reciben en Inventarios GI-11) */
+  trfPendientes() {
+    const f = CM06.f, lista = (Store.d.trfs || []).filter(t => (t.estado === 'Aprobada' || t.estado === 'Parcial') && CM06.enAlm(t.destino, f.alm === '' ? '_venta' : f.alm));
+    if (!lista.length) return '';
+    return '<div class="sec">Transferencias en camino hacia almacenes de venta (' + lista.length + ')</div>' +
+      UI.tabla(['Solicitud', 'Fecha', 'Tipo de movimiento', 'Origen → destino', 'Estado', 'Pendiente de recibir'], lista.map(t =>
+        '<tr><td><b>' + t.id + '</b></td><td class="mini">' + t.fecha + '</td><td class="mini">' + UI.esc(t.tipoMov + ' · ' + ((BD.tipoMov(t.tipoMov) || {}).nom || '')) + '</td>' +
+        '<td class="mini">' + t.origen + ' → <b>' + t.destino + '</b><br>' + UI.esc(M.almNom(t.destino)) + '</td><td>' + UI.estado(t.estado) + '</td>' +
+        '<td class="mini">' + t.lineas.filter(l => Docs.trf.pendiente(l) > 0).map(l => l.art + ' × ' + UI.q(Docs.trf.pendiente(l))).join('<br>') + '</td></tr>'), { sub: true }) +
+      '<p class="hint">La recepción la confirma Inventarios (GI-11); mientras tanto se ve como Pedido en el destino y Comprometido en el origen.</p>';
   },
   movimientos() {
     const f = CM06.f, mq = f.mq.toLowerCase();

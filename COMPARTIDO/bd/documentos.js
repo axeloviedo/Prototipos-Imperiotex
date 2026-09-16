@@ -395,7 +395,7 @@ const Docs = (() => {
       const lineas = (d.lineas || []).filter(l => l.art).map(l => ({ art: l.art, cant: BD.r4(num(l.cant)), recibido: 0 }));
       exigir(lineas.length, 'Agregue al menos un artículo');
       lineas.forEach(l => { exigir(Stock.inventariable(l.art), BD.nomArt(l.art) + ' no maneja stock'); exigir(l.cant > 0, 'Cantidad no válida en ' + BD.nomArt(l.art)); });
-      const t = { id: BD.sig('st', 'ST-', 6), fecha: d.fecha || BD.ahora(), origen: d.origen, destino: d.destino, tipoMov, estado: 'Borrador', obs: d.obs || '', sol: d.sol || '', of: d.of || '', movs: [], lineas, hist: [] };
+      const t = { id: BD.sig('st', 'ST-', 6), fecha: d.fecha || BD.ahora(), origen: d.origen, destino: d.destino, tipoMov, estado: 'Borrador', obs: d.obs || '', sol: d.sol || '', of: d.of || '', modulo: d.modulo || 'Inventarios', movs: [], lineas, hist: [] };
       (BD.d.trfs = BD.d.trfs || []).unshift(t);
       BD.hist(t, 'Creada', d.origen + ' → ' + d.destino);
       g(); return t;
@@ -421,7 +421,7 @@ const Docs = (() => {
         exigir(l, BD.nomArt(x.art) + ' no está en ' + id);
         exigir(Number(x.cant) <= trf.pendiente(l) + 0.00005, 'No se recibe más de lo pendiente: ' + BD.nomArt(x.art));
       });
-      const r = Stock.transferencia({ det: 'Transferencia ' + t.id, tipoMov: t.tipoMov, origen: t.origen, destino: t.destino, ndoc: t.of || t.sol || t.id, doc: t.id, obs: obs || t.obs, modulo: 'Inventarios',
+      const r = Stock.transferencia({ det: 'Transferencia ' + t.id, tipoMov: t.tipoMov, origen: t.origen, destino: t.destino, ndoc: t.of || t.sol || t.id, doc: t.id, obs: obs || t.obs, modulo: t.modulo || 'Inventarios',
         lineas: rec.map(x => ({ art: x.art, cant: Number(x.cant), liberar: Number(x.cant), pedido: Number(x.cant) })) });
       exigir(r.ok, r.error);
       rec.forEach(x => {

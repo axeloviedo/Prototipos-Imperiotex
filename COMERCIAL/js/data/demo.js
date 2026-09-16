@@ -1,7 +1,7 @@
 /* COMERCIAL — historia comercial de la demo sobre la BASE COMPARTIDA (docs/16_BASE_DATOS_COMPARTIDA.md).
    Demo.historia() YA NO crea el estado: parte de la base que exista (normalmente después de la historia de Producción, que deja el
    producto terminado Zuleika PT-0001..0004 en SB-CENTRAL) y registra la operación comercial con los mismos servicios que usan las pantallas
-   (Stock compartido con modulo 'Comercial', Ventas, Caja, Dev). Sin DOM: la ejecuta el generador de escenario-operacion.js en node.
+   (Stock compartido con modulo 'Comercial', Docs.trf para la reposición en dos pasos, Ventas, Caja, Dev). Sin DOM: la ejecuta el generador de escenario-operacion.js en node.
    Fechas fijas de julio 2026 posteriores al 25/07/2026 (BD.reloj y UI.reloj). No guarda nada por su cuenta salvo BD.guardar() al final. */
 const Demo = {
   /* costo de referencia SOLO para la carga inicial (ING-INICIAL), si Producción todavía no dejó producto terminado (aConfirmar) */
@@ -11,6 +11,8 @@ const Demo = {
     'SB-TIENDA01': { 'PT-0001': 8, 'PT-0002': 8, 'PT-0003': 6, 'PT-0004': 6 },
     'SB-TIENDA02': { 'PT-0001': 4, 'PT-0002': 4, 'PT-0003': 4, 'PT-0004': 4 }
   },
+  /* reposición que queda APROBADA sin recibir al final de la historia: se ve como Pedido en la tienda y Comprometido en SB-CENTRAL */
+  REPOSICION_PENDIENTE: { 'SB-TIENDA02': { 'PT-0001': 2, 'PT-0003': 2 } },
   MAYORISTA: { 'PT-0001': 12, 'PT-0002': 6, 'PT-0003': 6 },
 
   _ok(r) { if (!r || !r.ok) throw new Error('Demo comercial: ' + (r ? r.error : 'sin resultado')); return r.mov; },
@@ -60,7 +62,7 @@ const Demo = {
     /* ---------- 0) producto terminado para vender: se usa el que dejó Producción en SB-CENTRAL ---------- */
     T('27/07/2026 08:30', 'USER12');
     const req = {};
-    Object.keys(Demo.REPOSICION).forEach(alm => Object.keys(Demo.REPOSICION[alm]).forEach(art => { req[art] = (req[art] || 0) + Demo.REPOSICION[alm][art]; }));
+    [Demo.REPOSICION, Demo.REPOSICION_PENDIENTE].forEach(R => Object.keys(R).forEach(alm => Object.keys(R[alm]).forEach(art => { req[art] = (req[art] || 0) + R[alm][art]; })));
     Object.keys(Demo.MAYORISTA).forEach(art => { req[art] = (req[art] || 0) + Demo.MAYORISTA[art]; });
     const falta = Object.keys(req).map(art => ({ art, cant: UI.r4(req[art] - Stock.disp(CENTRAL, art)) })).filter(x => x.cant > 0);
     if (falta.length) {
@@ -72,15 +74,12 @@ const Demo = {
       }));
     }
 
-    /* ---------- 1) reposición de tiendas: transferencia de PT desde el Almacén Central ---------- */
+    /* ---------- 1) reposición de tiendas en DOS PASOS (Solicitud de Transferencia, decisiones T2/T7):
+       27/07 se crea y aprueba (compromete en SB-CENTRAL y suma Pedido en la tienda) · 28/07 la tienda confirma la recepción (mueve el stock) ---------- */
+    const reponer = (alm, q) => Docs.trf.crear({ origen: CENTRAL, destino: alm, tipoMov: 'TRF-REPTIENDA', obs: 'Reposición de ' + BD.almNom(alm) + ' · producto terminado Zuleika',
+      lineas: Object.keys(q).map(art => ({ art, cant: q[art] })) });
     T('27/07/2026 09:00', 'USER12');
-    Object.keys(Demo.REPOSICION).forEach(alm => {
-      const q = Demo.REPOSICION[alm];
-      Demo._ok(Stock.transferencia({
-        tipoMov: 'TRF-REPTIENDA', det: 'Transferencia - Reposición de tienda', origen: CENTRAL, destino: alm, ndoc: 'Reposición ' + BD.almNom(alm), doc: 'Reposición', modulo: 'Comercial',
-        obs: 'Producto terminado Zuleika para la campaña de fiestas patrias', lineas: Object.keys(q).map(art => ({ art, cant: q[art] }))
-      }));
-    });
+    const reposiciones = Object.keys(Demo.REPOSICION).map(alm => Docs.trf.aprobar(reponer(alm, Demo.REPOSICION[alm]).id).id);
 
     /* ---------- 2) cotizaciones ---------- */
     T('27/07/2026 10:00', 'USER10');
@@ -90,6 +89,10 @@ const Demo = {
     T('27/07/2026 11:30', 'USER12'); Cot.anular(cE, 'Cliente desistió de la compra');
     T('27/07/2026 16:00', 'USER15');
     Demo.cotizacion({ sede: 'TDA-02', cli: 'CLI-000004', lineas: [['PT-0001', 2]], obs: 'Precio especial de Tienda #2' });
+
+    /* 28/07 las tiendas confirman la recepción de la reposición: recién ahí se mueve el stock (Transferencia TRF-REPTIENDA) */
+    T('28/07/2026 09:30', 'USER12');
+    reposiciones.forEach(id => Docs.trf.recibir(id));
 
     /* mayorista: cotización en docenas → venta al crédito con factura y envío por agencia (compromete stock en SB-CENTRAL) */
     T('28/07/2026 11:00', 'USER13');
@@ -162,11 +165,15 @@ const Demo = {
     T('31/07/2026 12:30', 'USER11'); Caja.movimiento(sTda, { tipo: 'Ingreso', cat: 'Fondo de caja chica', desc: 'Reposición de sencillo para vuelto', monto: 50 });
     T('31/07/2026 12:45', 'USER11'); Caja.movimiento(sTda, { tipo: 'Egreso', cat: 'Pasajes y movilidad', desc: 'Movilidad para recojo de mercadería', monto: 12.5 });
 
+    /* reposición aprobada que la tienda aún no recibe: Pedido en SB-TIENDA02, Comprometido en SB-CENTRAL */
+    T('31/07/2026 13:00', 'USER12');
+    Object.keys(Demo.REPOSICION_PENDIENTE).forEach(alm => Docs.trf.aprobar(reponer(alm, Demo.REPOSICION_PENDIENTE[alm]).id));
+
     Cot.barrer();
     BD.reloj = null; UI.reloj = null;
     Store.fijarUsuario(previo || M.USUARIOS[0].cod, false);
     BD.guardar();
     const d = BD.d;
-    return { ajuste: falta, cotizaciones: d.cots.length, ventas: d.ventas.length, devoluciones: d.devs.length, cajas: d.sesiones.length, movimientosCaja: d.cmovs.length, cajaMayorista: sMay.id };
+    return { ajuste: falta, transferencias: (d.trfs || []).map(t => t.id + ' ' + t.estado), cotizaciones: d.cots.length, ventas: d.ventas.length, devoluciones: d.devs.length, cajas: d.sesiones.length, movimientosCaja: d.cmovs.length, cajaMayorista: sMay.id };
   }
 };
