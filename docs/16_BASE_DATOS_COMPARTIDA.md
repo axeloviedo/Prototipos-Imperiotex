@@ -1,6 +1,7 @@
 # 16 · Base de datos compartida del prototipo
 
 > Rama `feat/datos-compartidos` · 2026-09-16. Contrato para Inventarios, Compras, Producción y Comercial.
+> Fuentes de datos: plantillas Excel y `ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx` (almacenes, sedes, organización y grupos de compras, grupos de proveedores, grupos y tipos de movimiento), ambos en `docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO`.
 > Objetivo: probar el flujo **Producción masiva con stock suficiente** (incluida la compra del servicio tercerizado) pasando por los cuatro módulos con **los mismos datos**.
 
 ## 1. Idea general
@@ -63,7 +64,12 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `recursos` | `{cod, nom, tipo, activo, u, costo (estándar), cuenta (mayor), prov?}` — un servicio de terceros usa **el mismo código del artículo SRV** | complemento |
 | `operarios` | `{cod:'OPE-001', nom, rec, activo}` | complemento |
 | `proveedores` | `{cod:'PROV-0001', tipoDoc, doc, nom, comercial, grupo, tipo, estado, email, dir, ubigeo, tel, cel, mon, cond, dias, retencion, detraccion, servicio?, alm?, diasEst?, origen, aConfirmar?}` | 4 de plantilla + 17 de servicios (complemento) |
-| `gruposProveedor`, `condicionesPago` | | plantilla proveedores |
+| `gruposProveedor` | `{cod:'MP1'\|'SRV'\|'IMP'\|'ADU'\|'GEN', nom}` — el `grupo` del proveedor es este código | **estructura organizativa (docx)** |
+| `condicionesPago` | `{nom:'Crédito 30 días', dias}` | plantilla proveedores |
+| `organizacionesCompra` | `{cod:'SB'\|'CN', centro, nom}` | estructura organizativa |
+| `gruposCompra` | `{cod:'MP1'\|'SRV'\|'IMP'\|'EE1'\|'MSC'\|'SG1', nom}` — cada artículo de compra lleva `grupoCompra` | estructura organizativa |
+| `gruposMovimiento` | `{cod:'ING'\|'SAL'\|'TRF'\|'AJU', nom, desc}` | estructura organizativa |
+| `tiposMovimiento` | `{cod:'ING-COMPRA', grupo:'ING', nom, desc}` — 19 tipos | estructura organizativa |
 
 Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de servicios, costos estándar, precios de referencia).
 
@@ -91,6 +97,8 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 
 - `stock`: `{alm, art, act, comp, costo}` — Disponible = `act − comp`. Costo promedio ponderado por almacén.
 - `movs`: `{id:'ING-000001'|'SAL-…'|'TRF-…', tipo:'Ingreso'|'Salida'|'Transferencia', det, concepto, fecha, usuario, modulo, est, alm, destino?, od, ndoc, doc, obs, valor, lineas:[{art, cant, costo, valor, alm, signo:+1|-1, saldo}]}`.
+- Cada movimiento lleva `tipoMov` (código de `tiposMovimiento`), `grupoMov` y `tipoMovNom`. Se pasa en `o.tipoMov`; si falta se usa ING-INICIAL / SAL-USOPROD / TRF-INTERNO. Los **ajustes** (grupo AJU: AJU-SOBRANTE, AJU-FALTANTE, AJU-OBSERV) se registran con `Stock.ajuste({tipoMov, alm, obs, lineas})` y mueven stock como ingreso o salida.
+- Tipos que usa cada paso: compra recibida **ING-COMPRA** (proveedor extranjero **ING-IMPORT**) · emisión a producción **SAL-USOPROD** · recibo de producción **ING-PROD** · envío y retorno del servicio tercerizado **TRF-FABRIC** · salida de material a maquila **SAL-MAQUILA** · atención de solicitud / traslado entre sedes **TRF-INTERNO** · reposición a tienda **TRF-REPTIENDA** · entre tiendas **TRF-ENTRETIENDA** · a liquidación **TRF-LIQUID** · venta **SAL-VENTA** · devolución de cliente **ING-DEVCLI** · devolución a proveedor **SAL-DEVPROV** · reposición del proveedor **ING-CAMBIO** · cancelación de servicio **ING-CANCEL** · carga inicial **ING-INICIAL**.
 - **Solo `Stock` modifica** `stock` y `movs`: `Stock.ingreso`, `Stock.salida`, `Stock.transferencia` devuelven `{ok, mov}` o `{ok:false, error}`. `Stock.comprometer/liberar/comprometerLineas`, `Stock.kardex(art, alm)`, `Stock.saldoA(art, alm, fecha)`, `Stock.disp/act/comp/costo/totalDisp`. `Stock` **no guarda**: el que llama ejecuta `BD.guardar()`.
 
 ### 3.4 Documentos (`Docs`, siempre guardan)

@@ -95,6 +95,11 @@ const BD = {
   maestrosIniciales() {
     const P = BD_PLANTILLAS, C = BD_COMPLEMENTOS;
     const articulos = P.articulos.map(a => Object.assign({ costo: a.precioCompra || 0 }, a, C.ajustesArticulos[a.cod] || {})).concat(C.articulos);
+    /* grupo de compras (estructura organizativa): servicios SRV, envases y embalajes EE1, el resto de materia prima MP1 */
+    articulos.forEach(a => {
+      if (!a.compra || a.grupoCompra) return;
+      a.grupoCompra = a.grupo === 'SRV' ? 'SRV' : ['HANG TAG', 'BOLSA BRILLO'].includes(a.subcat) ? 'EE1' : 'MP1';
+    });
     const m = BD.copia({
       empresas: P.empresas,
       sedes: P.sedes,
@@ -114,7 +119,12 @@ const BD = {
       operarios: C.operarios,
       proveedores: P.proveedores.concat(C.proveedores),
       gruposProveedor: P.gruposProveedor,
-      condicionesPago: P.condicionesPago
+      condicionesPago: P.condicionesPago,
+      /* estructura organizativa (docx): organización y grupos de compras, grupos y tipos de movimiento */
+      organizacionesCompra: P.organizacionesCompra || [],
+      gruposCompra: P.gruposCompra || [],
+      gruposMovimiento: P.gruposMovimiento || [],
+      tiposMovimiento: P.tiposMovimiento || []
     });
     BD.extras().forEach(x => Object.keys(x.maestros || {}).forEach(k => {
       const v = BD.copia(x.maestros[k]);
@@ -157,5 +167,6 @@ const BD = {
   oc(id) { return BD.d.ocs.find(x => x.id === id); },
   fac(id) { return BD.d.facturas.find(x => x.id === id); },
   of(id) { return BD.d.ofs.find(x => x.id === id); },
-  mov(id) { return BD.d.movs.find(x => x.id === id); }
+  mov(id) { return BD.d.movs.find(x => x.id === id); },
+  tipoMov(cod) { return (BD.d.maestros.tiposMovimiento || []).find(t => t.cod === cod); }
 };

@@ -134,7 +134,7 @@ const BD_COMPLEMENTOS = (() => {
   const proveedores = [];
   SERVICIOS.forEach((s, i) => {
     const prov = 'PROV-' + pad(5 + i);
-    proveedores.push({ cod: prov, tipoDoc: s[2], doc: s[3], nom: s[1], comercial: s[1], grupo: 'Servicios', tipo: 'Nacional', estado: 'Activo', email: '', dir: '', ubigeo: 'LIMA / Lima / La Victoria', tel: '', cel: '',
+    proveedores.push({ cod: prov, tipoDoc: s[2], doc: s[3], nom: s[1], comercial: s[1], grupo: 'SRV', tipo: 'Nacional', estado: 'Activo', email: '', dir: '', ubigeo: 'LIMA / Lima / La Victoria', tel: '', cel: '',
       mon: 'S/.', cond: 'Crédito 15 días', dias: 15, retencion: false, detraccion: s[2] === 'RUC', servicio: s[0], alm: 'SB-TRANSITO', diasEst: 7, origen: C, aConfirmar: true });
     recursos.push({ cod: s[0], nom: 'Servicio ' + s[1].toLowerCase().replace(/\b\w/g, x => x.toUpperCase()), tipo: 'SERVICIO DE TERCEROS', activo: true, u: 'UND', costo: s[4], cuenta: '921201', prov, origen: C, aConfirmar: true });
   });

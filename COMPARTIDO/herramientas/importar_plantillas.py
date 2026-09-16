@@ -170,12 +170,68 @@ for a in mp + srv:
     if n:
         a['provDef'] = por_nombre.get(n.upper().replace('AVIOS', 'AVÍOS'), '')
 
+# ---------------- estructura organizativa (docx) ----------------
+# ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx manda sobre los grupos de proveedores del Excel.
+import docx
+from docx.table import Table
+
+
+def tablas_docx(archivo):
+    """Tablas del documento como listas de filas; las celdas combinadas se toman una sola vez."""
+    d = docx.Document(os.path.join(PL, archivo))
+    return [[[limpio(tc.xpath('string(.)')) for tc in dict.fromkeys(c._tc for c in r.cells)] for r in tb.rows] for tb in d.tables]
+
+
+def buscar(tablas, cabecera):
+    for tb in tablas:
+        if tb and tb[0][:len(cabecera)] == cabecera:
+            return tb[1:]
+    raise SystemExit('No se encontró la tabla ' + str(cabecera))
+
+
+estructura = {}
+ARCH_EST = 'ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx'
+if os.path.exists(os.path.join(PL, ARCH_EST)):
+    T = tablas_docx(ARCH_EST)
+    sedes_doc = {r[0]: r for r in buscar(T, ['Código', 'Sede', 'Compartida', 'Contenido'])}
+    for s in sedes:
+        r = sedes_doc.get(s['cod'])
+        if r:
+            s['compartida'] = r[2] == 'Sí'
+    estructura['organizacionesCompra'] = [{'cod': r[0], 'centro': r[1], 'nom': r[2]} for r in buscar(T, ['Org. Compras', 'Centro', 'Descripción'])]
+    grupos_compra = []
+    for tb in T:
+        if tb and tb[0] == ['Código', 'Descripción'] and not grupos_compra:
+            grupos_compra = [{'cod': r[0], 'nom': r[1]} for r in tb[1:]]
+        elif tb and tb[0] == ['Código', 'Descripción'] and grupos_compra:
+            grupos_prov = [{'cod': r[0], 'nom': r[1]} for r in tb[1:]]
+    estructura['gruposCompra'] = grupos_compra
+    estructura['gruposMovimiento'] = [{'cod': r[0], 'nom': r[1], 'desc': r[2]} for r in buscar(T, ['Código', 'Grupo de Movimiento', 'Propósito'])]
+    tipos_mov = []
+    for tb in T:
+        if tb and len(tb[0]) >= 3 and tb[0][:2] == ['Código', 'Tipo de Movimiento']:
+            for r in tb[1:]:
+                tipos_mov.append({'cod': r[0], 'grupo': r[0].split('-')[0], 'nom': r[1], 'desc': r[2]})
+    estructura['tiposMovimiento'] = tipos_mov
+    # grupos de proveedor de la plantilla Excel → los del documento
+    MAPA_GRUPO = {'Telas': 'MP1', 'Avíos': 'MP1', 'Servicios': 'SRV', 'Generales': 'GEN'}
+    for pr in proveedores:
+        if pr['tipo'] == 'Internacional':
+            pr['grupo'] = 'IMP'
+        elif 'LAVANDERIA' in pr['nom'].upper():
+            pr['grupo'] = 'SRV'  # en el Excel figura como Avíos
+        else:
+            pr['grupo'] = MAPA_GRUPO.get(pr['grupo'], pr['grupo'])
+    estructura['gruposProveedor'] = grupos_prov
+
 datos = {
     'fuente': 'docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO',
+    'estructura': 'ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx',
     'empresas': empresas, 'sedes': sedes, 'almacenes': almacenes,
     'unidades': unidades_pl, 'atributos': atributos, 'tiposCodigoBarra': tipos_barra, 'clasesValoracion': clases_val,
     'categorias': cats, 'subcategorias': subcats,
-    'articulos': mp + srv, 'proveedores': proveedores, 'gruposProveedor': grupos_prov, 'condicionesPago': condiciones
+    'articulos': mp + srv, 'proveedores': proveedores, 'gruposProveedor': grupos_prov, 'condicionesPago': condiciones,
+    **estructura
 }
 os.makedirs(os.path.dirname(SALIDA), exist_ok=True)
 with open(SALIDA, 'w', encoding='utf8', newline='\n') as f:

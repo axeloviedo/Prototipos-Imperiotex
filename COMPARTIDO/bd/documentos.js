@@ -170,7 +170,7 @@ const Docs = (() => {
       const s = BD.sol(id); exigir(s && (s.estado === 'Aprobada' || s.estado === 'En proceso'), 'La solicitud no está aprobada');
       const ls = s.lineas.filter(l => l.prop === 'Transferencia' && l.origen === origen && l.estado === 'Pendiente');
       exigir(ls.length, 'No hay líneas pendientes para transferir desde ' + origen);
-      const r = Stock.transferencia({ det: 'Transferencia - Atención de ' + s.id, origen, destino: s.destino, ndoc: s.of || s.id, doc: s.id, modulo: 'Inventarios', obs: 'Atiende ' + s.id, lineas: ls.map(l => ({ art: l.art, cant: l.cant })) });
+      const r = Stock.transferencia({ det: 'Transferencia - Atención de ' + s.id, tipoMov: (BD.alm(s.destino) || {}).transito ? 'TRF-FABRIC' : 'TRF-INTERNO', origen, destino: s.destino, ndoc: s.of || s.id, doc: s.id, modulo: 'Inventarios', obs: 'Atiende ' + s.id, lineas: ls.map(l => ({ art: l.art, cant: l.cant })) });
       exigir(r.ok, r.error);
       ls.forEach(l => { l.estado = 'Transferido'; l.doc = r.mov.id; });
       BD.hist(s, 'Transferencia ' + r.mov.id, origen + ' → ' + s.destino);
@@ -298,7 +298,8 @@ const Docs = (() => {
         exigir(it.recq + Number(l.cant) <= it.cant + 0.00005, 'No se recibe más de lo pedido: ' + BD.nomArt(l.art));
       });
       const factor = o.mon === 'USD' ? o.tc : 1;
-      const r = Stock.ingreso({ det: 'Ingreso - Compra', alm, origen: BD.provNom(o.prov), ndoc: o.id, doc: o.id, modulo: 'Inventarios', obs: d.obs || '',
+      const intl = (BD.prov(o.prov) || {}).tipo === 'Internacional';
+      const r = Stock.ingreso({ det: intl ? 'Ingreso - Importación' : 'Ingreso - Compra', tipoMov: intl ? 'ING-IMPORT' : 'ING-COMPRA', alm, origen: BD.provNom(o.prov), ndoc: o.id, doc: o.id, modulo: 'Inventarios', obs: d.obs || '',
         lineas: lineas.map(l => ({ art: l.art, cant: l.cant, costo: BD.r4(o.items.find(i => i.art === l.art).pu * factor) })) });
       exigir(r.ok, r.error);
       lineas.forEach(l => { const it = o.items.find(i => i.art === l.art); it.recq = BD.r4(it.recq + Number(l.cant)); if (o.sol) sol._recibido(o.sol, l.art, Number(l.cant), o.id); });

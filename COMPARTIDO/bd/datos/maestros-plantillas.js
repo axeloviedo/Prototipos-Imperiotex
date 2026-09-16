@@ -2,6 +2,7 @@
    ARCHIVO GENERADO por COMPARTIDO/herramientas/importar_plantillas.py: no editar a mano. Lo que falta va en maestros-complementos.js. */
 const BD_PLANTILLAS = {
  "fuente": "docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO",
+ "estructura": "ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx",
  "empresas": [
   {
    "cod": "SB01",
@@ -21,19 +22,22 @@ const BD_PLANTILLAS = {
    "cod": "G",
    "nom": "Gamarra",
    "dir": "Pisagua 984, La Victoria",
-   "contenido": "Productos en Proceso, Productos Terminados, Materia Prima, Mercadería Liq."
+   "contenido": "Productos en Proceso, Productos Terminados, Materia Prima, Mercadería Liq.",
+   "compartida": true
   },
   {
    "cod": "Z",
    "nom": "Zárate",
    "dir": "San Juan de Lurigancho",
-   "contenido": "Materia Prima, Productos en Proceso"
+   "contenido": "Materia Prima, Productos en Proceso",
+   "compartida": true
   },
   {
    "cod": "VIRT",
    "nom": "Virtual",
    "dir": "(sin dirección física)",
-   "contenido": "Productos Terminados (Online), Productos en Proceso en Transición"
+   "contenido": "Productos Terminados (Online), Productos en Proceso en Transición",
+   "compartida": true
   },
   {
    "cod": "YA",
@@ -2803,7 +2807,7 @@ const BD_PLANTILLAS = {
    "doc": "20456123789",
    "nom": "TEXTIL SAN JACINTO SAC",
    "comercial": "TEXTIL SAN JACINTO",
-   "grupo": "Telas",
+   "grupo": "MP1",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "ventas@sanjacinto.com.pe",
@@ -2824,7 +2828,7 @@ const BD_PLANTILLAS = {
    "doc": "20321654987",
    "nom": "AVÍOS DEL SUR EIRL",
    "comercial": "AVÍOS DEL SUR",
-   "grupo": "Avíos",
+   "grupo": "MP1",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "ventas@aviosdelsur.pe",
@@ -2845,7 +2849,7 @@ const BD_PLANTILLAS = {
    "doc": "20567891234",
    "nom": "LAVANDERIA INDUSTRIAL DEL SUR SAC",
    "comercial": "LAVANDERIA DEL SUR",
-   "grupo": "Avíos",
+   "grupo": "SRV",
    "tipo": "Nacional",
    "estado": "Activo",
    "email": "servicios@lavanderiadelsur.com",
@@ -2866,7 +2870,7 @@ const BD_PLANTILLAS = {
    "doc": "BR-33.013.545/0001",
    "nom": "YKK DO BRASIL LTDA",
    "comercial": "YKK",
-   "grupo": "Telas",
+   "grupo": "IMP",
    "tipo": "Internacional",
    "estado": "Activo",
    "email": "export@ykk.com.br",
@@ -2884,24 +2888,24 @@ const BD_PLANTILLAS = {
  ],
  "gruposProveedor": [
   {
-   "cod": "TEL",
-   "nom": "Telas",
-   "desc": "Proveedores de telas y géneros textiles"
-  },
-  {
-   "cod": "AVI",
-   "nom": "Avíos",
-   "desc": "Botones, cierres, hilos, etiquetas, empaque"
+   "cod": "MP1",
+   "nom": "Telas y Avíos"
   },
   {
    "cod": "SRV",
-   "nom": "Servicios",
-   "desc": "Servicios tercerizados: lavandería, bordado, corte, confección"
+   "nom": "Servicios de Producción (lavandería, confección, corte, acabados, bordado)"
+  },
+  {
+   "cod": "IMP",
+   "nom": "Importación (cierres exteriores)"
+  },
+  {
+   "cod": "ADU",
+   "nom": "Agentes de Aduana"
   },
   {
    "cod": "GEN",
-   "nom": "Generales",
-   "desc": "Suministros generales, útiles de oficina, mantenimiento"
+   "nom": "Generales / Varios"
   }
  ],
  "condicionesPago": [
@@ -2932,6 +2936,182 @@ const BD_PLANTILLAS = {
   {
    "nom": "Crédito 90 días",
    "dias": 90
+  }
+ ],
+ "organizacionesCompra": [
+  {
+   "cod": "SB",
+   "centro": "IMPERIOTEX",
+   "nom": "Org. Compras SARA BQ"
+  },
+  {
+   "cod": "CN",
+   "centro": "CATINNA NOW",
+   "nom": "Org. Compras CATINNA NOW"
+  }
+ ],
+ "gruposCompra": [
+  {
+   "cod": "MP1",
+   "nom": "Materia Prima (telas, avíos, cierres)"
+  },
+  {
+   "cod": "SRV",
+   "nom": "Servicios (lavandería, confección, corte, acabados, bordado)"
+  },
+  {
+   "cod": "IMP",
+   "nom": "Importaciones (cierres)"
+  },
+  {
+   "cod": "EE1",
+   "nom": "Envases y Embalajes (bolsas de marca, hang tags, empaque)"
+  },
+  {
+   "cod": "MSC",
+   "nom": "Misceláneos y Economato"
+  },
+  {
+   "cod": "SG1",
+   "nom": "Servicios Generales"
+  }
+ ],
+ "gruposMovimiento": [
+  {
+   "cod": "ING",
+   "nom": "Ingresos",
+   "desc": "Suma stock a un almacén"
+  },
+  {
+   "cod": "SAL",
+   "nom": "Salidas",
+   "desc": "Resta stock de un almacén"
+  },
+  {
+   "cod": "TRF",
+   "nom": "Transferencias",
+   "desc": "Mueve stock entre almacenes (sale de uno, entra a otro)"
+  },
+  {
+   "cod": "AJU",
+   "nom": "Ajustes",
+   "desc": "Corrige stock por inventario o auditoría"
+  }
+ ],
+ "tiposMovimiento": [
+  {
+   "cod": "ING-PROD",
+   "grupo": "ING",
+   "nom": "Ingreso por producción terminada",
+   "desc": "Acabados -> Central"
+  },
+  {
+   "cod": "ING-COMPRA",
+   "grupo": "ING",
+   "nom": "Ingreso por compra de materia prima",
+   "desc": "Proveedor -> MP / Central MP"
+  },
+  {
+   "cod": "ING-IMPORT",
+   "grupo": "ING",
+   "nom": "Ingreso por importación",
+   "desc": "Proveedor exterior -> Central MP"
+  },
+  {
+   "cod": "ING-DEVCLI",
+   "grupo": "ING",
+   "nom": "Ingreso por devolución de cliente",
+   "desc": "Cliente -> Tienda"
+  },
+  {
+   "cod": "ING-CAMBIO",
+   "grupo": "ING",
+   "nom": "Ingreso por cambio / reposición de proveedor",
+   "desc": "Proveedor -> MP"
+  },
+  {
+   "cod": "ING-CANCEL",
+   "grupo": "ING",
+   "nom": "Ingreso por cancelación de servicio",
+   "desc": "Proveedor -> Almacén"
+  },
+  {
+   "cod": "ING-INICIAL",
+   "grupo": "ING",
+   "nom": "Carga inicial de stock",
+   "desc": "Stock Existente -> Almacén"
+  },
+  {
+   "cod": "SAL-VENTA",
+   "grupo": "SAL",
+   "nom": "Salida por venta (tienda / online)",
+   "desc": "Almacén -> Cliente"
+  },
+  {
+   "cod": "SAL-USOPROD",
+   "grupo": "SAL",
+   "nom": "Salida por uso en producción",
+   "desc": "MP -> Producción"
+  },
+  {
+   "cod": "SAL-MAQUILA",
+   "grupo": "SAL",
+   "nom": "Salida a maquila / servicio",
+   "desc": "MP -> Proveedor"
+  },
+  {
+   "cod": "SAL-DEVPROV",
+   "grupo": "SAL",
+   "nom": "Salida por devolución a proveedor (material fallado)",
+   "desc": "MP -> Proveedor"
+  },
+  {
+   "cod": "TRF-REPTIENDA",
+   "grupo": "TRF",
+   "nom": "Reposición a tienda",
+   "desc": "Central -> Tienda"
+  },
+  {
+   "cod": "TRF-ENTRETIENDA",
+   "grupo": "TRF",
+   "nom": "Transferencia entre tiendas",
+   "desc": "Tienda A -> Tienda B"
+  },
+  {
+   "cod": "TRF-LIQUID",
+   "grupo": "TRF",
+   "nom": "Traslado a liquidación",
+   "desc": "Central / Tienda -> Liquidación"
+  },
+  {
+   "cod": "TRF-FABRIC",
+   "grupo": "TRF",
+   "nom": "Tránsito de fabricación",
+   "desc": "PPT -> Transición -> Proveedor y retorno"
+  },
+  {
+   "cod": "TRF-INTERNO",
+   "grupo": "TRF",
+   "nom": "Traslado interno entre almacenes / sedes",
+   "desc": "Almacén A -> Almacén B"
+  },
+  {
+   "cod": "AJU-SOBRANTE",
+   "grupo": "AJU",
+   "nom": "Ajuste por sobrante de inventario",
+   "desc": "Suma la diferencia (conteo > sistema)"
+  },
+  {
+   "cod": "AJU-FALTANTE",
+   "grupo": "AJU",
+   "nom": "Ajuste por faltante de inventario",
+   "desc": "Resta la diferencia (conteo < sistema)"
+  },
+  {
+   "cod": "AJU-OBSERV",
+   "grupo": "AJU",
+   "nom": "Ingreso con observación (recepción no conforme)",
+   "desc": "Ingresa y deja observación trazada"
   }
  ]
 };
