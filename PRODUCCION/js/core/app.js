@@ -1,4 +1,4 @@
-/* PRODUCCION · Producción — registro de pantallas, navegación y ejecución segura de acciones */
+/* PRODUCCION · Producción — registro de pantallas, navegación y ejecución segura de acciones sobre la base compartida (BD) */
 const App = {
   P: {}, actual: null, params: null,
   MENU: [
@@ -34,23 +34,26 @@ const App = {
   },
   refrescar() { App.go(App.actual, App.params, true); },
 
-  /* ejecuta una mutación: si falla muestra el motivo y no guarda; si va bien guarda y devuelve true */
+  /* ejecuta una mutación sobre la base compartida: si va bien guarda (BD.guardar) y devuelve el resultado o true; si falla muestra el motivo */
   accion(fn, okMsg) {
     try {
       const r = fn();
-      Store.guardar();
+      BD.guardar();
       if (okMsg) UI.toast(typeof okMsg === 'function' ? okMsg(r) : okMsg);
       return r === undefined ? true : r;
     } catch (e) {
       console.warn(e);
       UI.toast(e.message || String(e));
-      Store.guardar();
+      BD.guardar();
       return false;
     }
   },
 
   iniciar() {
-    Store.iniciar();
+    BD.iniciar('USER05 · Producción');
+    BDSelector.montar(document.getElementById('bd-selector'));
+    /* otro módulo guardó en otra pestaña: se vuelve a pintar la pantalla actual (sin perder el modal abierto) */
+    BD.alCambiar(() => { if (App.actual && !document.querySelector('#modales .overlay')) App.refrescar(); });
     App.nav();
     const h = (location.hash || '').slice(1).split('/');
     if (h[0] && App.P[h[0]]) App.go(h[0], h[1] ? { id: decodeURIComponent(h[1]) } : {});

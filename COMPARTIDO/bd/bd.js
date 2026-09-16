@@ -167,6 +167,7 @@ const BD = {
   oc(id) { return BD.d.ocs.find(x => x.id === id); },
   fac(id) { return BD.d.facturas.find(x => x.id === id); },
   of(id) { return BD.d.ofs.find(x => x.id === id); },
+  gre(id) { return BD.d.gres.find(x => x.id === id); },
   mov(id) { return BD.d.movs.find(x => x.id === id); },
   tipoMov(cod) { return (BD.d.maestros.tiposMovimiento || []).find(t => t.cod === cod); }
 };

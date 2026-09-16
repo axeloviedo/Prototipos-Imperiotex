@@ -1,7 +1,7 @@
 /* PRODUCCION · PR-04 Referencias: las órdenes que se crearon juntas, por fase */
 const PR04 = {
   estado(ref) {
-    const ofs = Store.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado');
+    const ofs = BD.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado');
     if (ofs.length && ofs.every(o => o.estado === 'Cerrado')) return ['Terminado', 'var(--completada)'];
     if (ofs.some(o => o.estado === 'Liberado' || o.prod > 0)) return ['En proceso', 'var(--prp)'];
     return ['Planificado', 'var(--borrador)'];
@@ -11,7 +11,7 @@ const PR04 = {
     const R = Prod.nombreRef();
     return '<div class="screen-head"><h1>Referencias</h1><span class="code">PR-04</span><div class="spacer"></div><button class="btn btn-secondary" onclick="PR04.renombrar()" title="Cómo se llama este campo en la empresa">✎ Nombre del campo: ' + UI.esc(R) + '</button></div>' +
       UI.tabla([R, 'Origen', 'Produce al final', ['Órdenes', 'num'], ['Adjuntos', 'num'], 'Estado', ['Acciones', '', '80px']], Explosion.refs().map(ref => {
-        const ofs = Store.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado'), est = PR04.estado(ref), sf = ofs.find(o => o.sf);
+        const ofs = BD.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado'), est = PR04.estado(ref), sf = ofs.find(o => o.sf);
         if (!ofs.length) return '';
         const sec = Explosion.secuencia(ofs), max = Math.max.apply(null, ofs.map(o => sec[o.id]));
         return '<tr><td><b>' + ref + '</b>' + '</td><td>' + (sf ? sf.sf : 'Producción') + '</td>' +
@@ -31,7 +31,7 @@ const PR04 = {
   guardarNombre() { if (App.accion(() => Prod.renombrarRef(UI.v('ref-nom')), 'Nombre guardado')) { UI.cerrar(); App.refrescar(); } },
   detalle(ref) {
     const R = Prod.nombreRef();
-    const ofs = Store.d.ofs.filter(o => o.ref === ref);
+    const ofs = BD.d.ofs.filter(o => o.ref === ref);
     if (!ofs.length) return UI.aviso('No existe', 'err');
     const orden = Explosion.ordenar(ofs), sec = Explosion.secuencia(ofs), est = PR04.estado(ref), sf = ofs.find(o => o.sf);
     const fases = [...new Set(orden.map(o => sec[o.id]))];

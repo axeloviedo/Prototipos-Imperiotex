@@ -2,7 +2,7 @@
 const PR01 = {
   f: { q: '', est: 'abiertas', vista: 'todas' },
   render() {
-    const ofs = Store.d.ofs, R = Prod.nombreRef(), f = PR01.f;
+    const ofs = BD.d.ofs, R = Prod.nombreRef(), f = PR01.f;
     const lib = ofs.filter(o => o.estado === 'Liberado');
     return '<div class="screen-head"><h1>Órdenes de Fabricación</h1><span class="code">PR-01</span><div class="spacer"></div>' +
       '<button class="btn btn-secondary" onclick="App.go(\'pr03\')">Desde una solicitud</button>' +
@@ -23,7 +23,7 @@ const PR01 = {
     const pasa = o => (!f.est || (f.est === 'abiertas' ? Prod.abierta(o) : o.estado === f.est)) &&
       (!q || o.id.toLowerCase().includes(q) || String(o.ref).includes(q) || o.art.toLowerCase().includes(q) || M.nomArt(o.art).toLowerCase().includes(q));
     const html = Explosion.refs().map(ref => {
-      const todas = Store.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado' || o.ref === ref && f.est === 'Cancelado');
+      const todas = BD.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado' || o.ref === ref && f.est === 'Cancelado');
       const sec = Explosion.secuencia(todas);
       /* solo fases con avance: la fase 1, las que ya tuvieron emisiones o recibos y la siguiente */
       let limite = 99;
@@ -77,7 +77,7 @@ const PR01N = {
   },
   despues() { PR01N.pintarArt(); },
   buscar() {
-    BUS.articulo('Seleccionar artículo a fabricar', a => a.inv && (a.grupo === 'PRODUCTOS TERMINADOS' || a.grupo === 'PRODUCTOS EN PROCESO'), cod => { PR01N.art = cod; PR01N.pintarArt(); });
+    BUS.articulo('Seleccionar artículo a fabricar', a => a.inv !== false && (a.grupo === 'PT' || a.grupo === 'PPT' || BD.fabricable(a.cod)), cod => { PR01N.art = cod; PR01N.pintarArt(); });
   },
   pintarArt() {
     const a = M.art(PR01N.art);

@@ -1,9 +1,11 @@
-/* PRODUCCION · Maestros de Producción: PR-10 Listas de materiales · PR-11 Recursos (ficha y operarios) · PR-12 Tipos de recurso.
-   No hay pantalla de configuración: el nombre de la referencia es una etiqueta que se edita desde PR-04. */
+/* PRODUCCION · Maestros de Producción sobre la base compartida (BD.d.maestros): PR-10 Listas de materiales (solo lectura: se editan en Inventarios GI-17)
+   · PR-11 Recursos (ficha y operarios) · PR-12 Tipos de recurso. Recursos, tipos y operarios se editan aquí y los ven todos los módulos.
+   No hay pantalla de configuración: el nombre de la referencia es una etiqueta (BD.d.config.nombreRef) que se edita desde PR-04. */
 const PR10 = {
   art: 'PT-0001',
   render() {
     const fabr = M.fabricables();
+    if (!fabr.length) return '<div class="screen-head"><h1>Listas de materiales</h1><span class="code">PR-10</span></div>' + UI.aviso('No hay listas de materiales en la base: se crean en Inventarios (GI-17).', 'info');
     if (!M.art(PR10.art) || !M.ldmsDe(PR10.art).length) PR10.art = fabr[0].cod;
     const lista = M.LDMS.map(l => '<tr class="clickable" onclick="PR10.art=\'' + l.art + '\';App.refrescar()"><td><b>' + l.id + '</b></td><td>' + l.art + '<br><span class="mini">' + UI.esc(M.nomArt(l.art)) + '</span></td>' +
       '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + UI.esc(l.desc) + '</span></td><td>' + (l.pred ? UI.badge('Predeterminada', 'var(--confirmado)') : '<span class="mini">Alternativa</span>') + '</td>' +
@@ -35,14 +37,14 @@ const PR11 = {
   tab: 'rec', f: { q: '', tipo: '', est: '' },
   ESTADOS: ['Activo', 'Inactivo'],
   /* correlativo sobre los códigos existentes: nunca repite uno que ya está */
-  sigCod(lista, pref, dig) { return pref + String(lista.reduce((a, x) => Math.max(a, parseInt(String(x.cod).slice(pref.length), 10) || 0), 0) + 1).padStart(dig, '0'); },
+  sigCod(lista, pref, dig) { return pref + String(lista.filter(x => String(x.cod).indexOf(pref) === 0).reduce((a, x) => Math.max(a, parseInt(String(x.cod).slice(pref.length), 10) || 0), 0) + 1).padStart(dig, '0'); },
   estado(r) { return r.activo !== false ? UI.badge('Activo', 'var(--confirmado)') : UI.badge('Inactivo', 'var(--borrador)'); },
   esHumano(r) { return !!r && r.tipo === 'RECURSO HUMANO'; },
-  horasOpe(cod) { return Store.d.ofs.reduce((a, of) => a + of.emisiones.reduce((s, e) => s + e.recursos.reduce((z, r) => z + (r.operarios || []).filter(x => x.ope === cod).reduce((w, x) => w + x.horas, 0), 0), 0), 0); },
+  horasOpe(cod) { return BD.d.ofs.reduce((a, of) => a + of.emisiones.reduce((s, e) => s + e.recursos.reduce((z, r) => z + (r.operarios || []).filter(x => x.ope === cod).reduce((w, x) => w + x.horas, 0), 0), 0), 0); },
 
   render() {
     const t = PR11.tab, f = PR11.f;
-    const tabs = [['rec', 'Recursos (' + M.recursos().length + ')'], ['ope', 'Operarios (' + Store.d.operarios.length + ')']];
+    const tabs = [['rec', 'Recursos (' + M.recursos().length + ')'], ['ope', 'Operarios (' + M.operarios().length + ')']];
     return '<div class="screen-head"><h1>Recursos</h1><span class="code">PR-11</span><div class="spacer"></div>' +
       (t === 'rec' ? '<button class="btn btn-primary" onclick="App.go(\'pr11f\',{id:\'nuevo\'})">+ Nuevo recurso</button>' : '<button class="btn btn-primary" onclick="PR11.editarOpe(-1)">+ Nuevo operario</button>') + '</div>' +
       '<div class="tabs">' + tabs.map(x => '<div class="tab' + (x[0] === t ? ' active' : '') + '" onclick="PR11.tab=\'' + x[0] + '\';App.refrescar()">' + x[1] + '</div>').join('') + '</div>' +
@@ -51,7 +53,7 @@ const PR11 = {
         UI.campo('Tipo de recurso', '<select onchange="PR11.f.tipo=this.value;PR11.pintar()">' + UI.opts(M.tiposRecurso().map(x => x.nom), f.tipo, 'Todos') + '</select>') +
         UI.campo('Estado', '<select onchange="PR11.f.est=this.value;PR11.pintar()">' + UI.opts(PR11.ESTADOS, f.est, 'Todos') + '</select>') + '</div></div>' +
         '<div id="pr11-body"></div>' +
-        '<p class="hint">No mueven almacén: su costo entra a la orden con el costo estándar vigente al emitir o recibir. Un servicio de terceros se contrasta con la OC o la factura en la pestaña Costo de la orden.</p>'
+        '<p class="hint">No mueven almacén: su costo entra a la orden con el costo estándar vigente al emitir o recibir. Un servicio de terceros usa el mismo código del artículo de servicio (SRV) y lleva su proveedor habitual; se contrasta con la OC y la factura en la pestaña Costo de la orden.</p>'
         : PR11.operarios());
   },
   despues() { PR11.pintar(); },
@@ -59,13 +61,13 @@ const PR11 = {
   lista() {
     const f = PR11.f, q = f.q.trim().toLowerCase();
     const filas = M.recursos().filter(r => (!q || r.cod.toLowerCase().includes(q) || r.nom.toLowerCase().includes(q)) && (!f.tipo || r.tipo === f.tipo) && (!f.est || (f.est === 'Activo') === (r.activo !== false)))
-      .map(r => '<tr><td><b>' + r.cod + '</b></td><td>' + UI.esc(r.nom) + '</td><td class="mini">' + UI.esc(r.tipo) + '</td><td>' + UI.esc(r.u) + '</td>' +
+      .map(r => '<tr><td><b>' + r.cod + '</b></td><td>' + UI.esc(r.nom) + (r.prov ? '<br><span class="mini">' + UI.esc(M.provNom(r.prov)) + '</span>' : '') + '</td><td class="mini">' + UI.esc(r.tipo) + '</td><td>' + UI.esc(r.u) + '</td>' +
         '<td class="num">' + UI.n(r.costo, 2) + '</td><td>' + UI.esc(r.cuenta) + '</td><td>' + PR11.estado(r) + '</td><td><button class="btn btn-secondary btn-sm" onclick="App.go(\'pr11f\',{id:\'' + r.cod + '\'})">Editar</button></td></tr>');
     return UI.tabla([['Código', '', '100px'], 'Nombre', 'Tipo', 'Unidad de consumo', ['Costo estándar (S/.)', 'num'], 'Cuenta mayor', 'Estado', ['Acciones', '', '80px']], filas, { vacio: 'No hay recursos con esos filtros' });
   },
-  /* d: {nom, tipo, activo, u, costo, cuenta}; u del maestro de unidades, costo = costo estándar, cuenta = cuenta mayor (solo dígitos); sin cod crea el recurso */
+  /* d: {nom, tipo, activo, u, costo, cuenta, prov}; u del maestro de unidades, costo = costo estándar, cuenta = cuenta mayor (solo dígitos), prov = proveedor habitual (servicios); sin cod crea el recurso */
   guardarRecurso(cod, d) {
-    const lista = Store.d.recursos, R = cod ? lista.find(r => r.cod === cod) : null, nom = String(d.nom || '').trim(), costo = parseFloat(d.costo);
+    const lista = M.recursos(), R = cod ? lista.find(r => r.cod === cod) : null, nom = String(d.nom || '').trim(), costo = parseFloat(d.costo);
     if (cod && !R) throw new Error('No existe el recurso ' + cod);
     if (!nom) throw new Error('Indique el nombre del recurso');
     if (lista.some(r => r !== R && r.nom.trim().toLowerCase() === nom.toLowerCase())) throw new Error('Ya existe un recurso llamado ' + nom);
@@ -75,9 +77,11 @@ const PR11 = {
     const cuenta = String(d.cuenta == null ? '' : d.cuenta).trim();
     if (!/^\d+$/.test(cuenta)) throw new Error('Indique la cuenta mayor (solo números)');
     if (R) {
-      if (d.u !== R.u && Store.d.ofs.some(o => o.recs.some(x => x.cod === R.cod))) throw new Error('Ya se usa en órdenes de fabricación con la unidad ' + R.u + ': no se puede cambiar');
+      if (d.u !== R.u && BD.d.ofs.some(o => o.recs.some(x => x.cod === R.cod))) throw new Error('Ya se usa en órdenes de fabricación con la unidad ' + R.u + ': no se puede cambiar');
     }
-    const datos = { nom, tipo: d.tipo, activo: d.activo !== false, u: d.u, costo: UI.r4(costo), cuenta };
+    const esServ = d.tipo === 'SERVICIO DE TERCEROS';
+    if (esServ && d.prov && !M.prov(d.prov)) throw new Error('Proveedor no válido');
+    const datos = { nom, tipo: d.tipo, activo: d.activo !== false, u: d.u, costo: UI.r4(costo), cuenta, prov: esServ ? (d.prov || '') : '' };
     if (R) return Object.assign(R, datos);
     const nuevo = Object.assign({ cod: PR11.sigCod(lista, 'REC-', 4) }, datos);
     lista.push(nuevo);
@@ -85,7 +89,7 @@ const PR11 = {
   },
 
   operarios() {
-    const filas = Store.d.operarios.map((o, i) => {
+    const filas = M.operarios().map((o, i) => {
       const R = M.rec(o.rec) || {};
       return '<tr><td><b>' + o.cod + '</b></td><td>' + UI.esc(o.nom) + '</td><td class="mini">' + o.rec + ' · ' + UI.esc(R.nom || '') + '</td>' +
         '<td class="num">' + UI.n(PR11.horasOpe(o.cod), 1) + '</td><td>' + UI.badge(o.activo ? 'Activo' : 'Inactivo', o.activo ? 'var(--confirmado)' : 'var(--borrador)') + '</td>' +
@@ -95,7 +99,7 @@ const PR11 = {
       '<p class="hint">Cada operario ocupa uno de los recursos creados, de cualquier tipo: en la emisión se registra como detalle de ese recurso y sus horas se valorizan con su costo estándar.</p>';
   },
   editarOpe(i) {
-    const o = i >= 0 ? Store.d.operarios[i] : { nom: '', rec: '' };
+    const o = i >= 0 ? M.operarios()[i] : { nom: '', rec: '' };
     const recs = M.recursos().filter(r => r.activo !== false || r.cod === o.rec);
     if (!recs.length) { UI.toast('Primero cree un recurso'); return; }
     UI.modal({
@@ -107,7 +111,7 @@ const PR11 = {
   },
   /* d: {nom, rec}; i < 0 crea el operario */
   guardarOperario(i, d) {
-    const nom = String(d.nom || '').trim(), lista = Store.d.operarios;
+    const nom = String(d.nom || '').trim(), lista = M.operarios();
     if (!nom) throw new Error('Indique el nombre');
     if (!M.rec(d.rec)) throw new Error('Elija el recurso que ocupa');
     const datos = { nom, rec: d.rec };
@@ -119,7 +123,7 @@ const PR11 = {
   guardarOpe(i) {
     if (App.accion(() => PR11.guardarOperario(i, { nom: UI.v('op-nom'), rec: UI.v('op-rec') }), 'Operario guardado')) { UI.cerrar(); App.refrescar(); }
   },
-  alternar(i) { const o = Store.d.operarios[i]; o.activo = !o.activo; Store.guardar(); App.refrescar(); }
+  alternar(i) { const o = M.operarios()[i]; o.activo = !o.activo; BD.guardar(); App.refrescar(); }
 };
 App.pantalla('pr11', { titulo: 'Recursos', render: PR11.render, despues: PR11.despues });
 
@@ -139,18 +143,19 @@ const PR11F = {
       UI.campo('Unidad de consumo', '<select id="rf-u">' + UI.opts(M.UNIDADES.map(u => ({ v: u.cod, t: u.cod + ' · ' + u.nom })), r.u) + '</select>', { req: true, hint: 'Del maestro de Unidades de Medida (Inventarios)' }) +
       UI.campo('Costo Estándar (S/.)', '<input id="rf-costo" type="number" min="0" step="any" value="' + UI.esc(r.costo) + '">', { req: true, hint: 'Por unidad de consumo' }) +
       UI.campo('Cuenta Mayor', '<input id="rf-cta" type="number" min="0" step="1" inputmode="numeric" value="' + UI.esc(r.cuenta) + '" placeholder="Ej. 921101">', { req: true }) +
+      UI.campo('Proveedor habitual', '<select id="rf-prov">' + UI.opts(M.PROVEEDORES.filter(p => p.servicio || p.grupo === 'SRV' || p.cod === r.prov).map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), r.prov || '', '—') + '</select>', { hint: 'Solo SERVICIO DE TERCEROS: a quién se envía y a quién se le compra' }) +
       '</div></div>' + (nuevo ? '' : PR11F.uso(r));
   },
   /* solo lectura: órdenes que llevan el recurso, con lo consumido y el costo que se les imputó */
   uso(r) {
     const tot = { plan: 0, real: 0, costo: 0 };
-    const filas = Store.d.ofs.filter(o => o.recs.some(x => x.cod === r.cod)).map(o => {
+    const filas = BD.d.ofs.filter(o => o.recs.some(x => x.cod === r.cod)).map(o => {
       const ls = o.recs.filter(x => x.cod === r.cod), plan = ls.reduce((a, x) => a + x.plan, 0), real = ls.reduce((a, x) => a + x.real, 0), costo = ls.reduce((a, x) => a + x.costoReal, 0);
       tot.plan += plan; tot.real += real; tot.costo += costo;
       return '<tr class="clickable" onclick="App.go(\'pr02\',{id:\'' + o.id + '\'})"><td><b>' + o.id + '</b></td><td>' + o.ref + '</td><td>' + UI.esc(M.nomArt(o.art)) + '<br><span class="mini">' + o.art + '</span></td><td>' + UI.estadoOF(o.estado) + '</td>' +
         '<td class="num">' + UI.q(plan, r.u) + '</td><td class="num">' + UI.q(real, r.u) + '</td><td class="num">' + UI.s(costo) + '</td></tr>';
     });
-    const ops = Store.d.operarios.filter(o => o.rec === r.cod);
+    const ops = M.operarios().filter(o => o.rec === r.cod);
     return '<div class="sec">Uso en producción <span class="mini">solo lectura</span></div>' +
       UI.kpis([{ l: 'Órdenes que lo usan', v: filas.length }, { l: 'Consumido', v: UI.q(tot.real, r.u), s: 'planificado ' + UI.q(tot.plan, r.u) }, { l: 'Costo imputado', v: UI.s(tot.costo), color: 'var(--prp)' }]) +
       UI.tabla(['Orden', Prod.nombreRef(), 'Produce', 'Estado', ['Planificado', 'num'], ['Consumido', 'num'], ['Costo imputado', 'num']], filas,
@@ -160,7 +165,7 @@ const PR11F = {
       '<p class="hint">El costo imputado se valorizó con el costo estándar vigente al emitir o recibir: cambiarlo aquí no recalcula lo ya registrado.</p>';
   },
   guardar(cod) {
-    const r = App.accion(() => PR11.guardarRecurso(cod, { nom: UI.v('rf-nom'), tipo: UI.v('rf-tipo'), activo: UI.v('rf-est') !== 'Inactivo', u: UI.v('rf-u'), costo: UI.v('rf-costo'), cuenta: UI.v('rf-cta') }),
+    const r = App.accion(() => PR11.guardarRecurso(cod, { nom: UI.v('rf-nom'), tipo: UI.v('rf-tipo'), activo: UI.v('rf-est') !== 'Inactivo', u: UI.v('rf-u'), costo: UI.v('rf-costo'), cuenta: UI.v('rf-cta'), prov: UI.v('rf-prov') }),
       x => 'Recurso ' + x.cod + ' guardado');
     if (r) App.go('pr11f', { id: r.cod });
   }
@@ -198,7 +203,7 @@ const PR12 = {
   },
   /* sin cod crea el tipo; al renombrar se actualiza el tipo de sus recursos */
   guardarTipo(cod, nom) {
-    const lista = Store.d.tiposRecurso, T = cod ? lista.find(t => t.cod === cod) : null;
+    const lista = M.tiposRecurso(), T = cod ? lista.find(t => t.cod === cod) : null;
     nom = String(nom || '').trim();
     if (cod && !T) throw new Error('No existe el tipo ' + cod);
     if (!nom) throw new Error('Indique el nombre del tipo de recurso');
@@ -206,7 +211,7 @@ const PR12 = {
     if (T) {
       if (T.nom === nom) return T;
       if (T.clase) throw new Error(T.nom + ' no se puede renombrar: ' + PR12.CLASES[T.clase].toLowerCase());
-      Store.d.recursos.forEach(r => { if (r.tipo === T.nom) r.tipo = nom; });
+      M.recursos().forEach(r => { if (r.tipo === T.nom) r.tipo = nom; });
       T.nom = nom;
       return T;
     }
@@ -215,7 +220,7 @@ const PR12 = {
     return t;
   },
   eliminarTipo(cod) {
-    const lista = Store.d.tiposRecurso, i = lista.findIndex(t => t.cod === cod), T = lista[i];
+    const lista = M.tiposRecurso(), i = lista.findIndex(t => t.cod === cod), T = lista[i];
     if (!T) throw new Error('No existe el tipo ' + cod);
     if (T.clase) throw new Error(T.nom + ' no se puede eliminar: ' + PR12.CLASES[T.clase].toLowerCase());
     const n = PR12.usos(T.nom);

@@ -369,7 +369,7 @@ const Docs = (() => {
     crear(d) {
       exigir(gre.MOTIVOS.includes(d.motivo), 'Elija el motivo de traslado');
       exigir(BD.alm(d.origen), 'Almacén de origen no válido');
-      const x = { id: BD.sig('gre', 'T001-', 6), fecha: BD.ahora(), motivo: d.motivo, origen: d.origen, destino: d.destino || '', prov: d.prov || '',
+      const x = { id: BD.sig('gre', 'T001-', 6), fecha: d.fecha || BD.ahora(), motivo: d.motivo, origen: d.origen, destino: d.destino || '', prov: d.prov || '',
         transportista: d.transportista || '', mov: d.mov || '', of: d.of || '', estado: 'Aceptada SUNAT', obs: d.obs || '', lineas: (d.lineas || []).map(l => ({ art: l.art, cant: BD.r4(l.cant) })), hist: [] };
       BD.d.gres.unshift(x);
       BD.hist(x, 'Emitida', d.motivo);

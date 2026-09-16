@@ -11,8 +11,7 @@
 <aside id="sidebar">
   <div class="logo"><b>IMPERIOTEX · SARA BQ</b><span>ERP - Producción (PRODUCCION)</span></div>
   <nav id="nav"></nav>
-  <div class="foot">Prototipo funcional · Producción sobre Logística V9<br>
-    <button class="btn-link" style="color:#fff;padding:4px 0" onclick="Store.reiniciar()">↺ Reiniciar todo el prototipo</button></div>
+  <div class="foot">Prototipo funcional · Producción sobre la base de datos compartida</div>
 </aside>
 
 <div id="main">
@@ -34,6 +33,7 @@
         <option value="CATINNA NOW">CATINNA NOW</option>
       </select>
     </div>
+    <div id="bd-selector"></div>
     <div class="userchip"><div class="avatar">U5</div><span>USER05 · Producción</span></div>
   </div>
   <div id="content"></div>
@@ -53,12 +53,9 @@
 <script src="../COMPARTIDO/bd/explosion.js"></script>
 <script src="../COMPARTIDO/bd/documentos.js"></script>
 <script src="../COMPARTIDO/bd/selector.js"></script>
-<!-- núcleo (orden obligatorio) -->
+<!-- núcleo de Producción (orden obligatorio; Stock, Explosion y Docs vienen de la base compartida) -->
 <script src="js/core/ui.js"></script>
 <script src="js/data/maestros.js"></script>
-<script src="js/core/store.js"></script>
-<script src="js/core/stock.js"></script>
-<script src="js/core/explosion.js"></script>
 <script src="js/core/produccion.js"></script>
 <script src="js/data/demo.js"></script>
 <script src="js/core/app.js"></script>
