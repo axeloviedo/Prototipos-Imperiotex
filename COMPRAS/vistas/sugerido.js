@@ -3,7 +3,7 @@ Vistas.pantallas(String.raw`
   <!-- ==================================================== CO-15 · Sugerido de Compras -->
   <section class="screen" id="scr-co15">
     <div class="screen-head">
-      <h1>Sugerido de Compras</h1><span class="code">CO-15</span>
+      <h1>Sugerido de Compras</h1><span class="code">CO-15</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <div class="spacer"></div>
       <span class="hint">Artículos inventariables comprados · datos al 19/07/2026</span>
     </div>

@@ -227,16 +227,18 @@ const Docs = (() => {
       const o = {
         id: BD.sig('oc', 'OC-', 6), est: 'Borrador', fecha: d.fecha || BD.hoy(), prov: d.prov || '', cond: d.cond || p.cond || 'Contado', mon: d.mon || p.mon || 'S/.', tc: Number(d.tc) || 3.75,
         ref: d.ref || '', obs: d.obs || '', sol: d.sol || '', of: d.of || '', sf: d.sf || '', almDestino: d.almDestino || '', valLog: false, valGer: false,
+        orgCompra: d.orgCompra || 'SB', grupoCompra: d.grupoCompra || '',
         items, recepciones: [], facturas: [], hist: []
       };
       o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
+      if (!o.grupoCompra) o.grupoCompra = p.tipo === 'Internacional' ? 'IMP' : o.tipo === 'Servicio' ? 'SRV' : ((BD.art(items[0].art) || {}).grupoCompra || 'MP1');
       BD.d.ocs.unshift(o);
       BD.hist(o, 'Creada en borrador', (o.sol ? 'desde ' + o.sol : 'OC directa') + (o.of ? ' · ' + o.of : ''));
       g(); return o;
     },
     guardar(id, d) {
       const o = BD.oc(id); exigir(o && o.est === 'Borrador', 'Solo se edita una OC en Borrador');
-      ['prov', 'fecha', 'cond', 'mon', 'tc', 'ref', 'obs', 'almDestino', 'of'].forEach(k => { if (d[k] != null) o[k] = d[k]; });
+      ['prov', 'fecha', 'cond', 'mon', 'tc', 'ref', 'obs', 'almDestino', 'of', 'orgCompra', 'grupoCompra'].forEach(k => { if (d[k] != null) o[k] = d[k]; });
       if (d.items) o.items = oc._items(d.items);
       o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
       g(); return o;
@@ -271,7 +273,7 @@ const Docs = (() => {
       (f.hist = f.hist || []).push({ f: BD.ahora(), a: c.tipo + ' ' + c.doc, d: BD.nomArt(c.rec) + ' · S/ ' + c.importe, u: BD.usuario });
     },
     cancelar(id, motivo) {
-      const o = BD.oc(id); exigir(o && ['Borrador', 'Pendiente de Validar', 'Para Recibir y Pagar'].includes(o.est) && !o.recepciones.length, 'Solo se cancela una OC sin recepciones');
+      const o = BD.oc(id); exigir(o && ['Borrador', 'Pendiente de Validar', 'Para Recibir y Pagar'].includes(o.est) && !o.recepciones.length && !o.facturas.length, 'Solo se cancela una OC sin recepciones ni facturas');
       o.est = 'Cancelada'; BD.hist(o, 'Cancelada', motivo || '', 'no');
       if (o.sol) { const s = BD.sol(o.sol); if (s) { s.lineas.forEach(l => { if (l.doc === o.id && l.estado === 'En compra') { l.estado = 'Pendiente'; l.doc = ''; } }); sol._actualizar(s); } }
       g(); return o;

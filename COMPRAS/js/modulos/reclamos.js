@@ -1,8 +1,20 @@
-/* COMPRAS · CO-11 Reclamos */
+/* COMPRAS · CO-11 Reclamos — DATOS DE EJEMPLO · no conectado a la base compartida (docs/16 §5).
+   Usa sus propias OC de ejemplo (REC_OCS); los enlaces a esas OC no abren CO-07. */
 /* ===== CO-11 · Reclamos ===== */
 const REC_EST={"Registrado":"var(--reclamo-reg)","Resuelto":"var(--confirmado)"};
 const MOTIVOS=["Faltante en la entrega","Producto con defecto de fábrica","Tono o color distinto al aprobado","Medida o gramaje fuera de especificación","Producto oxidado o deteriorado","Servicio mal ejecutado","Entrega fuera de plazo","Otros"];
 const AVIOS=["MP-0031","MP-0032","MP-0044","MP-0045","MP-0046","MP-0047"];
+/* OC de ejemplo solo para los reclamos (no existen en BD.d.ocs) */
+const REC_OCS={
+ oc225:{id:"OC-000225",prov:"AVÍOS DEL SUR EIRL",fecha:"05/07/2026",est:"Completada",mon:"S/.",items:[{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",cant:500,recq:500},{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",cant:300,recq:300}]},
+ oc231:{id:"OC-000231",prov:"TEXTIL SAN JACINTO SAC",fecha:"14/07/2026",est:"Para Pagar",mon:"S/.",items:[{cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",cant:242.40,recq:242.40}]},
+ oc228:{id:"OC-000228",prov:"LAVANDERIA INDUSTRIAL DEL SUR SAC",fecha:"10/07/2026",est:"Para Pagar",mon:"S/.",items:[{cod:"SERV-0005",nom:"SERVICIO DE LAVADO INDUSTRIAL",u:"UND",cant:60,recq:60}]},
+ oc219:{id:"OC-000219",prov:"YKK DO BRASIL LTDA",fecha:"28/06/2026",est:"Para Recibir y Pagar",mon:"USD",items:[{cod:"MP-0046",nom:"CIERRE YKK RC-045 12CM",u:"UND",cant:6000,recq:0},{cod:"MP-0047",nom:"CIERRE YKK RM-030 15CM",u:"UND",cant:4000,recq:4000}]},
+ oc222:{id:"OC-000222",prov:"CONFECCIONES EL AGUILA SAC",fecha:"01/07/2026",est:"Para Recibir y Pagar",mon:"S/.",items:[{cod:"SERV-0003",nom:"SERVICIO DE CONFECCION PANTALON",u:"UND",cant:120,recq:120}]},
+ oc226:{id:"OC-000226",prov:"TRANSPORTES GAMARRA EXPRESS SAC",fecha:"08/07/2026",est:"Completada",mon:"S/.",items:[{cod:"SERV-0009",nom:"SERVICIO DE FLETE LOCAL",u:"UND",cant:2,recq:2}]},
+ oc229:{id:"OC-000229",prov:"TEXTIL SAN JACINTO SAC",fecha:"11/07/2026",est:"Para Recibir y Pagar",mon:"S/.",items:[{cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",cant:160,recq:80}]}
+};
+function recVerOC(k){ const o=REC_OCS[k]; toast((o?o.id:"OC")+": orden de ejemplo de Reclamos, no existe en la base compartida"); }
 const RECS={
  r8:{id:"REC-000008",ock:"oc225",oc:"OC-000225",prov:"AVÍOS DEL SUR EIRL",obs:"Despacho con dos artículos observados al abrir las cajas.",freg:"10/07/2026",
   lineas:[{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",lote:"",qrec:300,qfall:36,motivo:"Producto oxidado o deteriorado"},
@@ -55,7 +67,7 @@ function renderRec(){
     const nl=d.lineas.length;
     const tr=document.createElement('tr'); tr.className="clickable"; tr.onclick=()=>loadRec(k);
     tr.innerHTML='<td>'+d.id+'</td><td>'+d.prov+'</td>'+
-     '<td><button class="btn-link" onclick="event.stopPropagation();loadOC(\''+d.ock+'\')">'+d.oc+'</button></td>'+
+     '<td><button class="btn-link" onclick="event.stopPropagation();recVerOC(\''+d.ock+'\')">'+d.oc+'</button></td>'+
      '<td>'+recMotivoResumen(d)+(nl>1?'<br><span class="hint">'+nl+' artículos afectados</span>':'')+'</td>'+
      '<td style="'+resCol+'">'+d.result+'</td><td>'+(d.salida||"-")+'</td>'+
      '<td><span class="badge" style="background:'+REC_EST[d.est]+'">'+d.est+'</span></td><td>'+d.freg+'</td><td>'+(d.fcierre||"-")+'</td>'+
@@ -65,6 +77,7 @@ function renderRec(){
   document.getElementById('rec-count').textContent=n+" reclamos";
 }
 function nuevoRec(ockPre){
+  if(ockPre && !REC_OCS[ockPre])ockPre="";
   RECkey=""; REC={id:"REC-0000"+REC_SEQ,ock:"",oc:"",prov:"",obs:"",freg:"2026-07-19",lineas:[],
    result:"Pendiente de gestión",obsres:"",salida:"",est:"Registrado",fcierre:"",docs:[]};
   document.getElementById('rec-titulo').textContent="REGISTRAR RECLAMO";
@@ -78,8 +91,8 @@ function nuevoRec(ockPre){
 }
 function abrirRecOC(){
   const tb=document.getElementById('co11a-body'); tb.innerHTML="";
-  OCS_ORDEN.forEach(k=>{
-    const o=OCS[k]; if(!o)return;
+  Object.keys(REC_OCS).forEach(k=>{
+    const o=REC_OCS[k]; if(!o)return;
     if(o.est==="Borrador"||o.est==="Pendiente de Validar"||o.est==="Cancelada")return;
     tb.innerHTML+='<tr><td>'+o.id+'</td><td>'+o.prov+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+OC_EST[o.est]+'">'+o.est+'</span></td>'+
      '<td><button class="btn btn-primary btn-sm" onclick="vincularRecOC(\''+k+'\')">Vincular</button></td></tr>';
@@ -88,7 +101,7 @@ function abrirRecOC(){
 }
 function vincularRecOC(k){
   closeModal('m-co11a');
-  const o=OCS[k];
+  const o=REC_OCS[k]; if(!o){toast("OC de ejemplo no encontrada");return}
   REC.ock=k; REC.oc=o.id; REC.prov=o.prov; REC.lineas=[];
   document.getElementById('rec-oc').value=o.id;
   document.getElementById('rec-prov').value=o.prov;
@@ -97,7 +110,7 @@ function vincularRecOC(k){
 }
 function abrirRecItem(){
   if(!REC.ock){toast("Vincule primero la Orden de Compra");return}
-  const o=OCS[REC.ock], tb=document.getElementById('co11b-body'); tb.innerHTML="";
+  const o=REC_OCS[REC.ock], tb=document.getElementById('co11b-body'); tb.innerHTML="";
   o.items.forEach((it,i)=>{
     if(REC.lineas.some(l=>l.cod===it.cod))return;
     const qrec=(it.recq!==undefined&&it.recq>0)?it.recq:it.cant;
@@ -109,7 +122,7 @@ function abrirRecItem(){
 }
 function addRecLinea(i){
   closeModal('m-co11b');
-  const it=OCS[REC.ock].items[i];
+  const it=REC_OCS[REC.ock].items[i];
   const qrec=(it.recq!==undefined&&it.recq>0)?it.recq:it.cant;
   REC.lineas.push({cod:it.cod,nom:it.nom,u:it.u,lote:"",qrec:qrec,qfall:0,motivo:""});
   renderRecItems();
@@ -200,8 +213,6 @@ function renderRecForm(){
   if(p3)recSalidaChange();
   document.getElementById('rec-docs').innerHTML=(REC.docs.length?REC.docs:["Sin documentos relacionados"]).map(d=>{
     d=d.replace(/NC-(\d{6})/,'<button class="btn-link" onclick="go(\'co12\')">NC-$1</button>');
-    d=d.replace("ING-000513",'<button class="btn-link" onclick="showDetalle(\'ing513\')">ING-000513</button>');
-    d=d.replace("ING-000502",'<button class="btn-link" onclick="showDetalle(\'ing502\')">ING-000502</button>');
     return '<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+d+'</div>';
   }).join('');
 }
@@ -267,24 +278,14 @@ function recSalidaChange(){
 function crearDevolucionRec(){
   document.getElementById('rec-crear-menu').classList.remove('open');
   devolucionCtx={rec:RECkey};
-  document.getElementById('gi10-tipo').value="Devoluciones a proveedores";
-  document.getElementById('gi10-ndoc').value=REC.id+" · "+REC.oc+" (vinculada)";
-  const c0=REC.lineas[0].cod;
-  document.getElementById('gi10-alm').value=(["MP-0012","MP-0013","MP-0018"].includes(c0))?"SB-ALM-MPT · MP Telas":"SB-ALM-MPA · MP Avíos";
-  document.getElementById('gi10-dsel').value="Proveedor";
-  document.getElementById('gi10-dest').value=REC.prov;
-  document.getElementById('gi10-head').innerHTML=GI10_HEAD_LINK;
-  document.getElementById('gi10-items').innerHTML=REC.lineas.map((l,i)=>
-    '<tr><td>'+(i+1)+'</td><td>'+l.cod+'</td><td>'+l.nom+'</td><td>'+l.u+'</td>'+
-    '<td style="text-align:right">'+fmtM(l.qfall)+'</td><td>'+(l.lote||'<span class="hint">No aplica</span>')+'</td><td></td></tr>').join('');
-  go('gi10');
-  toast("Devolución precargada desde "+REC.id+" con "+REC.lineas.length+" línea(s): confirme para descontar el stock y cerrar el reclamo");
+  toast("Reclamos usa datos de ejemplo: registre la devolución real en Salidas (GI-10) con el tipo de devolución a proveedor");
+  if(document.getElementById('scr-gi10'))go('gi10');
 }
 function crearNCdesdeRec(){
   document.getElementById('rec-crear-menu').classList.remove('open');
   const monto=parseFloat(document.getElementById('rec-ncmonto').value)||0;
   if(!(monto>0)){toast("Indique el monto de la Nota de Crédito");return}
-  const o=OCS[REC.ock];
+  const o=REC_OCS[REC.ock];
   const id="NC-0000"+NC_SEQ; NC_SEQ++;
   NCS.unshift({id:id,prov:REC.prov,ock:REC.ock,oc:REC.oc,rec:REC.id,reck:RECkey,monto:monto,mon:o?o.mon:"S/.",
    est:"Pendiente",freg:"19/07/2026",fapl:"",fac:""});

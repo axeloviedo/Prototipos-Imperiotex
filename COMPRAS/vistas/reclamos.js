@@ -2,7 +2,7 @@
 Vistas.pantallas(String.raw`
   <section class="screen" id="scr-co11">
     <div class="screen-head">
-      <h1>Reclamos a Proveedores</h1><span class="code">CO-11</span>
+      <h1>Reclamos a Proveedores</h1><span class="code">CO-11</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="nuevoRec()">+ Registrar Reclamo</button>
     </div>
@@ -27,7 +27,7 @@ Vistas.pantallas(String.raw`
   <!-- ==================================================== CO-11 · Reclamo (Registro 3 pasos) -->
   <section class="screen" id="scr-co11f">
     <div class="screen-head">
-      <h1 id="rec-titulo">REGISTRAR RECLAMO</h1><span class="code">CO-11</span>
+      <h1 id="rec-titulo">REGISTRAR RECLAMO</h1><span class="code">CO-11</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <span class="badge" id="rec-badge" style="background:var(--reclamo-reg)">Registrado</span>
       <div class="spacer"></div>
       <button class="btn btn-secondary" id="rec-b-cancelar" onclick="go('co11')">Cancelar</button>

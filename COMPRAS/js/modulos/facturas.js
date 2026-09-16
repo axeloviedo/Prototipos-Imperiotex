@@ -1,215 +1,187 @@
-/* COMPRAS · CO-09/10 Facturas de Compra */
-/* ===== CO-09/CO-10 · Facturas de Compra ===== */
-const FAC_EST={"Borrador":"var(--borrador)","Impagado":"var(--impagado)","Pagado":"var(--confirmado)"};
-let FACS=[
- {id:"FC-000048",ock:"oc225",oc:"OC-000225",prov:"AVÍOS DEL SUR EIRL",ndoc:"F441-00220",fecha:"05/07/2026",cond:"Contado",mon:"S/.",tc:"3.75",
-  est:"Pagado",detr:false,detrp:12,obs:"Botones y cierres metálicos.",
-  items:[{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",cant:500,pu:0.35,igv:18},{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",cant:300,pu:0.80,igv:18}],
-  docs:["Pago registrado en BPD_TESORERIA el 05/07/2026 (contado)","Ingreso relacionado: ING-000502 (módulo GI)"],ncs:[]},
- {id:"FC-000051",ock:"oc227",oc:"OC-000227",prov:"AVÍOS DEL SUR EIRL",ndoc:"F441-00219",fecha:"08/07/2026",cond:"Contado",mon:"S/.",tc:"3.75",
-  est:"Pagado",detr:false,detrp:12,obs:"Pagada por adelantado: la entrega llegó después.",
-  items:[{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",cant:1000,pu:0.80,igv:18}],
-  docs:["Pago registrado en BPD_TESORERIA el 08/07/2026"],ncs:[]},
- {id:"FC-000053",ock:"oc229",oc:"OC-000229",prov:"TEXTIL SAN JACINTO SAC",ndoc:"F212-00836",fecha:"11/07/2026",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  est:"Impagado",detr:false,detrp:12,obs:"Factura del primer despacho (entrega parcial).",
-  items:[{cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",cant:64,pu:19.40,igv:18}],
-  docs:["Vence el 10/08/2026 (crédito 30 días) · pago pendiente en BPD_TESORERIA"],ncs:[]},
- {id:"FC-000055",ock:"oc226",oc:"OC-000226",prov:"TRANSPORTES GAMARRA EXPRESS SAC",ndoc:"F090-1122",fecha:"08/07/2026",cond:"Contado",mon:"S/.",tc:"3.75",
-  est:"Pagado",detr:true,detrp:12,obs:"Servicio de flete: sujeto a detracción.",
-  items:[{cod:"SERV-0009",nom:"SERVICIO DE FLETE LOCAL",u:"UND",cant:2,pu:180.00,igv:18}],
-  docs:["Pago registrado en BPD_TESORERIA","Detracción depositada en cuenta del Banco de la Nación"],ncs:[]}
- ,{id:"FC-000054",ock:"oc219",oc:"OC-000219",prov:"YKK DO BRASIL LTDA",ndoc:"Invoice YKK-BR 88412",fecha:"18/07/2026",cond:"Contado",mon:"USD",tc:"3.75",
-  est:"Impagado",detr:false,detrp:12,obs:"Importación de cierres YKK: embarque marítimo en tránsito.",
-  items:[{cod:"MP-0046",nom:"CIERRE YKK RC-045 12CM",u:"UND",cant:6000,pu:0.52,igv:0},{cod:"MP-0047",nom:"CIERRE YKK RM-030 15CM",u:"UND",cant:4000,pu:0.48,igv:0}],
-  docs:["Registrada desde la Invoice del proveedor (CO-10)","Mercadería aún no recibida: embarque en tránsito"],ncs:[]}
-];
-let FAC=null, FACidx=-1, FAC_SEQ=56;
+/* COMPRAS · CO-09/10 Facturas de Compra
+   Conectado a la base compartida: BD.d.facturas con Docs.fac.crear/pagar (docs/16 §3.4).
+   {id:'FC-000001', oc, prov, ndoc, fecha, cond, mon, tc, est:'Impagado'|'Pagado', items:[{art, cant, pu, igv}], obs, hist}
+   Globales: renderFac(), abrirFactura(id), crearFacDesdeOC() (desde CO-07). */
+const FAC_EST={"Por registrar":"var(--borrador)","Borrador":"var(--borrador)","Impagado":"var(--impagado)","Pagado":"var(--confirmado)","Anulada":"var(--cancelada)"};
+let FAC=null;   // factura abierta: documento de la base o borrador local {nuevo:true,...} aún no registrado
 function facTot(f){
   let sub=0,igv=0;
-  f.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igv+=st*(it.igv/100)});
+  f.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igv+=st*((it.igv||0)/100)});
   return {sub:sub,igv:igv,tot:sub+igv};
 }
 function renderFac(){
-  const q=(document.getElementById('f-fac-q').value||"").toLowerCase();
-  const e=document.getElementById('f-fac-e').value, pv=document.getElementById('f-fac-p').value;
-  const selP=document.getElementById('f-fac-p');
-  if(selP.options.length<=1)selP.innerHTML='<option value="">Todos</option>'+[...new Set(PROV.map(x=>x.nom))].map(x=>'<option>'+x+'</option>').join('');
-  const tb=document.getElementById('fac-body'); tb.innerHTML=""; let n=0, imp=0;
-  FACS.forEach((f,i)=>{
-    if(q && !(f.id.toLowerCase().includes(q)||f.ndoc.toLowerCase().includes(q)||sinTildes(f.prov).includes(sinTildes(q))||f.oc.toLowerCase().includes(q)))return;
-    if(e && f.est!==e)return; if(pv && f.prov!==pv)return;
+  const tb=document.getElementById('fac-body'); if(!tb)return;
+  const facs=coD().facturas;
+  const q=sinTildes(document.getElementById('f-fac-q').value||"");
+  const e=document.getElementById('f-fac-e').value;
+  const selP=document.getElementById('f-fac-p'), pv=selP.value;
+  const provs=[...new Set(facs.map(f=>f.prov))];
+  selP.innerHTML='<option value="">Todos</option>'+provs.map(c=>'<option value="'+c+'">'+coEsc(coProvTxt(c))+'</option>').join('');
+  selP.value=provs.includes(pv)?pv:"";
+  const desde=document.getElementById('f-fac-d').value;
+  let html="", n=0, impS=0, impU=0;
+  facs.forEach(f=>{
+    if(q && !(sinTildes(f.id).includes(q)||sinTildes(f.ndoc).includes(q)||sinTildes(coProvTxt(f.prov)).includes(q)||sinTildes(f.oc).includes(q)))return;
+    if(e && f.est!==e)return; if(selP.value && f.prov!==selP.value)return;
+    if(desde && coISO(f.fecha)<desde)return;
     n++;
-    const t=facTot(f); if(f.est==="Impagado")imp+=t.tot;
-    const tr=document.createElement('tr'); tr.className="clickable"; tr.onclick=()=>loadFac(i);
-    tr.innerHTML='<td>'+f.id+'</td><td>'+f.prov+'</td><td>'+(f.ndoc||'<span class="hint">sin registrar</span>')+'</td><td>'+f.mon+'</td>'+
-     '<td style="text-align:right;font-weight:600">'+fmtM(t.tot)+'</td>'+
-     '<td><span class="badge" style="background:'+FAC_EST[f.est]+'">'+f.est+'</span></td><td>'+f.fecha+'</td>'+
-     '<td><button class="btn-link" onclick="event.stopPropagation();loadOC(\''+f.ock+'\')">'+f.oc+'</button></td>'+
-     '<td><button class="btn-link" onclick="event.stopPropagation();loadFac('+i+')">Abrir</button></td>';
-    tb.appendChild(tr);
+    const tot=Docs.fac.total(f);
+    if(f.est==="Impagado"){ if(f.mon==="USD")impU+=tot; else impS+=tot; }
+    html+='<tr class="clickable" onclick="abrirFactura(\''+f.id+'\')"><td>'+f.id+'</td><td>'+coEsc(coProvTxt(f.prov))+'</td><td>'+coEsc(f.ndoc)+'</td><td>'+f.mon+'</td>'+
+     '<td style="text-align:right;font-weight:600">'+fmtM(tot)+'</td>'+
+     '<td><span class="badge" style="background:'+(FAC_EST[f.est]||"var(--borrador)")+'">'+f.est+'</span></td><td>'+f.fecha+'</td>'+
+     '<td><button class="btn-link" onclick="event.stopPropagation();abrirOC(\''+f.oc+'\')">'+f.oc+'</button></td>'+
+     '<td><button class="btn-link" onclick="event.stopPropagation();abrirFactura(\''+f.id+'\')">Abrir</button></td></tr>';
   });
-  document.getElementById('fac-count').innerHTML=n+" facturas"+(imp>0?' · <b style="color:var(--impagado)">Impagado: S/. '+fmtM(imp)+'</b>':'');
+  tb.innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:16px">'+(facs.length?'Sin facturas para los filtros aplicados':'Aún no hay facturas en la base: regístrelas contra una OC aprobada')+'</td></tr>';
+  const imp=[impS>0?'S/. '+fmtM(impS):'',impU>0?'USD '+fmtM(impU):''].filter(Boolean).join(' + ');
+  document.getElementById('fac-count').innerHTML=n+" facturas"+(imp?' · <b style="color:var(--impagado)">Impagado: '+imp+'</b>':'');
+  /* rehidrata la ficha abierta (si no es un borrador local) */
+  const scr=document.getElementById('scr-co10');
+  if(FAC && !FAC.nuevo && scr && scr.classList.contains('active')){ const f=BD.fac(FAC.id); if(f){FAC=f; loadFacForm(true);} }
 }
 function abrirFacOC(){
-  const tb=document.getElementById('co10a-body'); tb.innerHTML="";
-  OCS_ORDEN.forEach(k=>{
-    const o=OCS[k]; if(!o)return;
-    if(o.est==="Borrador"||o.est==="Pendiente de Validar"||o.est==="Cancelada")return;
-    if(o.fac>=100)return;
-    const t=ocTotales(o);
-    tb.innerHTML+='<tr><td>'+o.id+'</td><td>'+o.prov+'</td><td>'+o.fecha+'</td><td style="text-align:right">'+(o.mon==="USD"?"USD ":"S/. ")+fmtM(t.tot)+'</td>'+
-     '<td style="text-align:right;color:var(--confirmado)">'+o.fac+'%</td>'+
-     '<td><button class="btn btn-primary btn-sm" onclick="crearFacDesdeOCk(\''+k+'\')">Facturar</button></td></tr>';
+  let html="";
+  coD().ocs.filter(ocFacturable).forEach(o=>{
+    const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
+    html+='<tr><td>'+o.id+'</td><td>'+o.tipo+'</td><td>'+coEsc(coProvTxt(o.prov))+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td>'+
+     '<td style="text-align:right">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
+     '<td style="text-align:right">'+a.rec+'%</td><td style="text-align:right;color:var(--confirmado)">'+a.fac+'%</td>'+
+     '<td><button class="btn btn-primary btn-sm" onclick="crearFacDesdeOCk(\''+o.id+'\')">Facturar</button></td></tr>';
   });
-  if(!tb.innerHTML)tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--texto-sec);padding:14px">No hay OCs pendientes de facturar</td></tr>';
+  document.getElementById('co10a-body').innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:14px">No hay OCs aprobadas pendientes de facturar</td></tr>';
   openModal('m-co10a');
 }
 function crearFacDesdeOC(){
-  document.getElementById('oc-crear-menu').classList.remove('open');
-  if(OC.fac>=100){toast("La OC ya está facturada al 100%");return}
-  crearFacDesdeOCk(OCkey);
+  const menu=document.getElementById('oc-crear-menu'); if(menu)menu.classList.remove('open');
+  if(!OC||!OCid){toast("Abra primero una orden de compra");return}
+  if(!ocFacturable(BD.oc(OCid))){toast("La OC no está aprobada o ya está facturada al 100%");return}
+  crearFacDesdeOCk(OCid);
 }
-function crearFacDesdeOCk(k){
+function crearFacDesdeOCk(id){
   closeModal('m-co10a');
-  const o=OCS[k];
-  const esServ=esServicioOC(o);
-  FAC={id:"FC-0000"+FAC_SEQ,ock:k,oc:o.id,prov:o.prov,ndoc:"",fecha:"19/07/2026",cond:o.cond,mon:o.mon,tc:o.tc,
-   est:"Borrador",detr:esServ,detrp:12,obs:"",
-   items:o.items.map(it=>({cod:it.cod,nom:it.nom,u:it.u,cant:it.cant,pu:it.pu,igv:it.igv})),
-   docs:["Factura del proveedor registrada contra "+o.id+" (Crear ▾)"],ncs:[]};
-  FACidx=-1;
+  const o=BD.oc(id); if(!o){toast("No existe la OC "+id);return}
+  if(!ocFacturable(o)){toast("La OC "+id+" no está aprobada o ya está facturada");return}
+  FAC={nuevo:true,id:"",oc:o.id,prov:o.prov,ndoc:"",fecha:BD.hoy(),cond:o.cond,mon:o.mon,tc:o.tc,est:"Por registrar",obs:"",
+    items:ocPendFac(o).map(it=>({art:it.art,cant:BD.r4(it.cant-it.facq),pu:it.pu,igv:it.igv,max:BD.r4(it.cant-it.facq),puOC:it.pu})),hist:[]};
   loadFacForm();
-  toast("Factura contra "+o.id+": ítems y precios precargados, transcriba la serie y número del comprobante recibido"+(esServ?" · servicio: detracción sugerida":""));
+  toast("Factura contra "+o.id+": transcriba la serie y número del comprobante recibido"+(o.of&&esServicioOC(o)?" · pasará a la pestaña Costo de "+o.of:""));
 }
-function loadFac(i){
-  FACidx=i; FAC=FACS[i]; loadFacForm();
+function abrirFactura(id){
+  const f=BD.fac(id); if(!f){toast("No existe la factura "+id);return}
+  FAC=f; loadFacForm();
 }
-function loadFacForm(){
-  document.getElementById('fac-id').value=FAC.id;
+function loadFac(id){ abrirFactura(id); }
+function verOCdeFac(){ if(FAC&&FAC.oc)abrirOC(FAC.oc); }
+function loadFacForm(sinIr){
+  const o=BD.oc(FAC.oc), p=BD.prov(FAC.prov)||{};
+  document.getElementById('fac-id').value=FAC.nuevo?"(se asigna al registrar)":FAC.id;
   document.getElementById('fac-oc').value=FAC.oc;
-  document.getElementById('fac-prov').value=FAC.prov;
+  document.getElementById('fac-prov').value=p.nom?(p.nom+" ("+p.cod+")"):FAC.prov;
   document.getElementById('fac-ndoc').value=FAC.ndoc;
-  document.getElementById('fac-cond').value=FAC.cond;
+  document.getElementById('fac-fecha').value=coISO(FAC.fecha);
+  document.getElementById('fac-cond').value=FAC.cond||"";
   document.getElementById('fac-mon').value=FAC.mon;
   document.getElementById('fac-tc').value=FAC.tc;
-  document.getElementById('fac-obs').value=FAC.obs;
-  document.getElementById('fac-detr').checked=FAC.detr;
-  document.getElementById('fac-detrp').value=FAC.detrp;
-  renderFacForm(); go('co10');
+  document.getElementById('fac-obs').value=FAC.obs||"";
+  document.getElementById('fac-fiscal').value="Detracción: "+(p.detraccion?"sí":"no")+" · Retención: "+(p.retencion?"sí":"no");
+  /* aviso: servicio de una orden de fabricación */
+  const av=document.getElementById('fac-aviso-of');
+  const srvOF=o && o.of && FAC.items.some(i=>BD.esServicio(i.art));
+  if(srvOF){
+    av.style.display="block";
+    av.innerHTML='<b style="font-size:12.5px">Servicio de la orden de fabricación '+coEsc(o.of)+'</b><p class="hint" style="margin-top:5px">'+(FAC.nuevo?'Al registrarla, esta factura pasa':'Esta factura pasó')+' a la <b>pestaña Costo de la orden</b>, donde el importe real se contrasta con el costo estándar del servicio.'+(BD.of(o.of)?'':' <span style="color:var(--pendiente)">La orden '+coEsc(o.of)+' no existe en la base: no se registra en ninguna orden.</span>')+' <button class="btn-link" onclick="verOFdeOC(\''+coEsc(o.of)+'\')">Abrir la orden en Producción</button></p>';
+  }else av.style.display="none";
+  renderFacForm();
+  if(!sinIr)go('co10');
 }
 function renderFacForm(){
-  const e=FAC.est, ro=(e!=="Borrador");
-  document.getElementById('fac-titulo').textContent=(e==="Borrador")?"REGISTRAR FACTURA DEL PROVEEDOR":("FACTURA DEL PROVEEDOR: "+(FAC.ndoc||FAC.id));
-  const b=document.getElementById('fac-badge'); b.textContent=e; b.style.background=FAC_EST[e];
+  const e=FAC.est, nuevo=!!FAC.nuevo;
+  document.getElementById('fac-titulo').textContent=nuevo?"REGISTRAR FACTURA DEL PROVEEDOR":("FACTURA DEL PROVEEDOR: "+FAC.ndoc+" · "+FAC.id);
+  const b=document.getElementById('fac-badge'); b.textContent=e; b.style.background=FAC_EST[e]||"var(--borrador)";
   const show=(id,v)=>document.getElementById(id).style.display=v?"inline-block":"none";
-  show('fac-b-cancelar',e==="Borrador"); show('fac-b-guardar',e==="Borrador"); show('fac-b-emitir',e==="Borrador");
-  show('fac-b-pago',e==="Impagado"); show('fac-b-volver',ro);
-  ['fac-ndoc','fac-fecha','fac-cond','fac-obs','fac-detr','fac-detrp'].forEach(id=>document.getElementById(id).disabled=ro);
+  show('fac-b-cancelar',nuevo); show('fac-b-emitir',nuevo);
+  show('fac-b-pago',!nuevo && e==="Impagado"); show('fac-b-volver',!nuevo);
+  ['fac-ndoc','fac-fecha','fac-obs'].forEach(id=>document.getElementById(id).disabled=!nuevo);
+  document.getElementById('fac-items-hint').style.display=nuevo?"block":"none";
   renderFacItems();
-  renderFacNC();
-  document.getElementById('fac-docs').innerHTML=(FAC.docs.length?FAC.docs:["Sin documentos relacionados"]).map(d=>{
-    d=d.replace("ING-000502",'<button class="btn-link" onclick="showDetalle(\'ing502\')">ING-000502</button>');
-    d=d.replace("ING-000513",'<button class="btn-link" onclick="showDetalle(\'ing513\')">ING-000513</button>');
-    return '<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+d+'</div>';
-  }).join('');
+  renderFacDocs();
 }
 function renderFacItems(){
-  const ro=(FAC.est!=="Borrador");
-  document.getElementById('fac-items-head').innerHTML='<tr><th style="width:36px">#</th><th>Código</th><th>Nombre</th><th>Unidad</th><th style="width:95px;text-align:right">Cantidad</th><th style="width:105px;text-align:right">Precio unit.</th><th style="width:100px;text-align:right">Subtotal</th><th style="width:95px;text-align:right">IGV (auto)</th><th style="width:110px;text-align:right">Total</th></tr>';
-  const tb=document.getElementById('fac-items'); tb.innerHTML="";
-  let sub=0,igvT=0;
-  const oc=OCS[FAC.ock];
+  const nuevo=!!FAC.nuevo;
+  document.getElementById('fac-items-head').innerHTML='<tr><th style="width:36px">#</th><th>Código</th><th>Nombre</th><th>Unidad</th>'+(nuevo?'<th style="width:95px;text-align:right">Pendiente</th>':'')+'<th style="width:95px;text-align:right">Cantidad</th><th style="width:105px;text-align:right">Precio unit.</th><th style="width:100px;text-align:right">Subtotal</th><th style="width:95px;text-align:right">IGV (auto)</th><th style="width:110px;text-align:right">Total</th></tr>';
+  const o=BD.oc(FAC.oc);
+  let html="";
   FAC.items.forEach((it,i)=>{
-    const st=it.cant*it.pu, igv=st*(it.igv/100); sub+=st; igvT+=igv;
-    const ocIt=oc?oc.items.find(x=>x.cod===it.cod):null;
-    const dif=(ocIt && (Math.abs(ocIt.cant-it.cant)>0.001 || Math.abs(ocIt.pu-it.pu)>0.001));
-    const cant=ro?('<td style="text-align:right">'+fmtM(it.cant)+'</td>'):'<td><input value="'+it.cant+'" style="text-align:right" oninput="facItemInput('+i+',\'cant\',this)"></td>';
-    const pu=ro?('<td style="text-align:right">'+fmtM(it.pu)+'</td>'):'<td><input value="'+it.pu+'" style="text-align:right" oninput="facItemInput('+i+',\'pu\',this)"></td>';
-    tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+it.cod+'</td><td id="fac-nom-'+i+'">'+it.nom+(dif?' <span class="hint" style="color:var(--pendiente)">difiere de la OC</span>':'')+'</td><td>'+it.u+'</td>'+cant+pu+
-     '<td id="fac-st-'+i+'" style="text-align:right">'+fmtM(st)+'</td><td id="fac-igv-'+i+'" style="text-align:right">'+(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00 <span class="hint">import.</span>')+'</td>'+
+    const st=it.cant*it.pu, igv=st*((it.igv||0)/100);
+    const ocIt=o?o.items.find(x=>x.art===it.art):null;
+    const dif=!!ocIt && Math.abs(ocIt.pu-it.pu)>0.0001;
+    const cant=nuevo?'<td><input value="'+it.cant+'" style="text-align:right" oninput="facItemInput('+i+',\'cant\',this)"></td>':('<td style="text-align:right">'+fmtM(it.cant)+'</td>');
+    const pu=nuevo?'<td><input value="'+it.pu+'" style="text-align:right" oninput="facItemInput('+i+',\'pu\',this)"></td>':('<td style="text-align:right">'+fmtM(it.pu)+'</td>');
+    html+='<tr><td>'+(i+1)+'</td><td>'+it.art+'</td><td id="fac-nom-'+i+'">'+coEsc(BD.nomArt(it.art))+(dif?' <span class="hint" style="color:var(--pendiente)">precio distinto a la OC ('+fmtM(ocIt.pu)+')</span>':'')+'</td><td>'+coEsc(BD.u(it.art))+'</td>'+
+     (nuevo?'<td style="text-align:right">'+fmtM(it.max)+'</td>':'')+cant+pu+
+     '<td id="fac-st-'+i+'" style="text-align:right">'+fmtM(st)+'</td><td id="fac-igv-'+i+'" style="text-align:right">'+(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00')+'</td>'+
      '<td id="fac-tot-'+i+'" style="text-align:right;font-weight:600">'+fmtM(st+igv)+'</td></tr>';
   });
+  document.getElementById('fac-items').innerHTML=html||'<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:14px">Sin ítems</td></tr>';
   facTotalesUI();
 }
 function facItemInput(i,campo,el){
-  FAC.items[i][campo]=parseFloat(el.value)||0;
-  const it=FAC.items[i], st=it.cant*it.pu, igv=st*(it.igv/100);
-  const oc=OCS[FAC.ock];
-  const ocIt=oc?oc.items.find(x=>x.cod===it.cod):null;
-  const dif=(ocIt && (Math.abs(ocIt.cant-it.cant)>0.001 || Math.abs(ocIt.pu-it.pu)>0.001));
+  const it=FAC.items[i];
+  it[campo]=parseFloat(el.value)||0;
+  const st=it.cant*it.pu, igv=st*((it.igv||0)/100);
   const cn=document.getElementById('fac-nom-'+i);
-  if(cn)cn.innerHTML=it.nom+(dif?' <span class="hint" style="color:var(--pendiente)">difiere de la OC</span>':'');
+  if(cn)cn.innerHTML=coEsc(BD.nomArt(it.art))+(Math.abs((it.puOC||it.pu)-it.pu)>0.0001?' <span class="hint" style="color:var(--pendiente)">precio distinto a la OC ('+fmtM(it.puOC)+')</span>':'')+(it.cant>it.max+0.00005?' <span class="hint" style="color:var(--cancelada)">supera lo pendiente</span>':'');
   const c1=document.getElementById('fac-st-'+i), c2=document.getElementById('fac-igv-'+i), c3=document.getElementById('fac-tot-'+i);
   if(c1)c1.textContent=fmtM(st);
-  if(c2)c2.innerHTML=(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00 <span class="hint">import.</span>');
+  if(c2)c2.textContent=(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00');
   if(c3)c3.textContent=fmtM(st+igv);
   facTotalesUI();
 }
 function facTotalesUI(){
-  let sub=0,igvT=0;
-  FAC.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igvT+=st*(it.igv/100)});
-  const tot=sub+igvT;
-  const tc=parseFloat(FAC.tc)||1;
-  const dual=(FAC.mon==="USD")?(' <span class="hint">· S/. '+fmtM(tot*tc)+' (TC '+tc+')</span>'):'';
-  document.getElementById('fac-items-foot').innerHTML='<tr><td colspan="6" style="text-align:right;font-weight:600">Totales ('+FAC.mon+')</td>'+
-   '<td style="text-align:right;font-weight:600">'+fmtM(sub)+'</td><td style="text-align:right;font-weight:600">'+fmtM(igvT)+'</td><td style="text-align:right;font-weight:700">'+fmtM(tot)+dual+'</td></tr>';
-  // detraccion
-  const box=document.getElementById('fac-detr-box');
-  const aplica=document.getElementById('fac-detr').checked;
-  FAC.detr=aplica; FAC.detrp=parseFloat(document.getElementById('fac-detrp').value)||0;
-  if(aplica){
-    const d=tot*FAC.detrp/100;
+  const t=facTot(FAC), tc=parseFloat(FAC.tc)||1;
+  const dual=(FAC.mon==="USD")?(' <span class="hint">· S/. '+fmtM(t.tot*tc)+' (TC '+tc+')</span>'):'';
+  document.getElementById('fac-items-foot').innerHTML='<tr><td colspan="'+(FAC.nuevo?7:6)+'" style="text-align:right;font-weight:600">Totales ('+FAC.mon+')</td>'+
+   '<td style="text-align:right;font-weight:600">'+fmtM(t.sub)+'</td><td style="text-align:right;font-weight:600">'+fmtM(t.igv)+'</td><td style="text-align:right;font-weight:700">'+fmtM(t.tot)+dual+'</td></tr>';
+  const p=BD.prov(FAC.prov)||{}, box=document.getElementById('fac-detr-box');
+  if(p.detraccion||p.retencion){
     box.style.display="block";
-    box.innerHTML='Detracción '+FAC.detrp+'%: <b>'+fmtM(d)+'</b> se deposita en la cuenta de detracciones del proveedor · Neto a pagar al proveedor: <b>'+fmtM(tot-d)+'</b> <span class="warn" title="Porcentaje y supuestos a confirmar con contabilidad">⚠</span>';
+    box.innerHTML='Dato informativo del maestro del proveedor: '+[p.detraccion?'<b>sujeto a detracción</b> (se deposita en su cuenta del Banco de la Nación; porcentaje según el tipo de servicio)':'',p.retencion?'<b>sujeto a retención</b>':''].filter(Boolean).join(' · ')+'. No se calcula aquí: lo aplica Tesorería al pagar <span class="warn" title="Porcentajes y cuentas a confirmar con contabilidad">⚠</span>.';
   }else box.style.display="none";
 }
-function renderFacNC(){
-  const box=document.getElementById('fac-nc'), tb=document.getElementById('fac-nc-body');
-  const pend=NCS.filter(x=>x.prov===FAC.prov && x.est==="Pendiente");
-  if(!pend.length || FAC.est==="Pagado"){box.style.display="none";return}
-  box.style.display="block"; tb.innerHTML="";
-  pend.forEach(x=>{
-    const i=NCS.indexOf(x);
-    tb.innerHTML+='<tr><td>'+x.id+'</td>'+
-     '<td>'+(x.reck?('<button class="btn-link" onclick="loadRec(\''+x.reck+'\')">'+x.rec+'</button>'):x.rec)+'</td>'+
-     '<td>'+x.oc+'</td><td style="text-align:right;font-weight:600">'+(x.mon==="USD"?"USD ":"S/. ")+fmtM(x.monto)+'</td>'+
-     '<td><button class="btn btn-primary btn-sm" onclick="aplicarNCenFac('+i+')">Aplicar a esta factura</button></td></tr>';
-  });
+function renderFacDocs(){
+  const o=BD.oc(FAC.oc), filas=[];
+  const fila=h=>'<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+h+'</div>';
+  if(o){
+    const a=Docs.oc.avance(o);
+    filas.push(fila('Orden de compra <button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button> · '+o.tipo+' · <span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span> · recibido '+a.rec+'% · facturado '+a.fac+'%'));
+    o.recepciones.filter(r=>r.tipo==="Ingreso").forEach(r=>filas.push(fila('Ingreso relacionado: '+((typeof abrirMov==='function')?'<button class="btn-link" onclick="abrirMov(\''+r.mov+'\')">'+r.mov+'</button>':'<b>'+r.mov+'</b>')+((BD.mov(r.mov)||{}).tipoMov?' · '+coEsc(BD.mov(r.mov).tipoMov):'')+' · '+r.fecha+' · '+coEsc(r.alm))));
+    o.recepciones.filter(r=>r.tipo==="Conformidad").forEach(r=>filas.push(fila('Conformidad del servicio · '+r.fecha+(r.conforme===false?' · con observaciones':''))));
+    o.facturas.filter(id=>id!==FAC.id).forEach(id=>{const f=BD.fac(id); if(f)filas.push(fila('Otra factura de la misma OC: <button class="btn-link" onclick="abrirFactura(\''+f.id+'\')">'+f.id+'</button> · '+coEsc(f.ndoc)+' · '+f.est))});
+  }
+  (FAC.hist||[]).slice().reverse().forEach(h=>filas.push(fila(h.f+' · '+coEsc(h.u)+' · <b>'+coEsc(h.a)+'</b>'+(h.d?' · <span class="hint">'+coEsc(h.d)+'</span>':''))));
+  document.getElementById('fac-docs').innerHTML=filas.join('')||'<span class="hint">Sin documentos relacionados</span>';
 }
-function aplicarNCenFac(i){
-  const x=NCS[i];
-  if(!FAC.ndoc){toast("Registre primero la factura para poder aplicarle la NC");return}
-  x.est="Aplicada"; x.fac=FAC.ndoc; x.fapl="19/07/2026";
-  FAC.ncs.push(x.id);
-  FAC.docs.unshift("Nota de Crédito aplicada: "+x.id+" por "+(x.mon==="USD"?"USD ":"S/. ")+fmtM(x.monto)+" (origen "+x.rec+")");
-  renderFacForm(); renderNC();
-  toast(x.id+" aplicada a "+FAC.ndoc+": el descuento se refleja en el pago a Tesorería");
-}
+function cancelarFacForm(){ const oc=FAC&&FAC.oc; FAC=null; if(oc&&BD.oc(oc))abrirOC(oc); else go('co09'); }
 function registrarFac(){
+  if(!FAC||!FAC.nuevo)return;
   const nd=document.getElementById('fac-ndoc').value.trim();
   if(!nd){toast("Transcriba la serie y número del comprobante recibido del proveedor");return}
-  if(!/^[A-Za-z0-9]+-[0-9]+$/.test(nd)){toast("Formato esperado serie-número, por ejemplo F212-00841");return}
-  if(FACS.some((f,i)=>f.ndoc===nd && i!==FACidx)){toast("Ya existe una factura registrada con ese comprobante");return}
-  if(!FAC.items.length){toast("La factura no tiene ítems");return}
-  FAC.ndoc=nd; FAC.cond=document.getElementById('fac-cond').value;
-  FAC.obs=document.getElementById('fac-obs').value; FAC.est="Impagado";
-  if(FACidx<0){FACS.unshift(FAC); FACidx=0; FAC_SEQ++;}
-  // avance de facturacion en la OC
-  const o=OCS[FAC.ock];
-  if(o){
-    const totOC=o.items.reduce((a,it)=>a+it.cant*it.pu,0);
-    const facV=FACS.filter(f=>f.ock===FAC.ock&&f.est!=="Borrador").reduce((a,f)=>a+f.items.reduce((b,it)=>b+it.cant*it.pu,0),0);
-    o.fac=Math.min(100,Math.round(facV/totOC*100));
-    o.est=estadoPorAvance(o);
-    o.docs.unshift("Factura del proveedor registrada: "+nd+" ("+FAC.id+") · Impagada");
-    renderOCS();
-  }
-  renderFacForm(); renderFac();
-  toast(nd+" registrada: Impagada · OC facturada al "+(o?o.fac:0)+"% · estado "+(o?o.est:""));
+  if(!/^[A-Za-z0-9]+-[0-9]+$/.test(nd)){toast("Formato esperado serie-número, por ejemplo F001-00012");return}
+  if(coD().facturas.some(f=>f.prov===FAC.prov && f.ndoc===nd)){toast("Ya existe una factura de este proveedor con ese comprobante");return}
+  const lineas=FAC.items.filter(it=>it.cant>0).map(it=>({art:it.art,cant:it.cant,pu:it.pu}));
+  if(!lineas.length){toast("Indique al menos una cantidad a facturar");return}
+  if(FAC.items.some(it=>it.pu<=0 && it.cant>0)){toast("Todas las líneas facturadas deben tener precio");return}
+  const fecha=coDMY(document.getElementById('fac-fecha').value)||BD.hoy();
+  const f=coTry(()=>Docs.fac.crear({oc:FAC.oc,ndoc:nd,fecha:fecha,lineas:lineas,obs:document.getElementById('fac-obs').value}));
+  if(!f)return;
+  const o=BD.oc(f.oc), a=Docs.oc.avance(o);
+  FAC=f; loadFacForm(); coRefrescar();
+  toast(nd+" registrada ("+f.id+"): Impagada · OC facturada al "+a.fac+"% · "+o.est);
 }
 function marcarPagada(){
-  FAC.est="Pagado";
-  FAC.docs.unshift("Pago registrado en BPD_TESORERIA el 19/07/2026");
-  renderFacForm(); renderFac();
-  toast("Pago reflejado desde BPD_TESORERIA: la factura queda Pagada");
+  if(!FAC||FAC.nuevo)return;
+  const f=coTry(()=>Docs.fac.pagar(FAC.id)); if(!f)return;
+  FAC=f; loadFacForm(); coRefrescar();
+  toast("Pago reflejado desde Tesorería: la factura queda Pagada");
 }

@@ -2,7 +2,7 @@
 Vistas.pantallas(String.raw`
   <section class="screen" id="scr-co12">
     <div class="screen-head">
-      <h1>Notas de Crédito de Proveedor</h1><span class="code">CO-12</span>
+      <h1>Notas de Crédito de Proveedor</h1><span class="code">CO-12</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="nuevaNC()">+ Registrar NC</button>
     </div>
@@ -20,7 +20,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="nc-count"></span></div>
     </div>
-    <p class="hint">Una NC Pendiente aparece en la sección "NC aplicables" de las Facturas del proveedor (CO-10, Ola 5): Tesorería la consulta antes de pagar la siguiente factura. Detracción cuando corresponda <span class="warn" title="Tratamiento de detracción a confirmar con contabilidad">⚠</span>.</p>
+    <p class="hint">Pantalla con datos de ejemplo: sus NC no se cruzan con las facturas reales de la base (CO-10). En el diseño, una NC Pendiente la consulta Tesorería antes de pagar la siguiente factura del proveedor. Detracción cuando corresponda <span class="warn" title="Tratamiento de detracción a confirmar con contabilidad">⚠</span>.</p>
   </section>
 `);
 

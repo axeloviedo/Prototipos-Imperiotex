@@ -1,18 +1,24 @@
-/* COMPRAS · CO-14 Comprobante de Costos de Destino (Landed Cost) */
+/* COMPRAS · CO-14 Comprobante de Costos de Destino (Landed Cost) — DATOS DE EJEMPLO · no conectado a la base compartida (docs/16 §5).
+   Usa sus propias facturas de importación de ejemplo (CCD_FACS), no BD.d.facturas. */
+const CCD_FACS=[
+ {id:"FC-EJ-0054",oc:"OC-000219",prov:"YKK DO BRASIL LTDA",ndoc:"Invoice YKK-BR 88412",fecha:"18/07/2026",mon:"USD",tc:"3.75",est:"Impagado",
+  items:[{cod:"MP-0046",nom:"CIERRE YKK RC-045 12CM",u:"UND",cant:6000,pu:0.52,igv:0},{cod:"MP-0047",nom:"CIERRE YKK RM-030 15CM",u:"UND",cant:4000,pu:0.48,igv:0}]}
+];
+function ccdFacTot(f){let sub=0,igv=0;f.items.forEach(it=>{const st=it.cant*it.pu;sub+=st;igv+=st*(it.igv/100)});return {sub:sub,igv:igv,tot:sub+igv}}
 /* ===== CO-14 · Comprobante de Costos de Destino Estimados (Landed Cost) ===== */
 const CTAS_COSTO=["Cargos de tránsito y transporte","Derechos de aduana y nacionalización","Flete internacional","Seguro de carga"];
 const CCD_EST={"Borrador":"var(--borrador)","Aplicado":"var(--completada)"};
 let CCDS=[
- {id:"CCD-0001",fecha:"19/07/2026",tc:"3.40",base:"Cantidad",est:"Borrador",fks:[4],
+ {id:"CCD-0001",fecha:"19/07/2026",tc:"3.40",base:"Cantidad",est:"Borrador",fks:[0],
   costos:[{cta:"Cargos de tránsito y transporte",desc:"Transporte marítimo Santos-Callao + gastos portuarios",mon:"S/.",imp:2000},
           {cta:"Derechos de aduana y nacionalización",desc:"Agencia de aduanas y nacionalización del embarque",mon:"USD",imp:300}]}
 ];
 let CCD=null, CCDidx=-1, CCD_SEQ=2;
-function ccdFacTotS(f){const t=facTot(f);return (f.mon==="USD")?t.tot*(parseFloat(f.tc)||1):t.tot}
+function ccdFacTotS(f){const t=ccdFacTot(f);return (f.mon==="USD")?t.tot*(parseFloat(f.tc)||1):t.tot}
 function ccdItems(){
   const arr=[];
   CCD.fks.forEach(fi=>{
-    const f=FACS[fi]; if(!f)return;
+    const f=CCD_FACS[fi]; if(!f)return;
     const tc=(f.mon==="USD")?(parseFloat(f.tc)||1):1;
     f.items.forEach(it=>{
       const tot=it.cant*it.pu*tc;
@@ -30,8 +36,8 @@ function ccdCostosTotS(){
 function renderCCD(){
   const tb=document.getElementById('ccd-body'); tb.innerHTML="";
   CCDS.forEach((d,i)=>{
-    const provs=[...new Set(d.fks.map(fi=>FACS[fi]?FACS[fi].prov:""))].filter(Boolean).join(", ");
-    const facs=d.fks.map(fi=>FACS[fi]?FACS[fi].id:"").filter(Boolean).join(", ");
+    const provs=[...new Set(d.fks.map(fi=>CCD_FACS[fi]?CCD_FACS[fi].prov:""))].filter(Boolean).join(", ");
+    const facs=d.fks.map(fi=>CCD_FACS[fi]?CCD_FACS[fi].id:"").filter(Boolean).join(", ");
     const tc=parseFloat(d.tc)||1;
     const tot=d.costos.reduce((a,c)=>a+((c.mon==="USD")?c.imp*tc:c.imp),0);
     tb.innerHTML+='<tr class="clickable" onclick="loadCCD('+i+')"><td>'+d.id+'</td><td>'+d.fecha+'</td><td>'+facs+'</td><td>'+provs+'</td>'+
@@ -71,7 +77,7 @@ function renderCCDfacs(){
   const ro=(CCD.est!=="Borrador");
   const tb=document.getElementById('ccd-facs'); tb.innerHTML="";
   CCD.fks.forEach((fi,x)=>{
-    const f=FACS[fi]; if(!f)return;
+    const f=CCD_FACS[fi]; if(!f)return;
     tb.innerHTML+='<tr><td>'+f.id+'</td><td>'+f.ndoc+'</td><td>'+f.oc+'</td><td>'+f.prov+'</td>'+
      '<td style="text-align:right;font-weight:600">'+fmtM(ccdFacTotS(f))+'</td>'+
      '<td>'+(ro?'':'<button class="btn-link" onclick="CCD.fks.splice('+x+',1);renderCCDfacs();ccdTotalesUI()">Quitar</button>')+'</td></tr>';
@@ -80,7 +86,7 @@ function renderCCDfacs(){
 }
 function abrirModalFacCCD(){
   const tb=document.getElementById('co14a-body'); tb.innerHTML="";
-  FACS.forEach((f,i)=>{
+  CCD_FACS.forEach((f,i)=>{
     if(CCD.fks.includes(i))return;
     tb.innerHTML+='<tr><td>'+f.id+'</td><td>'+f.ndoc+'</td><td>'+f.oc+'</td><td>'+f.prov+'</td>'+
      '<td><span class="badge" style="background:'+(FAC_EST[f.est]||"var(--borrador)")+'">'+f.est+'</span></td>'+
@@ -93,7 +99,7 @@ function abrirModalFacCCD(){
 function addFacCCD(i){
   CCD.fks.push(i); closeModal('m-co14a');
   renderCCDfacs(); ccdTotalesUI();
-  toast(FACS[i].id+" agregada: sus ítems ya aparecen en la tabla 2");
+  toast(CCD_FACS[i].id+" agregada: sus ítems ya aparecen en la tabla 2");
 }
 function addCostoCCD(){
   CCD.costos.push({cta:CTAS_COSTO[0],desc:"",mon:"S/.",imp:0});

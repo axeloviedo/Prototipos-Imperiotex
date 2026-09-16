@@ -1,330 +1,428 @@
-/* COMPRAS · CO-06/07 Órdenes de Compra */
+/* COMPRAS · CO-06/07 Órdenes de Compra
+   Conectado a la base compartida: BD.d.ocs con Docs.oc (docs/16 §3.4).
+   {id:'OC-000001', est, tipo:'Bienes'|'Servicio', fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer,
+    items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}
+   Globales que usan otras pantallas: renderOCS(), loadOC(id), abrirOC(id), nuevaOC(), fmtM(n), sinTildes(t) (en proveedores.js). */
+
+/* ===== utilidades comunes de Compras ===== */
+function coD(){ if(!BD.d) BD.iniciar(); return BD.d; }
+function coEsc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function coMon(m){ return m==="USD"?"USD ":"S/. "; }
+function coISO(dmy){ const m=/^(\d{2})\/(\d{2})\/(\d{4})/.exec(dmy||""); return m?(m[3]+"-"+m[2]+"-"+m[1]):""; }
+function coDMY(iso){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||""); return m?(m[3]+"/"+m[2]+"/"+m[1]):""; }
+function coTry(fn){ try{ return fn(); }catch(e){ console.error(e); toast(e&&e.message?e.message:String(e)); return null; } }
+function fmtM(n){ return (Number(n)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+/* refresca las listas de Compras y, si están cargadas, las de Inventarios que muestran lo mismo */
+function coRefrescar(){
+  ['renderOCS','renderFac','renderPanelCompras','renderSol','renderMov','renderStock','renderDash'].forEach(f=>{
+    if(typeof window[f]==='function'){ try{ window[f](); }catch(e){ console.error(f,e); } }
+  });
+}
+
 /* ===== CO-06/07 · Órdenes de Compra ===== */
 const OC_EST={"Borrador":"var(--borrador)","Pendiente de Validar":"var(--pendiente)","Para Recibir y Pagar":"var(--prp)","Para Recibir":"var(--oc-recibir)","Para Pagar":"var(--oc-pagar)","Completada":"var(--completada)","Cancelada":"var(--cancelada)"};
-function esServicioOC(o){return o.items.length>0 && o.items.every(it=>String(it.cod).startsWith("SERV"))}
-function estadoPorAvance(o){if(o.rec===100&&o.fac===100)return "Completada";if(o.rec===100)return "Para Pagar";if(o.fac===100)return "Para Recibir";return "Para Recibir y Pagar"}
-const OCS={
- oc232:{id:"OC-000232",est:"Borrador",sol:"SOL-000029",solKey:"s29",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-19",valLog:false,valGer:false,rec:0,fac:0,ref:"",op:"",obs:"Tela negra para la producción de agosto (hereda SOL-000029).",
-  items:[{cod:"MP-0013",nom:"TELA DENIM 12 OZ NEGRO",u:"MT",cant:150,pu:18.80,igv:18}],ca:{adu:0,nac:0,fle:0},docs:["Solicitud origen: SOL-000029 (bloqueada al validarse la OC)"]},
- oc230:{id:"OC-000230",est:"Pendiente de Validar",sol:"SOL-000028",solKey:"",prov:"AVÍOS DEL SUR EIRL",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-18",valLog:true,valGer:false,rec:0,fac:0,ref:"Cotización AV-2026-118",op:"",obs:"Reposición de botones.",
-  items:[{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",cant:2000,pu:0.35,igv:18}],ca:{adu:0,nac:0,fle:0},docs:["Validada por Logística: pendiente Gerencia"]},
- oc231:{id:"OC-000231",est:"Para Pagar",sol:"SOL-000025",solKey:"",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-14",valLog:true,valGer:true,rec:100,fac:0,ref:"Cotización SJ-2198",op:"",obs:"Telas e hilo para producción Zuleika. Ingreso completo: falta factura y pagos.",
-  items:[{cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",cant:242.40,pu:19.40,igv:18,recq:242.40},{cod:"MP-0031",nom:"HILO POLIESTER AZUL",u:"UND",cant:12,pu:24.00,igv:18,recq:12}],
-  ca:{adu:0,nac:0,fle:0},docs:["Ingreso vinculado: ING-000513 (15/07/2026, módulo GI)","Factura: pendiente (CO-10, Ola 5)"]},
- oc229:{id:"OC-000229",est:"Para Recibir y Pagar",sol:"SOL-000026",solKey:"",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-11",valLog:true,valGer:true,rec:50,fac:40,ref:"Cotización SJ-2211",op:"",obs:"Entrega en dos partes: primera recibida, factura parcial registrada.",
-  items:[{cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",cant:160,pu:19.40,igv:18,recq:80}],ca:{adu:0,nac:0,fle:0},
-  docs:["Ingreso parcial vinculado: ING-000508 (80 KG, módulo GI)","Factura parcial: F212-00836 (40%)"]},
- oc227:{id:"OC-000227",est:"Para Recibir",sol:"SOL-000023",solKey:"",prov:"AVÍOS DEL SUR EIRL",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-08",valLog:true,valGer:true,rec:0,fac:100,ref:"Cotización AV-2026-112",op:"",obs:"Factura completa con sus pagos: solo falta registrar el ingreso.",
-  items:[{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",cant:1000,pu:0.80,igv:18}],ca:{adu:0,nac:0,fle:0},
-  docs:["Factura vinculada: F441-00219 Pagada (100%)","Ingreso: pendiente de entrega del proveedor"]},
- oc219:{id:"OC-000219",est:"Para Recibir y Pagar",sol:"SOL-000022",solKey:"",prov:"YKK DO BRASIL LTDA",provTipo:"Internacional",cond:"Contado",mon:"USD",tc:"3.75",
-  fecha:"2026-06-28",valLog:true,valGer:true,rec:0,fac:0,ref:"Proforma YKK-BR 88412",op:"",obs:"Importación de cierres YKK (embarque marítimo).",
-  items:[{cod:"MP-0046",nom:"CIERRE YKK RC-045 12CM",u:"UND",cant:6000,pu:0.52,igv:0},{cod:"MP-0047",nom:"CIERRE YKK RM-030 15CM",u:"UND",cant:4000,pu:0.48,igv:0}],
-  ca:{adu:180,nac:1120,fle:450},docs:["Ingreso: pendiente de llegada del embarque","Factura: Invoice YKK-BR 88412 (CO-10, Ola 5)"]},
- oc222:{id:"OC-000222",est:"Para Recibir y Pagar",sol:"SOL-000024",solKey:"",prov:"CONFECCIONES EL AGUILA SAC",provTipo:"Nacional",cond:"Crédito 15 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-01",valLog:true,valGer:true,rec:0,fac:0,ref:"Cotización EA-0090",op:"",obs:"Confección tercerizada. El servicio cierra por conformidad, sin ingreso a almacén.",
-  items:[{cod:"SERV-0003",nom:"SERVICIO DE CONFECCION PANTALON",u:"UND",cant:120,pu:30.00,igv:18}],
-  ca:{adu:0,nac:0,fle:0},docs:["OC de servicio: el envío y el retorno del material se registran en la Orden de Fabricación (Producción)"]},
- oc224:{id:"OC-000224",est:"Pendiente de Validar",sol:"OC directa",solKey:"",prov:"LAVANDERIA INDUSTRIAL DEL SUR SAC",provTipo:"Nacional",cond:"Crédito 15 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-12",valLog:true,valGer:false,rec:0,fac:0,ref:"Cotización LV-0187",op:"OF-000125",obs:"Servicio de teñido para la producción de agosto.",
-  items:[{cod:"SERV-0006",nom:"SERVICIO DE TEÑIDO",u:"UND",cant:80,pu:12.00,igv:18}],ca:{adu:0,nac:0,fle:0},
-  docs:["Vinculada a producción: OF-000125","Pendiente: aprobación de Gerencia"]},
- oc228:{id:"OC-000228",est:"Para Pagar",sol:"OC directa",solKey:"",prov:"LAVANDERIA INDUSTRIAL DEL SUR SAC",provTipo:"Nacional",cond:"Crédito 15 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-10",valLog:true,valGer:true,rec:100,fac:0,ref:"Cotización LV-0181",op:"OF-000122",obs:"Lavado stone wash de las 60 prendas en proceso de la OF-000122. Conformidad dada: falta factura y pagos.",
-  items:[{cod:"SERV-0005",nom:"SERVICIO DE LAVADO INDUSTRIAL",u:"UND",cant:60,pu:23.00,igv:18}],ca:{adu:0,nac:0,fle:0},
-  docs:["Vinculada a producción: OF-000122","Envío y retorno de las 60 prendas registrados en la OF-000122 (almacén de tránsito)","Conformidad del servicio: recepcionada conforme (14/07)","El costo del servicio se acumula en la OF-000122, no en el Kardex del material"]},
- oc226:{id:"OC-000226",est:"Completada",sol:"OC directa",solKey:"",prov:"TRANSPORTES GAMARRA EXPRESS SAC",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-08",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización TG-0455",op:"",obs:"Flete Gamarra - Zárate (2 viajes). Servicio finalizado.",
-  items:[{cod:"SERV-0009",nom:"SERVICIO DE FLETE LOCAL",u:"UND",cant:2,pu:180.00,igv:18}],ca:{adu:0,nac:0,fle:0},
-  docs:["Conformidad del servicio: recepcionada conforme","Factura vinculada: F090-1122 Pagada"]},
- oc225:{id:"OC-000225",est:"Completada",sol:"SOL-000021",solKey:"",prov:"AVÍOS DEL SUR EIRL",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-07-05",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización AV-2026-104",op:"",obs:"Botones y cierres metálicos.",
-  items:[{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",cant:500,pu:0.35,igv:18,recq:500},{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",cant:300,pu:0.80,igv:18,recq:300}],
-  ca:{adu:0,nac:0,fle:0},docs:["Ingreso vinculado: ING-000502 (05/07/2026, módulo GI)","Factura vinculada: F441-00220 Pagada (CO-09, Ola 5)"]},
- oc221:{id:"OC-000221",est:"Para Recibir y Pagar",sol:"SOL-000027",solKey:"",prov:"AVÍOS DEL SUR EIRL",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-06-30",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización AV-2026-115",op:"",obs:"Avíos para confección tercerizada.",
-  items:[{cod:"MP-0032",nom:"HILO POLIESTER NEGRO",u:"UND",cant:8,pu:24.00,igv:18,recq:8},{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",cant:600,pu:0.35,igv:18,recq:600}],
-  ca:{adu:0,nac:0,fle:0},docs:["Avíos entregados al taller de confección"]},
- oc220:{id:"OC-000220",est:"Completada",sol:"SOL-000027",solKey:"",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-06-28",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización SJ-2185",op:"",obs:"Tela para confección tercerizada.",
-  items:[{cod:"MP-0013",nom:"TELA DENIM 12 OZ NEGRO",u:"MT",cant:96,pu:18.80,igv:18,recq:96}],
-  ca:{adu:0,nac:0,fle:0},docs:["Tela despachada directamente al taller (guía del proveedor)"]},
- oc216:{id:"OC-000216",est:"Completada",sol:"OC directa",solKey:"",prov:"CONFECCIONES EL AGUILA SAC",provTipo:"Nacional",cond:"Crédito 15 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-05-28",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización EA-0081",op:"",obs:"Confección tercerizada de polos.",
-  items:[{cod:"SERV-0003",nom:"SERVICIO DE CONFECCION PANTALON",u:"UND",cant:240,pu:13.125,igv:18,recq:240}],
-  ca:{adu:0,nac:0,fle:0},docs:["Conformidad del servicio registrada","Factura del proveedor: F556-00311 Pagada"]},
- oc215:{id:"OC-000215",est:"Completada",sol:"OC directa",solKey:"",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Crédito 30 días",mon:"S/.",tc:"3.75",
-  fecha:"2026-05-20",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización SJ-2130",op:"",obs:"Tela jersey para confección tercerizada de polos.",
-  items:[{cod:"MP-0018",nom:"TELA POPELINA BLANCA",u:"MT",cant:420,pu:6.50,igv:18,recq:420}],
-  ca:{adu:0,nac:0,fle:0},docs:["Tela despachada al taller"]},
- oc214:{id:"OC-000214",est:"Completada",sol:"OC directa",solKey:"",prov:"LAVANDERIA INDUSTRIAL DEL SUR SAC",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-06-02",valLog:true,valGer:true,rec:100,fac:100,ref:"Cotización LV-0170",op:"",obs:"Lavado y acabado de polos tercerizados.",
-  items:[{cod:"SERV-0005",nom:"SERVICIO DE LAVADO INDUSTRIAL",u:"UND",cant:240,pu:2.50,igv:18,recq:240}],
-  ca:{adu:0,nac:0,fle:0},docs:["Conformidad del servicio registrada"]},
- oc218:{id:"OC-000218",est:"Cancelada",sol:"SOL-000019",solKey:"",prov:"TEXTIL SAN JACINTO SAC",provTipo:"Nacional",cond:"Contado",mon:"S/.",tc:"3.75",
-  fecha:"2026-06-25",valLog:true,valGer:false,rec:0,fac:0,ref:"Cotización SJ-2140",op:"",obs:"Cancelada el 26/06. Motivo: cambio de proveedor por plazo de entrega.",
-  items:[{cod:"MP-0018",nom:"TELA POPELINA BLANCA",u:"MT",cant:100,pu:6.50,igv:18}],ca:{adu:0,nac:0,fle:0},
-  docs:["Cancelada antes de la validación de Gerencia: sin efectos en stock ni facturas"]}
-};
-const OCS_ORDEN=["oc232","oc230","oc231","oc224","oc229","oc228","oc227","oc226","oc225","oc222","oc221","oc220","oc219","oc218","oc216","oc215","oc214"];
-let OC=null, OCkey="";
-function fmtM(n){return n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function ocTotales(o){
-  let sub=0,igv=0;
-  o.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igv+=st*(it.igv/100)});
-  return {sub:sub,igv:igv,tot:sub+igv};
+let OC=null, OCid="";   // OC: documento abierto (copia de trabajo si está en Borrador); OCid: '' = nueva sin guardar
+function esServicioOC(o){ return !!o && o.items.length>0 && o.items.every(it=>BD.esServicio(it.art)); }
+function ocTotales(o){ const t=Docs.oc.totales(o); return {sub:t.sub,igv:t.igv,tot:t.total}; }
+function ocIGV(art,prov){ const p=BD.prov(prov), a=BD.art(art); if(p&&p.tipo==="Internacional")return 0; return (a&&a.igv&&a.igv!=="Gravado")?0:18; }
+function ocPrecioRef(cod){ const a=BD.art(cod)||{}, r=BD.rec(cod)||{}; return Number(a.precioCompra||r.costo||a.costo||0); }
+function ocPendRec(o){ return o.items.filter(i=>i.cant-i.recq>0.00005); }
+function ocPendFac(o){ return o.items.filter(i=>i.cant-i.facq>0.00005); }
+/* estructura organizativa: organización (SB/CN) y grupo de compras (MP1, SRV, IMP, EE1, MSC, SG1) de la OC */
+function ocGrupoCompraDef(o){
+  const p=BD.prov(o.prov);
+  if(p&&p.tipo==="Internacional")return "IMP";
+  if(o.items.length && o.items.every(i=>BD.esServicio(i.art)))return "SRV";
+  const cnt={}; o.items.forEach(i=>{const g=(BD.art(i.art)||{}).grupoCompra; if(g)cnt[g]=(cnt[g]||0)+1});
+  return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||"MP1";
 }
+function ocOrg(o){ return o.orgCompra||"SB"; }
+function ocGrupo(o){ return o.grupoCompra||ocGrupoCompraDef(o); }
+function ocFacturable(o){ return !!o && ["Para Recibir y Pagar","Para Recibir","Para Pagar"].includes(o.est) && ocPendFac(o).length>0; }
+
 function renderOCS(){
-  const q=(document.getElementById('f-oc-q').value||"").toLowerCase();
+  const tb=document.getElementById('ocs-body'); if(!tb)return;
+  const q=sinTildes(document.getElementById('f-oc-q').value||"");
   const e=document.getElementById('f-oc-e').value, m=document.getElementById('f-oc-m').value;
+  const ft=(document.getElementById('f-oc-t')||{}).value||"";
+  const fo=document.getElementById('f-oc-o'), fg=document.getElementById('f-oc-g');
+  if(fo && fo.options.length<=1)fo.innerHTML='<option value="">Todas</option>'+(coD().maestros.organizacionesCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
+  if(fg && fg.options.length<=1)fg.innerHTML='<option value="">Todos</option>'+(coD().maestros.gruposCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
+  const vo=fo?fo.value:"", vg=fg?fg.value:"";
   const soloImp=document.getElementById('f-oc-i').checked;
-  const tb=document.getElementById('ocs-body'); tb.innerHTML=""; let n=0;
-  OCS_ORDEN.forEach(k=>{
-    const o=OCS[k]; if(!o)return;
-    if(q && !(o.id.toLowerCase().includes(q)||sinTildes(o.prov).includes(sinTildes(q))))return;
-    if(e && o.est!==e)return; if(m && o.mon!==m)return; if(soloImp && o.provTipo!=="Internacional")return;
+  let html="", n=0;
+  coD().ocs.forEach(o=>{
+    const p=BD.prov(o.prov)||{};
+    if(q && !(sinTildes(o.id).includes(q)||sinTildes(p.nom).includes(q)||sinTildes(o.prov).includes(q)||sinTildes(o.sol).includes(q)||sinTildes(o.of).includes(q)))return;
+    if(e==="*rec"){ if(!Docs.oc.recibible(o))return; }
+    else if(e==="*fac"){ if(!ocFacturable(o))return; }
+    else if(e && o.est!==e)return;
+    if(m && o.mon!==m)return; if(ft && o.tipo!==ft)return; if(vo && ocOrg(o)!==vo)return; if(vg && ocGrupo(o)!==vg)return; if(soloImp && p.tipo!=="Internacional")return;
     n++;
-    const t=ocTotales(o);
-    const full=(o.rec===100&&o.fac===100);
-    const totalTxt=(o.mon==="USD")?("USD "+fmtM(t.tot)):("S/. "+fmtM(t.tot));
-    let estCell='<span class="badge" style="background:'+OC_EST[o.est]+'">'+o.est+'</span>';
-    const pct=(v,tip)=>'<td style="text-align:right;color:var(--confirmado);'+(v===100?'font-weight:700':'')+'" title="'+tip+'">'+v+'%</td>';
-    const tr=document.createElement('tr'); tr.className="clickable"; tr.onclick=()=>loadOC(k);
-    tr.innerHTML='<td>'+o.id+(o.provTipo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td><td>'+o.prov+'</td><td>'+o.mon+'</td>'+
-     '<td style="text-align:right;'+(full?'color:var(--confirmado);font-weight:700':'')+'">'+totalTxt+'</td>'+
-     '<td>'+estCell+'</td><td>'+o.fecha+'</td>'+
-     '<td><button class="btn-link" onclick="event.stopPropagation();verSolDeOCk(\''+k+'\')">'+o.sol+'</button></td>'+
-     pct(o.rec,"% recibido: según los ingresos vinculados a la OC")+pct(o.fac,"% facturado: según las facturas vinculadas a la OC")+
-     '<td><button class="btn-link" onclick="event.stopPropagation();loadOC(\''+k+'\')">Abrir</button></td>';
-    tb.appendChild(tr);
+    const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
+    const full=(o.est==="Completada");
+    const origen=[o.sol?'<button class="btn-link" onclick="event.stopPropagation();verSolDeOC(\''+o.sol+'\')">'+o.sol+'</button>':'',
+      o.of?'<button class="btn-link" onclick="event.stopPropagation();verOFdeOC(\''+o.of+'\')">'+o.of+'</button>':''].filter(Boolean).join(' · ')||'<span class="hint">OC directa</span>';
+    const pct=(v,tip)=>'<td style="text-align:right;color:var(--confirmado);'+(v>=100?'font-weight:700':'')+'" title="'+tip+'">'+v+'%</td>';
+    html+='<tr class="clickable" onclick="abrirOC(\''+o.id+'\')"><td>'+o.id+(p.tipo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td>'+
+     '<td>'+o.tipo+'</td><td>'+ocOrg(o)+' · '+ocGrupo(o)+'</td><td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
+     '<td style="text-align:right;'+(full?'color:var(--confirmado);font-weight:700':'')+'">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
+     '<td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td><td>'+o.fecha+'</td>'+
+     '<td>'+origen+'</td>'+
+     pct(a.rec,o.tipo==="Servicio"?"% con conformidad del servicio":"% recibido en almacén")+pct(a.fac,"% facturado")+
+     '<td><button class="btn-link" onclick="event.stopPropagation();abrirOC(\''+o.id+'\')">Abrir</button></td></tr>';
   });
+  tb.innerHTML=html||'<tr><td colspan="12" style="text-align:center;color:var(--texto-sec);padding:16px">'+(coD().ocs.length?'Sin órdenes para los filtros aplicados':'Aún no hay órdenes de compra en la base: use "+ Agregar OC" o créelas desde una Solicitud de Materiales (GI-13)')+'</td></tr>';
   document.getElementById('ocs-count').textContent=n+" órdenes de compra";
+  /* si la ficha está abierta (y no se está editando un borrador) se rehidrata con la base */
+  const scr=document.getElementById('scr-co07');
+  if(OCid && scr && scr.classList.contains('active')){
+    const o=BD.oc(OCid);
+    if(o && !(OC && OC!==o && OC.est==="Borrador" && o.est==="Borrador")){ OC=(o.est==="Borrador")?BD.copia(o):o; ocLlenarForm(); renderOC(); }
+  }
 }
-function verSolDeOCk(k){const o=OCS[k]; if(o.solKey){loadSOL(o.solKey)}else if(o.sol==="OC directa"){toast("OC directa: sin solicitud de origen")}else{toast("Solicitud "+o.sol+" (ejemplo histórico)")}}
+function verSolDeOC(id){
+  id=id||(OC&&OC.sol);
+  if(!id){toast("OC directa: sin solicitud de origen");return}
+  if(typeof abrirSOL==='function')abrirSOL(id); else toast("Solicitud "+id+": ábrala en Inventarios (GI-13)");
+}
+function verOFdeOC(id){
+  id=id||(document.getElementById('oc-op').value||"").trim()||(OC&&OC.of);
+  if(!id){toast("La OC no está vinculada a una orden de fabricación");return}
+  if(!BD.of(id))toast("La orden "+id+" no existe en la base: se abre Producción igualmente");
+  window.open('../PRODUCCION/index.html#pr02/'+encodeURIComponent(id),'_blank');
+}
 function nuevaOC(){
-  OCS.oc233={id:"OC-000233",est:"Borrador",sol:"OC directa",solKey:"",prov:"",provTipo:"",cond:"Contado",mon:"S/.",tc:"3.75",
-   fecha:"2026-07-19",valLog:false,valGer:false,rec:0,fac:0,ref:"",op:"",obs:"",items:[],ca:{adu:0,nac:0,fle:0},
-   docs:["OC directa: creada sin solicitud de materiales"]};
-  if(!OCS_ORDEN.includes("oc233"))OCS_ORDEN.unshift("oc233");
-  renderOCS(); loadOC('oc233');
-  toast("OC directa creada: seleccione proveedor y agregue ítems");
+  coD();
+  OCid="";
+  OC={id:"",est:"Borrador",tipo:"Bienes",fecha:BD.hoy(),prov:"",cond:"Contado",mon:"S/.",tc:3.75,ref:"",obs:"",sol:"",of:"",sf:"",
+      almDestino:"SB-CENTRAL-MP",orgCompra:"SB",grupoCompra:"",valLog:false,valGer:false,items:[],recepciones:[],facturas:[],hist:[]};
+  ocLlenarForm(); renderOC(); go('co07');
+  toast("OC directa: seleccione proveedor y agregue ítems; se guarda en la base al Guardar borrador");
 }
-function verSolDeOC(){verSolDeOCk(OCkey)}
-function loadOC(k){
-  OCkey=k; OC=OCS[k];
-  document.getElementById('oc-titulo').textContent="ORDEN DE COMPRA: "+OC.id+(OC.provTipo==="Internacional"?" · IMPORTACIÓN":"");
-  document.getElementById('oc-id').value=OC.id;
-  document.getElementById('oc-sol').value=OC.sol;
-  document.getElementById('oc-prov').value=OC.prov+" ("+OC.provTipo+")";
-  document.getElementById('oc-cond').value=OC.cond;
-  document.getElementById('oc-mon').value=OC.mon;
+function abrirOC(id){
+  const o=BD.oc(id);
+  if(!o){toast("No existe la orden de compra "+id);return}
+  OCid=o.id; OC=(o.est==="Borrador")?BD.copia(o):o;
+  if(OC.est==="Borrador")OC._gcManual=!!o.grupoCompra && o.grupoCompra!==ocGrupoCompraDef(o);
+  ocLlenarForm(); renderOC(); go('co07');
+}
+function loadOC(id){ abrirOC(id); }
+
+function ocLlenarForm(){
+  const p=BD.prov(OC.prov);
+  document.getElementById('oc-titulo').textContent=(OCid?"ORDEN DE COMPRA: "+OC.id:"NUEVA ORDEN DE COMPRA")+(p&&p.tipo==="Internacional"?" · IMPORTACIÓN":"");
+  document.getElementById('oc-id').value=OCid||"(se asigna al guardar)";
+  document.getElementById('oc-sol').value=OC.sol||"OC directa";
+  document.getElementById('oc-prov').value=p?(p.nom+" ("+p.cod+" · "+p.tipo+")"):"";
+  const conds=coCondiciones().map(c=>c.nom); if(OC.cond && !conds.includes(OC.cond))conds.unshift(OC.cond);
+  document.getElementById('oc-cond').innerHTML=conds.map(c=>'<option>'+coEsc(c)+'</option>').join('');
+  document.getElementById('oc-cond').value=OC.cond||"Contado";
+  document.getElementById('oc-org').innerHTML=(coD().maestros.organizacionesCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
+  document.getElementById('oc-org').value=ocOrg(OC);
+  document.getElementById('oc-gcomp').innerHTML=(coD().maestros.gruposCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
+  document.getElementById('oc-gcomp').value=ocGrupo(OC);
+  document.getElementById('oc-mon').value=OC.mon||"S/.";
   document.getElementById('oc-tc').value=OC.tc;
-  document.getElementById('oc-fecha').value=OC.fecha;
-  document.getElementById('oc-ref').value=OC.ref;
-  document.getElementById('oc-op').value=OC.op||"";
-  document.getElementById('oc-obs').value=OC.obs;
-  document.getElementById('oc-ca-adu').value=OC.ca.adu;
-  document.getElementById('oc-ca-nac').value=OC.ca.nac;
-  document.getElementById('oc-ca-fle').value=OC.ca.fle;
-  renderOC(); go('co07');
+  document.getElementById('oc-fecha').value=coISO(OC.fecha);
+  document.getElementById('oc-alm').innerHTML='<option value="">(sin almacén)</option>'+coD().maestros.almacenes.map(a=>'<option value="'+a.cod+'">'+a.cod+' · '+coEsc(a.nom)+'</option>').join('');
+  document.getElementById('oc-alm').value=OC.almDestino||"";
+  document.getElementById('oc-op').value=OC.of||"";
+  document.getElementById('oc-sf').value=OC.sf||"-";
+  document.getElementById('oc-ref').value=OC.ref||"";
+  document.getElementById('oc-obs').value=OC.obs||"";
 }
+function ocLeerForm(){
+  if(!OC || OC.est!=="Borrador")return;
+  OC.cond=document.getElementById('oc-cond').value;
+  OC.orgCompra=document.getElementById('oc-org').value||"SB";
+  OC.grupoCompra=document.getElementById('oc-gcomp').value;
+  OC.mon=document.getElementById('oc-mon').value;
+  OC.tc=parseFloat(document.getElementById('oc-tc').value)||0;
+  OC.fecha=coDMY(document.getElementById('oc-fecha').value)||OC.fecha||BD.hoy();
+  OC.almDestino=document.getElementById('oc-alm').value;
+  OC.of=(document.getElementById('oc-op').value||"").trim().toUpperCase();
+  OC.ref=document.getElementById('oc-ref').value;
+  OC.obs=document.getElementById('oc-obs').value;
+}
+function ocUltimo(o,accion){ const h=(o.hist||[]).filter(x=>x.a===accion).pop(); return h?' <span class="hint">('+coEsc(h.u)+' · '+h.f+')</span>':''; }
 function renderOC(){
-  const e=OC.est;
-  const editable=(e==="Borrador"||e==="Pendiente de Validar"), ro=!editable;
-  const b=document.getElementById('oc-badge'); b.textContent=e; b.style.background=OC_EST[e];
-  const show=(id,v)=>document.getElementById(id).style.display=v?"inline-block":"none";
-  show('oc-b-cancelar',editable); show('oc-b-guardar',editable);
-  show('oc-b-enviar',e==="Borrador");
-  show('oc-b-vallog',e==="Pendiente de Validar" && !OC.valLog);
-  show('oc-b-valger',e==="Pendiente de Validar" && !OC.valGer);
-  show('oc-b-crear',e==="Para Recibir y Pagar"||e==="Para Recibir"||e==="Para Pagar");
-  ['oc-cond','oc-mon','oc-tc','oc-fecha','oc-ref','oc-op','oc-obs','oc-ca-adu','oc-ca-nac','oc-ca-fle'].forEach(id=>document.getElementById(id).disabled=ro);
-  document.getElementById('oc-b-additem').style.display=editable?"inline-block":"none";
-  document.getElementById('oc-b-prov').style.display=editable?"inline-block":"none";
-  // panel de validaciones
+  const o=OC, e=o.est, editable=(e==="Borrador"), recibible=Docs.oc.recibible(o);
+  if(editable && !o._gcManual){ o.grupoCompra=ocGrupoCompraDef(o); const sg=document.getElementById('oc-gcomp'); if(sg)sg.value=o.grupoCompra; }
+  const b=document.getElementById('oc-badge'); b.textContent=e; b.style.background=OC_EST[e]||"var(--borrador)";
+  const tipo=o.items.length?(esServicioOC(o)?"Servicio":"Bienes"):(o.tipo||"Bienes");
+  const tb=document.getElementById('oc-tipo-badge'); tb.textContent=tipo; tb.style.background=tipo==="Servicio"?"var(--oc-pagar)":"var(--primario-claro)";
+  const show=(id,v)=>{const el=document.getElementById(id); if(el)el.style.display=v?"inline-block":"none"};
+  const pendBienes=ocPendRec(o).filter(i=>!BD.esServicio(i.art)), pendSrv=ocPendRec(o).filter(i=>BD.esServicio(i.art));
+  show('oc-b-cancelar',["Borrador","Pendiente de Validar","Para Recibir y Pagar"].includes(e) && !o.recepciones.length && !o.facturas.length);
+  show('oc-b-guardar',editable);
+  show('oc-b-enviar',editable);
+  show('oc-b-vallog',e==="Pendiente de Validar" && !o.valLog);
+  show('oc-b-valger',e==="Pendiente de Validar" && !o.valGer);
+  show('oc-b-ingreso',recibible && pendBienes.length>0);
+  show('oc-b-conf',recibible && pendSrv.length>0);
+  const ops=[];
+  if(recibible && pendBienes.length)ops.push('<div class="op" onclick="abrirRecepcionOC()">Ingreso de Compra<small>Ingreso al almacén de lo pendiente de recibir (GI-09)</small></div>');
+  if(recibible && pendSrv.length)ops.push('<div class="op" onclick="abrirConformidadOC()">Conformidad del servicio<small>Sin movimiento de stock</small></div>');
+  if(ocFacturable(o))ops.push('<div class="op" onclick="crearFacDesdeOC()">Factura de Compra<small>CO-10 con lo pendiente de facturar de esta OC</small></div>');
+  document.getElementById('oc-crear-menu').innerHTML=ops.join('');
+  document.getElementById('oc-b-crear').style.display=ops.length?"inline-block":"none";
+  ['oc-org','oc-gcomp','oc-cond','oc-mon','oc-tc','oc-fecha','oc-ref','oc-op','oc-obs','oc-alm'].forEach(id=>document.getElementById(id).disabled=!editable);
+  show('oc-b-additem',editable); show('oc-b-prov',editable);
+  show('oc-b-versol',!!o.sol); show('oc-b-verof',editable||!!o.of);
+  /* validaciones */
   const val=document.getElementById('oc-val');
-  if(e==="Pendiente de Validar"||e==="Para Recibir y Pagar"||e==="Para Recibir"||e==="Para Pagar"||e==="Completada"){
+  if(e!=="Borrador" && !(e==="Cancelada" && !o.valLog && !o.valGer)){
     val.style.display="block";
-    document.getElementById('oc-val-log').innerHTML=OC.valLog?'Logística ✓ <span class="hint">(USER00)</span>':'Logística: <span style="color:var(--pendiente);font-weight:600">pendiente</span>';
-    document.getElementById('oc-val-ger').innerHTML=OC.valGer?'Gerencia ✓ <span class="hint">(David)</span>':'Gerencia: <span style="color:var(--pendiente);font-weight:600">pendiente</span>';
+    document.getElementById('oc-val-log').innerHTML=o.valLog?'Logística ✓'+ocUltimo(o,'V°B° Logística'):'Logística: <span style="color:var(--pendiente);font-weight:600">pendiente</span>';
+    document.getElementById('oc-val-ger').innerHTML=o.valGer?'Gerencia ✓'+ocUltimo(o,'Aprobación Gerencia'):'Gerencia: <span style="color:var(--pendiente);font-weight:600">pendiente</span>';
   }else val.style.display="none";
-  // avance numerico y conformidad
+  /* avance */
   const av=document.getElementById('oc-avance');
-  if(e==="Para Recibir y Pagar"||e==="Para Recibir"||e==="Para Pagar"||e==="Completada"){
+  const aviso=document.getElementById('oc-aviso-of');
+  const srvOF=!!o.of && o.items.some(i=>BD.esServicio(i.art));
+  if(["Para Recibir y Pagar","Para Recibir","Para Pagar","Completada"].includes(e) || srvOF){
     av.style.display="block";
-    document.getElementById('oc-pct-rec').textContent=OC.rec+"%";
-    document.getElementById('oc-pct-fac').textContent=OC.fac+"%";
-    document.getElementById('oc-pct-rec').style.color=(OC.rec===100)?"var(--confirmado)":"var(--texto)";
-    document.getElementById('oc-pct-fac').style.color=(OC.fac===100)?"var(--confirmado)":"var(--texto)";
-    document.getElementById('oc-conformidad').style.display=(esServicioOC(OC)&&OC.rec<100&&e!=="Completada")?"block":"none";
+    const a=Docs.oc.avance(o);
+    document.getElementById('oc-pct-rec-lbl').textContent=tipo==="Servicio"?"Con conformidad":"Recibido";
+    document.getElementById('oc-pct-rec').textContent=a.rec+"%";
+    document.getElementById('oc-pct-fac').textContent=a.fac+"%";
+    document.getElementById('oc-pct-rec').style.color=(a.rec>=100)?"var(--confirmado)":"var(--texto)";
+    document.getElementById('oc-pct-fac').style.color=(a.fac>=100)?"var(--confirmado)":"var(--texto)";
   }else av.style.display="none";
+  if(srvOF){
+    aviso.style.display="block";
+    aviso.innerHTML='<b>Servicio para la orden de fabricación '+coEsc(o.of)+'</b>'+(BD.of(o.of)?'':' <span style="color:var(--pendiente)">(la orden no existe en la base)</span>')+
+      '<br>Al aprobarse la OC y al registrar su factura, el importe pasa a la <b>pestaña Costo de la orden</b>, donde se contrasta con el costo estándar del servicio. '+
+      '<button class="btn-link" onclick="verOFdeOC(\''+coEsc(o.of)+'\')">Abrir la orden en Producción</button>';
+  }else aviso.style.display="none";
   renderOCitems();
-  document.getElementById('oc-docs').innerHTML=OC.docs.map(d=>{
-    d=d.replace("ING-000513",'<button class="btn-link" onclick="showDetalle(\'ing513\')">ING-000513</button>');
-    d=d.replace("ING-000502",'<button class="btn-link" onclick="showDetalle(\'ing502\')">ING-000502</button>');
-    return '<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+d+'</div>';
-  }).join('');
+  renderOCdocs();
 }
 function renderOCitems(){
-  const e=OC.est, ro=!(e==="Borrador"||e==="Pendiente de Validar");
-  const mon=document.getElementById('oc-mon').value, tc=parseFloat(document.getElementById('oc-tc').value)||0;
-  document.getElementById('oc-items-head').innerHTML='<tr><th style="width:36px">#</th><th>Código</th><th>Nombre</th><th>Unidad</th><th style="width:90px;text-align:right">Cantidad</th><th style="width:110px;text-align:right">Precio unit.</th><th style="width:100px;text-align:right">Subtotal</th><th style="width:90px;text-align:right">IGV (auto)</th><th style="width:110px;text-align:right">Total</th><th style="width:50px"></th></tr>';
-  const tb=document.getElementById('oc-items'); tb.innerHTML="";
-  let sub=0,igvT=0;
-  OC.items.forEach((it,i)=>{
-    const st=it.cant*it.pu, igv=st*(it.igv/100); sub+=st; igvT+=igv;
+  const o=OC, ro=(o.est!=="Borrador");
+  const conAvance=ro && o.est!=="Pendiente de Validar";
+  document.getElementById('oc-items-head').innerHTML='<tr><th style="width:36px">#</th><th>Código</th><th>Nombre</th><th>Unidad</th><th style="width:90px;text-align:right">Cantidad</th><th style="width:110px;text-align:right">Precio unit.</th><th style="width:100px;text-align:right">Subtotal</th><th style="width:90px;text-align:right">IGV (auto)</th><th style="width:110px;text-align:right">Total</th>'+
+    (conAvance?'<th style="width:90px;text-align:right">Recibido</th><th style="width:90px;text-align:right">Facturado</th>':'')+'<th style="width:60px"></th></tr>';
+  let html="";
+  o.items.forEach((it,i)=>{
+    const st=it.cant*it.pu, igv=st*((it.igv||0)/100), srv=BD.esServicio(it.art);
     const cant=ro?('<td style="text-align:right">'+fmtM(it.cant)+'</td>'):'<td><input value="'+it.cant+'" style="text-align:right" oninput="ocItemInput('+i+',\'cant\',this)"></td>';
     const pu=ro?('<td style="text-align:right">'+fmtM(it.pu)+'</td>'):'<td><input value="'+it.pu+'" style="text-align:right" oninput="ocItemInput('+i+',\'pu\',this)"></td>';
-    tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+it.cod+'</td><td>'+it.nom+(String(it.cod).startsWith("SERV")?' <span class="hint">(no inventariable: cierra por conformidad)</span>':'')+'</td><td>'+it.u+'</td>'+cant+pu+
-      '<td id="oc-st-'+i+'" style="text-align:right">'+fmtM(st)+'</td><td id="oc-igv-'+i+'" style="text-align:right">'+(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00 <span class="hint">import.</span>')+'</td><td id="oc-tot-'+i+'" style="text-align:right;font-weight:600">'+fmtM(st+igv)+'</td>'+
-      '<td>'+(ro?'':'<button class="btn-link" onclick="OC.items.splice('+i+',1);renderOCitems()">Eliminar</button>')+'</td></tr>';
+    html+='<tr><td>'+(i+1)+'</td><td>'+it.art+'</td><td>'+coEsc(BD.nomArt(it.art))+(srv?' <span class="hint">(servicio: cierra por conformidad)</span>':'')+'</td><td>'+coEsc(BD.u(it.art))+'</td>'+cant+pu+
+      '<td id="oc-st-'+i+'" style="text-align:right">'+fmtM(st)+'</td><td id="oc-igv-'+i+'" style="text-align:right">'+(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00 <span class="hint">'+(BD.prov(o.prov)&&BD.prov(o.prov).tipo==="Internacional"?'import.':'exon.')+'</span>')+'</td><td id="oc-tot-'+i+'" style="text-align:right;font-weight:600">'+fmtM(st+igv)+'</td>'+
+      (conAvance?'<td style="text-align:right;'+(it.recq>=it.cant?'color:var(--confirmado);font-weight:600':'')+'">'+fmtM(it.recq)+'</td><td style="text-align:right;'+(it.facq>=it.cant?'color:var(--confirmado);font-weight:600':'')+'">'+fmtM(it.facq)+'</td>':'')+
+      '<td>'+(ro?'':'<button class="btn-link" onclick="OC.items.splice('+i+',1);renderOC()">Eliminar</button>')+'</td></tr>';
   });
-  if(!OC.items.length)tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:16px">Sin ítems: use "+ Agregar ítem"</td></tr>';
+  document.getElementById('oc-items').innerHTML=html||'<tr><td colspan="12" style="text-align:center;color:var(--texto-sec);padding:16px">Sin ítems: use "+ Agregar ítem"</td></tr>';
   ocTotalesUI();
 }
 function ocItemInput(i,campo,el){
   OC.items[i][campo]=parseFloat(el.value)||0;
-  const it=OC.items[i], st=it.cant*it.pu, igv=st*(it.igv/100);
+  const it=OC.items[i], st=it.cant*it.pu, igv=st*((it.igv||0)/100);
   const c1=document.getElementById('oc-st-'+i), c2=document.getElementById('oc-igv-'+i), c3=document.getElementById('oc-tot-'+i);
   if(c1)c1.textContent=fmtM(st);
-  if(c2)c2.innerHTML=(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00 <span class="hint">import.</span>');
+  if(c2)c2.innerHTML=(it.igv>0?fmtM(igv)+' ('+it.igv+'%)':'0.00');
   if(c3)c3.textContent=fmtM(st+igv);
   ocTotalesUI();
 }
 function ocTotalesUI(){
+  if(!OC)return;
   const mon=document.getElementById('oc-mon').value, tc=parseFloat(document.getElementById('oc-tc').value)||0;
+  const conAvance=OC.est!=="Borrador" && OC.est!=="Pendiente de Validar";
   let sub=0,igvT=0;
-  OC.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igvT+=st*(it.igv/100)});
+  OC.items.forEach(it=>{const st=it.cant*it.pu; sub+=st; igvT+=st*((it.igv||0)/100)});
   const tot=sub+igvT;
   const dual=(mon==="USD")?(' <span class="hint">· S/. '+fmtM(tot*tc)+' (TC '+tc+')</span>'):'';
   document.getElementById('oc-items-foot').innerHTML='<tr><td colspan="6" style="text-align:right;font-weight:600">Totales ('+mon+')</td>'+
-   '<td style="text-align:right;font-weight:600">'+fmtM(sub)+'</td><td style="text-align:right;font-weight:600">'+fmtM(igvT)+'</td><td style="text-align:right;font-weight:700">'+fmtM(tot)+dual+'</td><td></td></tr>';
-  const esImport=(OC.provTipo==="Internacional");
+   '<td style="text-align:right;font-weight:600">'+fmtM(sub)+'</td><td style="text-align:right;font-weight:600">'+fmtM(igvT)+'</td><td style="text-align:right;font-weight:700">'+fmtM(tot)+dual+'</td>'+(conAvance?'<td></td><td></td>':'')+'<td></td></tr>';
+  const p=BD.prov(OC.prov), esImport=!!p && p.tipo==="Internacional";
   document.getElementById('oc-costos').style.display=esImport?"block":"none";
   if(esImport){
     const ca=(parseFloat(document.getElementById('oc-ca-adu').value)||0)+(parseFloat(document.getElementById('oc-ca-nac').value)||0)+(parseFloat(document.getElementById('oc-ca-fle').value)||0);
     const factor=sub>0?(1+ca/sub):1;
-    const cb=document.getElementById('oc-costos-body'); cb.innerHTML="";
-    OC.items.forEach(it=>{
-      cb.innerHTML+='<tr><td>'+it.cod+'</td><td>'+it.nom+'</td><td style="text-align:right">'+fmtM(it.pu)+'</td><td style="text-align:right;font-weight:600">S/. '+fmtM(it.pu*factor*tc)+'</td></tr>';
-    });
-    cb.innerHTML+='<tr><td colspan="4" class="hint">Estimación referencial: costos adicionales USD '+fmtM(ca)+' · Total desembolso estimado USD '+fmtM(sub+ca)+'. El costo real se aplica al Kardex con el Comprobante de Costos de Destino (CO-14), no desde esta OC.</td></tr>';
+    document.getElementById('oc-costos-body').innerHTML=OC.items.map(it=>'<tr><td>'+it.art+'</td><td>'+coEsc(BD.nomArt(it.art))+'</td><td style="text-align:right">'+fmtM(it.pu)+'</td><td style="text-align:right;font-weight:600">S/. '+fmtM(it.pu*factor*tc)+'</td></tr>').join('')+
+      '<tr><td colspan="4" class="hint">Estimación referencial: costos adicionales USD '+fmtM(ca)+' · desembolso estimado USD '+fmtM(sub+ca)+'. El ingreso al almacén valoriza al precio de la OC; el costo de destino real se aplicaría con CO-14 (pantalla de ejemplo).</td></tr>';
   }
 }
-function checkOCbase(){
-  if(!OC.prov){toast("Debe seleccionar el proveedor (CT-09)");return false}
-  if(!OC.items.length){toast("Agregue al menos un ítem a la OC");return false}
-  if(OC.items.some(it=>!(it.pu>0))){toast("Asigne precio unitario a todos los ítems");return false}
-  if(!(parseFloat(document.getElementById('oc-tc').value)>0)){toast("El Tipo de Cambio es obligatorio");return false}
-  return true;
-}
-function enviarValidacionOC(){
-  if(!checkOCbase())return;
-  OC.est="Pendiente de Validar"; renderOC(); renderOCS();
-  toast("OC enviada a validación: pendiente de Logística y Gerencia");
-}
-function validarLogOC(){
-  OC.valLog=true;
-  if(OC.valGer){completarValidacionOC()}else{renderOC();renderOCS();toast("Validada por Logística: pendiente la aprobación de Gerencia")}
-}
-function completarValidacionOC(){
-  OC.est=estadoPorAvance(OC);
-  OC.tc=document.getElementById('oc-tc').value;
-  OC.cond=document.getElementById('oc-cond').value;
-  OC.ref=document.getElementById('oc-ref').value;
-  OC.op=document.getElementById('oc-op').value;
-  renderOC(); renderOCS();
-  toast("OC validada por Logística y Gerencia: "+OC.est+" · TC congelado · documento inmutable");
+function renderOCdocs(){
+  const o=OC, filas=[];
+  const fila=h=>'<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+h+'</div>';
+  if(o.sol)filas.push(fila('Solicitud de Materiales origen: <button class="btn-link" onclick="verSolDeOC(\''+o.sol+'\')">'+o.sol+'</button>'));
+  if(o.sf)filas.push(fila('Solicitud de Fabricación: <b>'+coEsc(o.sf)+'</b>'));
+  if(o.of)filas.push(fila('Orden de fabricación: <button class="btn-link" onclick="verOFdeOC(\''+coEsc(o.of)+'\')">'+coEsc(o.of)+'</button>'+(BD.of(o.of)?'':' <span class="hint">(no existe en la base)</span>')));
+  o.recepciones.forEach(r=>{
+    const det=r.lineas.map(l=>coEsc(BD.nomArt(l.art))+' '+fmtM(l.cant)+' '+coEsc(BD.u(l.art))).join(', ');
+    if(r.tipo==="Ingreso"){
+      const link=(typeof abrirMov==='function')?'<button class="btn-link" onclick="abrirMov(\''+r.mov+'\')">'+r.mov+'</button>':'<b>'+r.mov+'</b>';
+      const mv=BD.mov(r.mov)||{};
+      filas.push(fila('Ingreso '+link+(mv.tipoMov?' · <b title="'+coEsc(mv.tipoMovNom||'')+'">'+coEsc(mv.tipoMov)+'</b>':'')+' · '+r.fecha+' · '+coEsc(r.alm)+' · '+det));
+    }else{
+      filas.push(fila('Conformidad del servicio · '+r.fecha+' · '+(r.conforme===false?'<span style="color:var(--cancelada);font-weight:600">con observaciones</span>':'<span style="color:var(--confirmado);font-weight:600">conforme</span>')+' · '+det+(r.obs?' · '+coEsc(r.obs):'')));
+    }
+  });
+  o.facturas.forEach(fid=>{
+    const f=BD.fac(fid); if(!f)return;
+    filas.push(fila('Factura <button class="btn-link" onclick="abrirFactura(\''+f.id+'\')">'+f.id+'</button> · comprobante '+coEsc(f.ndoc)+' · '+f.fecha+' · '+coMon(f.mon)+fmtM(Docs.fac.total(f))+' · <span class="badge" style="background:'+(FAC_EST[f.est]||"var(--borrador)")+'">'+f.est+'</span>'));
+  });
+  document.getElementById('oc-docs').innerHTML=filas.join('')||'<span class="hint">Sin documentos relacionados todavía.</span>';
+  document.getElementById('oc-hist').innerHTML=(o.hist||[]).slice().reverse().map(h=>'<tr><td>'+h.f+'</td><td>'+coEsc(h.u)+'</td><td'+(h.e==='no'?' style="color:var(--cancelada)"':'')+'>'+coEsc(h.a)+'</td><td class="hint">'+coEsc(h.d)+'</td></tr>').join('')
+    ||'<tr><td colspan="4" style="text-align:center;color:var(--texto-sec);padding:12px">Sin historial: la OC aún no se guarda</td></tr>';
 }
 function ocMoneda(){
-  const m=document.getElementById('oc-mon').value;
-  if(m==="USD" && OC.provTipo!=="Internacional"){
+  const m=document.getElementById('oc-mon').value, p=BD.prov(OC.prov);
+  if(m==="USD" && !(p && (p.tipo==="Internacional"||p.mon==="USD"))){
     toast("USD requiere un proveedor Internacional (importación)");
     document.getElementById('oc-mon').value="S/.";
   }
   OC.mon=document.getElementById('oc-mon').value;
   renderOCitems();
 }
-function preAprobarOC(){
-  if(!checkOCbase())return;
-  openModal('m-co07a');
+function elegirProvOC(cod){
+  const p=BD.prov(cod); closeModal('m-ct09');
+  if(!p||!OC||OC.est!=="Borrador"){toast("Abra una OC en Borrador para elegir el proveedor");return}
+  ocLeerForm();
+  OC.prov=p.cod; OC.cond=p.cond||OC.cond; OC.mon=p.mon||"S/.";
+  OC.items.forEach(it=>it.igv=ocIGV(it.art,p.cod));
+  ocLlenarForm(); renderOC();
+  toast(p.tipo==="Internacional"?"Proveedor internacional: la OC se trata como importación (USD, IGV en la nacionalización)":"Proveedor seleccionado: "+p.nom);
 }
+/* guarda la copia de trabajo en la base (crea la OC si es nueva). Devuelve true si se guardó */
+function guardarBorradorOC(silencio){
+  if(!OC||OC.est!=="Borrador")return false;
+  ocLeerForm();
+  if(!OC.items.length){toast("Agregue al menos un ítem a la OC");return false}
+  const d={prov:OC.prov,fecha:OC.fecha,cond:OC.cond,mon:OC.mon,tc:OC.tc,ref:OC.ref,obs:OC.obs,almDestino:OC.almDestino,of:OC.of,
+    items:OC.items.map(i=>({art:i.art,cant:i.cant,pu:i.pu,igv:i.igv}))};
+  const o=coTry(()=>OCid?Docs.oc.guardar(OCid,d):Docs.oc.crear(d));
+  if(!o)return false;
+  /* orgCompra y grupoCompra no los copia Docs.oc.crear/guardar: se asignan en el documento de la base (propuesta para el núcleo) */
+  const x=BD.oc(o.id); x.orgCompra=OC.orgCompra||"SB"; x.grupoCompra=OC.grupoCompra||ocGrupoCompraDef(x); BD.guardar();
+  const nueva=!OCid; OCid=o.id;
+  if(!silencio)toast((nueva?"OC creada en Borrador: ":"Borrador guardado: ")+o.id+(OC.of&&!BD.of(OC.of)?" · aviso: la orden "+OC.of+" no existe en la base":""));
+  abrirOC(o.id); coRefrescar();
+  return true;
+}
+function enviarValidacionOC(){
+  if(!OC)return;
+  ocLeerForm();
+  if(!OC.prov){toast("Debe seleccionar el proveedor (CT-09)");return}
+  if(!OC.items.length){toast("Agregue al menos un ítem a la OC");return}
+  if(OC.items.some(it=>!(it.pu>0))){toast("Asigne precio unitario a todos los ítems");return}
+  if(!(OC.tc>0)){toast("El Tipo de Cambio es obligatorio");return}
+  if(!guardarBorradorOC(true))return;
+  if(coTry(()=>Docs.oc.enviar(OCid))){ abrirOC(OCid); coRefrescar(); toast("OC enviada a validación: pendiente de Logística y Gerencia"); }
+}
+function validarLogOC(){
+  const o=coTry(()=>Docs.oc.validar(OCid)); if(!o)return;
+  abrirOC(OCid); coRefrescar();
+  toast(o.valGer?"OC aprobada: "+o.est:"V°B° de Logística registrado: pendiente la aprobación de Gerencia");
+}
+function preAprobarOC(){ openModal('m-co07a'); }
 function aprobarOC(){
   closeModal('m-co07a');
-  OC.valGer=true;
-  if(OC.valLog){completarValidacionOC()}else{renderOC();renderOCS();toast("Aprobada por Gerencia: pendiente la validación de Logística")}
+  const o=coTry(()=>Docs.oc.aprobar(OCid)); if(!o)return;
+  abrirOC(OCid); coRefrescar();
+  toast(o.valLog?("OC aprobada: "+o.est+(o.of&&esServicioOC(o)?" · registrada en la pestaña Costo de "+o.of:"")):"Aprobada por Gerencia: pendiente el V°B° de Logística");
+}
+function preCancelarOC(){
+  if(!OCid){ go('co06'); toast("OC nueva descartada (no se había guardado)"); return; }
+  document.getElementById('oc-motivo-cancel').value="";
+  openModal('m-co07c');
 }
 function cancelarOC(){
   const m=document.getElementById('oc-motivo-cancel').value.trim();
   if(!m){toast("El motivo de cancelación es obligatorio");return}
   closeModal('m-co07c');
-  OC.est="Cancelada"; renderOC(); renderOCS();
-  toast("OC cancelada. Si había servicio de terceros pendiente, el material retorna vía ingreso a almacén");
-}
-function conformidadOC(conforme){
-  if(conforme){
-    OC.rec=100; OC.est=estadoPorAvance(OC); renderOC(); renderOCS();
-    toast("Servicio recepcionado conforme: sin ingreso a almacén · "+OC.est);
-  }else{
-    nuevoRec(OCkey);
-    toast("Recepcionada con observaciones: registre el reclamo con el detalle de lo observado");
-  }
+  if(coTry(()=>Docs.oc.cancelar(OCid,m))){ abrirOC(OCid); coRefrescar(); toast("OC cancelada"+(OC.sol?": las líneas de "+OC.sol+" vuelven a quedar pendientes":"")); }
 }
 
-/* ===== CO-07 · Agregar ítem a la orden y crear su ingreso ===== */
+/* ===== CO-07d · Registrar ingreso (bienes) ===== */
+function abrirRecepcionOC(){
+  const menu=document.getElementById('oc-crear-menu'); if(menu)menu.classList.remove('open');
+  if(!OC||!Docs.oc.recibible(OC)){toast("La OC no está para recibir");return}
+  const pend=ocPendRec(OC).filter(i=>!BD.esServicio(i.art));
+  if(!pend.length){toast("No hay bienes pendientes de recibir");return}
+  const alm=(OC.almDestino && BD.alm(OC.almDestino))?OC.almDestino:"SB-CENTRAL-MP";
+  document.getElementById('oc-rec-alm').innerHTML=coD().maestros.almacenes.map(a=>'<option value="'+a.cod+'">'+a.cod+' · '+coEsc(a.nom)+'</option>').join('');
+  document.getElementById('oc-rec-alm').value=alm;
+  document.getElementById('oc-rec-obs').value="";
+  document.getElementById('oc-rec-body').innerHTML=pend.map(it=>{
+    const p=BD.r4(it.cant-it.recq);
+    return '<tr><td>'+it.art+'</td><td>'+coEsc(BD.nomArt(it.art))+'</td><td>'+coEsc(BD.u(it.art))+'</td><td style="text-align:right">'+fmtM(it.cant)+'</td><td style="text-align:right">'+fmtM(it.recq)+'</td><td style="text-align:right;font-weight:600">'+fmtM(p)+'</td>'+
+      '<td><input class="oc-rec-cant" data-art="'+it.art+'" value="'+p+'" style="text-align:right"></td></tr>';
+  }).join('');
+  openModal('m-oc-rec');
+}
+function confirmarRecepcionOC(){
+  const alm=document.getElementById('oc-rec-alm').value, obs=document.getElementById('oc-rec-obs').value.trim();
+  const lineas=[...document.querySelectorAll('#oc-rec-body .oc-rec-cant')].map(el=>({art:el.dataset.art,cant:parseFloat(el.value)||0})).filter(l=>l.cant>0);
+  if(!lineas.length){toast("Indique al menos una cantidad a recibir");return}
+  const mov=coTry(()=>Docs.oc.recibir(OCid,{alm:alm,lineas:lineas,obs:obs||("Ingreso contra "+OCid)}));
+  if(!mov)return;
+  closeModal('m-oc-rec');
+  abrirOC(OCid); coRefrescar();
+  toast("Ingreso "+mov.id+(mov.tipoMov?" ("+mov.tipoMov+")":"")+" registrado en "+alm+" · OC "+OC.est);
+}
+
+/* ===== CO-07e · Conformidad del servicio ===== */
+function abrirConformidadOC(){
+  const menu=document.getElementById('oc-crear-menu'); if(menu)menu.classList.remove('open');
+  if(!OC||!Docs.oc.recibible(OC)){toast("La OC no está para recibir");return}
+  const pend=ocPendRec(OC).filter(i=>BD.esServicio(i.art));
+  if(!pend.length){toast("No hay servicios pendientes de conformidad");return}
+  const box=document.getElementById('oc-conf-of');
+  if(OC.of){box.style.display="block"; box.innerHTML='Servicio para la orden <b>'+coEsc(OC.of)+'</b>: el costo del servicio se contrasta en la pestaña Costo de la orden (Producción) con la factura del proveedor.'}
+  else box.style.display="none";
+  document.getElementById('oc-conf-res').value="si";
+  document.getElementById('oc-conf-obs').value="";
+  document.getElementById('oc-conf-body').innerHTML=pend.map(it=>{
+    const p=BD.r4(it.cant-it.recq);
+    return '<tr><td>'+it.art+'</td><td>'+coEsc(BD.nomArt(it.art))+'</td><td>'+coEsc(BD.u(it.art))+'</td><td style="text-align:right">'+fmtM(it.cant)+'</td><td style="text-align:right">'+fmtM(it.recq)+'</td><td style="text-align:right;font-weight:600">'+fmtM(p)+'</td>'+
+      '<td><input class="oc-conf-cant" data-art="'+it.art+'" value="'+p+'" style="text-align:right"></td></tr>';
+  }).join('');
+  openModal('m-oc-conf');
+}
+function confirmarConformidadOC(){
+  const conforme=document.getElementById('oc-conf-res').value!=="no", obs=document.getElementById('oc-conf-obs').value.trim();
+  if(!conforme && !obs){toast("Describa las observaciones del servicio");return}
+  const lineas=[...document.querySelectorAll('#oc-conf-body .oc-conf-cant')].map(el=>({art:el.dataset.art,cant:parseFloat(el.value)||0})).filter(l=>l.cant>0);
+  if(!lineas.length){toast("Indique al menos una cantidad");return}
+  const o=coTry(()=>Docs.oc.conformidad(OCid,{lineas:lineas,conforme:conforme,obs:obs}));
+  if(!o)return;
+  closeModal('m-oc-conf');
+  abrirOC(OCid); coRefrescar();
+  toast((conforme?"Conformidad del servicio registrada":"Servicio registrado con observaciones")+" · OC "+o.est);
+}
+
+/* ===== CO-07b · Agregar ítem a la orden (maestro compartido de artículos) ===== */
 function openBuscadorOC(){
-  const g=document.getElementById('oc-it-g');
-  g.innerHTML='<option value="">Todos</option>'+TIPOS.map(t=>'<option>'+t.nom+'</option>').join('');
+  if(!OC||OC.est!=="Borrador"){toast("Solo se agregan ítems a una OC en Borrador");return}
+  document.getElementById('oc-it-g').innerHTML='<option value="">Todos</option>'+(coD().maestros.grupos||[]).map(g=>'<option value="'+g.cod+'">'+coEsc(g.nom)+'</option>').join('');
   document.getElementById('oc-it-q').value="";
   renderBuscarOC(); openModal('m-oc-item');
 }
 function renderBuscarOC(){
-  const q=(document.getElementById('oc-it-q').value||"").toLowerCase();
+  const q=sinTildes(document.getElementById('oc-it-q').value||"");
   const fg=document.getElementById('oc-it-g').value;
-  const tb=document.getElementById('oc-it-body'); tb.innerHTML="";
-  ARTICULOS.filter(a=>a.e==="Activo" && a.compra).forEach(a=>{
-    if(OC.items.some(it=>it.cod===a.id))return;
-    if(fg && a.t!==fg)return;
-    if(q && !(a.id.toLowerCase().includes(q)||sinTildes(a.n).includes(sinTildes(q))))return;
-    const pu=Number((typeof COSTO_REF!=='undefined' && COSTO_REF[a.id])||0);
-    tb.innerHTML+='<tr><td>'+a.id+'</td><td>'+a.n+'</td><td>'+a.u+'</td>'+
+  const p=BD.prov(OC&&OC.prov);
+  const lista=coD().maestros.articulos.filter(a=>a.compra && a.estado==="Activo" && !OC.items.some(it=>it.art===a.cod))
+    .filter(a=>!fg||a.grupo===fg)
+    .filter(a=>!q||sinTildes(a.cod).includes(q)||sinTildes(a.nom).includes(q))
+    .sort((a,b)=>((p&&b.cod===p.servicio)?1:0)-((p&&a.cod===p.servicio)?1:0));
+  const max=150;
+  document.getElementById('oc-it-body').innerHTML=lista.slice(0,max).map(a=>{
+    const pu=ocPrecioRef(a.cod);
+    return '<tr><td>'+a.cod+'</td><td>'+coEsc(a.nom)+(p&&a.cod===p.servicio?' <span class="hint">(servicio del proveedor)</span>':'')+'</td><td>'+a.grupo+'</td><td>'+coEsc(a.uCompra||a.u)+'</td>'+
      '<td style="text-align:right">'+(pu?fmtM(pu):'<span class="hint">-</span>')+'</td>'+
-     '<td><button class="btn btn-primary btn-sm" onclick="ocAddItem(\''+a.id+'\')">Agregar</button></td></tr>';
-  });
-  if(!tb.innerHTML)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la orden)</td></tr>';
+     '<td><button class="btn btn-primary btn-sm" onclick="ocAddItem(\''+a.cod+'\')">Agregar</button></td></tr>';
+  }).join('')+(lista.length>max?'<tr><td colspan="6" class="hint" style="text-align:center">'+(lista.length-max)+' artículos más: afine la búsqueda</td></tr>':'')
+    ||'<tr><td colspan="6" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la orden)</td></tr>';
 }
 function ocAddItem(cod){
-  const a=ARTICULOS.find(x=>x.id===cod); if(!a)return;
-  const pu=Number((typeof COSTO_REF!=='undefined' && COSTO_REF[a.id])||0);
-  OC.items.push({cod:a.id,nom:a.n,u:a.u,cant:1,pu:pu,igv:18});
-  closeModal('m-oc-item'); renderOCitems();
+  const a=BD.art(cod); if(!a||!OC)return;
+  ocLeerForm();
+  OC.items.push({art:cod,cant:1,pu:ocPrecioRef(cod),igv:ocIGV(cod,OC.prov),recq:0,facq:0});
+  closeModal('m-oc-item'); renderOC();
   toast("Ítem agregado: ajuste la cantidad y el precio de la línea");
-}
-function crearIngresoDesdeOC(){
-  const menu=document.getElementById('oc-crear-menu'); if(menu)menu.classList.remove('open');
-  if(!OC){toast("Abra primero una orden de compra");return}
-  if(OC.est==="Borrador"){toast("La orden todavía está en Borrador: confírmela antes de registrar su ingreso");return}
-  /* GI-09 precargado contra esta OC: registra la llegada física de lo comprado */
-  const nd=document.getElementById('gi09-ndoc'); if(nd)nd.value=OC.id;
-  const org=document.getElementById('gi09-origen'); if(org)org.value=OC.prov;
-  const obs=document.getElementById('gi09-obs');
-  if(obs)obs.value="Ingreso contra "+OC.id+". Las diferencias frente a lo pedido quedan registradas aquí.";
-  const tb=document.getElementById('gi09-items');
-  if(tb){
-    tb.innerHTML="";
-    OC.items.filter(it=>!String(it.cod).startsWith("SERV")).forEach((it,i)=>{
-      tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+it.cod+'</td><td>'+it.nom+'</td><td>'+it.u+'</td>'+
-       '<td><input value="'+it.cant+'" style="text-align:right"></td>'+
-       '<td><input value="'+Number(it.pu).toFixed(2)+'" style="text-align:right"></td>'+
-       '<td><span class="hint">auto</span></td>'+
-       '<td><button class="btn-link" onclick="this.closest(\'tr\').remove()">Eliminar</button></td></tr>';
-    });
-  }
-  go('gi09');
-  toast("Ingreso precargado desde "+OC.id+": confirme cantidades recibidas y regístrelo");
 }

@@ -1,4 +1,4 @@
-/* COMPRAS · CO-12 Notas de Crédito */
+/* COMPRAS · CO-12 Notas de Crédito — DATOS DE EJEMPLO · no conectado a la base compartida (docs/16 §5) */
 /* ===== CO-12 · Notas de Crédito ===== */
 let NCS=[
  {id:"NC-000009",prov:"AVÍOS DEL SUR EIRL",ock:"oc225",oc:"OC-000225",rec:"REC-000008",reck:"r8",monto:96.00,mon:"S/.",
@@ -19,7 +19,7 @@ function renderNC(){
     n++; if(x.est==="Pendiente")pend+=x.monto;
     const tr=document.createElement('tr');
     tr.innerHTML='<td>'+x.id+'</td><td>'+x.prov+'</td>'+
-     '<td><button class="btn-link" onclick="loadOC(\''+x.ock+'\')">'+x.oc+'</button></td>'+
+     '<td><button class="btn-link" onclick="recVerOC(\''+x.ock+'\')">'+x.oc+'</button></td>'+
      '<td>'+(x.reck?('<button class="btn-link" onclick="loadRec(\''+x.reck+'\')">'+x.rec+'</button>'):x.rec)+'</td>'+
      '<td style="text-align:right;font-weight:600">'+fmtM(x.monto)+'</td><td>'+x.mon+'</td>'+
      '<td><span class="badge" style="background:'+(x.est==="Pendiente"?"var(--pendiente)":"var(--confirmado)")+'">'+x.est+'</span></td>'+
@@ -40,8 +40,6 @@ function aplicarNC(){
   const f=document.getElementById('co12a-fac').value.trim();
   if(!f){toast("Indique la factura donde se aplicó el descuento");return}
   const x=NCS[ncIdx]; x.est="Aplicada"; x.fac=f; x.fapl="19/07/2026";
-  const prov=PROV.find(p=>p.nom===x.prov);
-  if(prov)prov.nc="";
   closeModal('m-co12a'); renderNC();
   toast(x.id+" aplicada en "+f+": deja de figurar como crédito pendiente");
 }
