@@ -1,6 +1,10 @@
 /* COMERCIAL V9 — reglas de negocio sin DOM: clientes, líneas de documento, cotizaciones, ventas y devoluciones.
    Cadena simple (estilo SAP B1, sin Orden de Venta ni Entrega aparte):
-     Cotización (no mueve stock) → Venta (Salida GI-10: baja el Stock Actual) → Devolución (Ingreso GI-09).
+     Cotización (no mueve stock) → Venta pendiente de pago (COMPROMETE stock)
+       → pago confirmado (validado en caja) que cubre el total (Salida GI-10: baja el Actual y libera lo comprometido)
+       → Devolución (Ingreso GI-09, solo de lo que ya salió).
+   DECISIÓN CERRADA 2026-09-16. Crédito: la misma regla; la condición de pago solo fija el vencimiento del saldo,
+   el stock queda comprometido hasta que lo validado cubra el total.
    Toda regla que falla lanza Error con el motivo; App.accion lo muestra y no guarda. */
 
 /* ============================== CLIENTES ============================== */
@@ -171,11 +175,7 @@ const Doc = {
     d.cliente = c ? { cod: c.cod, doc: Cli.docTxt(c), nom: c.nom, tipo: c.tipo } : null;
     return d;
   },
-  soloServicios(d) { return d.lineas.length > 0 && d.lineas.every(l => !(Store.art(l.art) || {}).inv); },
-  tipoDoc(d) {
-    const inv = d.lineas.filter(l => (Store.art(l.art) || {}).inv).length;
-    return !inv ? 'Servicios' : inv === d.lineas.length ? 'Productos' : 'Mixta';
-  }
+  soloServicios(d) { return d.lineas.length > 0 && d.lineas.every(l => !(Store.art(l.art) || {}).inv); }
 };
 
 /* ============================== COTIZACIONES ============================== */
@@ -345,12 +345,13 @@ const Ventas = {
     if (pagos.length && !Caja.abierta(d.sede, d.mon)) e.push('Para registrar pagos debe estar abierta la caja de ' + Store.sede(d.sede).nom + ' en ' + d.mon);
     return { e, w: rl.w };
   },
+  /* registra la venta: nace Pendiente de pago y COMPROMETE el stock de sus líneas inventariables (todavía no hay salida) */
   registrar(d) {
     Store.exigir('crear_venta', 'registrar ventas');
     const r = Ventas.revisar(d);
     if (r.e.length) throw new Error(r.e[0]);
-    const u = Store.usuario(), cli = Store.cli(d.cli), sede = Store.sede(d.sede), comp = M.comp(d.comp);
-    /* F3: se vuelve a comprobar el stock de TODOS los almacenes antes de mover nada */
+    const u = Store.usuario(), sede = Store.sede(d.sede), comp = M.comp(d.comp);
+    /* F3: se vuelve a comprobar el Disponible de TODOS los almacenes antes de comprometer nada */
     const porAlm = {};
     d.lineas.forEach((l, i) => { l.n = i + 1; if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
     Object.keys(porAlm).forEach(alm => porAlm[alm].forEach(l => {
@@ -361,26 +362,59 @@ const Ventas = {
     const serie = M.SERIES[d.sede][d.comp];
     Object.assign(v, {
       id: Store.sig('ven', 'VEN-' + Store.anio() + '-', 6), compNum: Store.sig('c_' + serie, serie + '-', 6),
-      fecha: d.fecha + ' ' + UI.ahora().slice(11), sedeNom: sede.nom, usuario: u.nom, estado: 'Registrada', movs: [], reembolsos: [], hist: []
+      fecha: UI.ahora(), sedeNom: sede.nom, usuario: u.nom, estado: 'Registrada', salida: null, movs: [], reembolsos: [], hist: []
     });
     v.plazoAnular = UI.sumarDias(v.fecha, Store.d.cfg.diasAnulacion).slice(0, 10);
     if (Doc.soloServicios(v)) v.entrega = null;
     Precios.doc(v);
-    const det = cli.tipo === 'MAYORISTA' ? 'Salida - Venta al por mayor' : 'Salida - Venta al por menor';
-    Object.keys(porAlm).forEach(alm => {
-      const lin = v.lineas.filter(l => l.alm === alm && (Store.art(l.art) || {}).inv);
-      const mov = Stock.salida({ det, alm, destino: 'Cliente · ' + cli.nom, ndoc: v.id, obs: comp.nom + ' ' + v.compNum, lineas: lin.map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), bloquear: false })) });
-      lin.forEach(l => { const ml = mov.lineas.find(x => x.art === l.art); l.costo = UI.r4((ml ? ml.costo : 0) * l.factor); });
-      v.movs.push(mov.id);
-    });
+    /* compromiso por línea inventariable, en UM de inventario */
+    v.lineas.forEach(l => { l.comp = (Store.art(l.art) || {}).inv ? UI.r4(l.cant * l.factor) : 0; });
+    Stock.comprometer(v.lineas.filter(l => l.comp > 0).map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), 1);
     v.pagos = (d.pagos || []).map(p => ({ id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: p.met, banco: p.banco || '', nop: p.nop || '', voucher: p.voucher || '', monto: UI.r2(p.monto), estado: 'Por validar', caja: ses.id, usuario: u.nom }));
     if (d.cot) { const c = Store.cot(d.cot); c.estado = 'Convertida'; c.venta = v.id; Store.hist(c, 'Convertida en venta', v.id); }
-    Store.hist(v, 'Registrada', comp.nom + ' ' + v.compNum + (d.cot ? ' · desde ' + d.cot : '') + (v.movs.length ? ' · salida ' + v.movs.join(', ') : '') + (r.w.length ? ' · avisos: ' + r.w.join(' · ') : ''));
+    const nComp = v.lineas.filter(l => l.comp > 0).length;
+    Store.hist(v, 'Registrada', comp.nom + ' ' + v.compNum + (d.cot ? ' · desde ' + d.cot : '') + (nComp ? ' · stock comprometido en ' + nComp + ' línea(s) hasta que el pago confirmado cubra el total' : '') + (r.w.length ? ' · avisos: ' + r.w.join(' · ') : ''));
     Store.d.ventas.unshift(v);
+    Ventas._salidaSiPagada(v); /* p. ej. un documento de total cero (solo obsequios) */
     return { venta: v, avisos: r.w };
   },
 
+  /* ---------- stock de la venta (DECISIÓN CERRADA 2026-09-16) ---------- */
+  tieneStock(v) { return v.lineas.some(l => (Store.art(l.art) || {}).inv); },
+  comprometido(v) { return UI.r4(v.lineas.reduce((t, l) => t + (l.comp || 0), 0)); },
+  /* '' (solo servicios) · Stock comprometido · Stock entregado · Stock liberado (anulada sin salida) · Stock devuelto (anulada con salida) */
+  estadoStock(v) {
+    if (!Ventas.tieneStock(v)) return '';
+    if (v.estado === 'Anulada') return v.salida ? 'Stock devuelto' : 'Stock liberado';
+    return v.salida ? 'Stock entregado' : 'Stock comprometido';
+  },
+  /* cuánto tienen comprometido las ventas pendientes en un almacén y artículo (para las consultas) */
+  comprometidoVentas(alm, art) {
+    return UI.r4(Store.d.ventas.filter(v => v.estado === 'Registrada' && !v.salida).reduce((t, v) => t + v.lineas.filter(l => l.alm === alm && l.art === art).reduce((s, l) => s + (l.comp || 0), 0), 0));
+  },
+  /* REGLA: cuando lo confirmado (pagos validados) cubre el total sale el stock: una Salida GI-10 por almacén que baja el Actual y libera lo comprometido */
+  _salidaSiPagada(v, pagoId) {
+    if (!v || v.estado !== 'Registrada' || v.salida) return null;
+    if (Ventas.confirmado(v) + 0.01 < v.total) return null;
+    const u = Store.usuario(), comp = M.comp(v.comp);
+    const det = (v.cliente && v.cliente.tipo) === 'MAYORISTA' ? 'Salida - Venta al por mayor' : 'Salida - Venta al por menor';
+    const porAlm = {};
+    v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
+    const movs = [];
+    Object.keys(porAlm).forEach(alm => {
+      const lin = porAlm[alm];
+      const mov = Stock.salida({ det, alm, destino: 'Cliente · ' + v.cliente.nom, ndoc: v.id, obs: comp.nom + ' ' + v.compNum + ' · pago confirmado', lineas: lin.map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), bloquear: false, liberar: l.comp || 0 })) });
+      lin.forEach(l => { const ml = mov.lineas.find(x => x.art === l.art); l.costo = UI.r4((ml ? ml.costo : 0) * l.factor); l.comp = 0; });
+      v.movs.push(mov.id); movs.push(mov.id);
+    });
+    v.salida = { f: UI.ahora(), u: u.nom, pago: pagoId || null, movs };
+    if (movs.length) Store.hist(v, 'Salida de stock', 'Pago confirmado completo: ' + movs.join(', ') + ' (baja el Actual y se libera lo comprometido)');
+    return v.salida;
+  },
+
   /* ---------- importes derivados ---------- */
+  /* confirmado = pagos validados en caja (solo esto cuenta para sacar el stock) */
+  confirmado(v) { return UI.r2(v.pagos.filter(p => p.estado === 'Validado').reduce((t, p) => t + p.monto, 0)); },
   pagado(v) { return UI.r2(v.pagos.filter(p => p.estado !== 'Anulado').reduce((t, p) => t + p.monto, 0) - v.reembolsos.filter(x => x.estado === 'Procesado').reduce((t, x) => t + x.monto, 0)); },
   devoluciones(v) { return Store.d.devs.filter(x => x.venta === v.id && x.estado !== 'Anulada'); },
   devuelto(v) { return UI.r2(Store.d.devs.filter(x => x.venta === v.id && x.estado === 'Finalizada').reduce((t, x) => t + x.total, 0)); },
@@ -391,7 +425,8 @@ const Ventas = {
     if (Ventas.porDevolver(v) > 0.004) return 'Por devolver';
     if (v.estado === 'Anulada') return 'Anulada';
     const neto = Ventas.neto(v), pag = Ventas.pagado(v);
-    if (pag >= neto - 0.01) return 'Pagado';
+    const conf = UI.r2(Ventas.confirmado(v) - v.reembolsos.filter(x => x.estado === 'Procesado').reduce((t, x) => t + x.monto, 0));
+    if (pag >= neto - 0.01) return conf >= neto - 0.01 ? 'Pagado' : 'Por validar';
     return pag > 0.004 ? 'Parcial' : 'Pendiente de pago';
   },
   porValidar(v) { return v.pagos.filter(p => p.estado === 'Por validar').length; },
@@ -427,7 +462,8 @@ const Ventas = {
     const p = Ventas._pagoEnCaja(v, id);
     p.estado = 'Validado';
     p.validado = { f: UI.ahora(), u: Store.usuario().nom };
-    Store.hist(v, 'Pago validado en caja', p.id + ' · ' + UI.m(p.monto, v.mon));
+    Store.hist(v, 'Pago validado en caja', p.id + ' · ' + UI.m(p.monto, v.mon) + ' · confirmado ' + UI.m(Ventas.confirmado(v), v.mon) + ' de ' + UI.m(v.total, v.mon));
+    Ventas._salidaSiPagada(v, p.id);
     return p;
   },
   rechazarPago(v, id, motivo) {
@@ -439,25 +475,32 @@ const Ventas = {
     return p;
   },
 
-  /* D1: anulación lógica (nunca se borra). Devuelve el stock; lo cobrado queda Por devolver en caja */
+  /* D1: anulación lógica (nunca se borra). Sin salida (stock comprometido): libera lo comprometido, sin plazo.
+     Con salida: solo dentro del plazo y devuelve el stock con un Ingreso. Lo cobrado queda Por devolver en caja */
   anular(v, motivo) {
     Store.exigir('anular_venta', 'anular ventas');
     if (!v || v.estado !== 'Registrada') throw new Error('La venta ya está ' + (v ? v.estado : 'eliminada'));
     if (!motivo) throw new Error('Elija el motivo de la anulación');
     if (Ventas.devoluciones(v).length) throw new Error('La venta tiene devoluciones: no se anula (anule antes las devoluciones pendientes)');
-    if (UI.aFecha(UI.hoy()) > UI.aFecha(v.plazoAnular)) throw new Error('El plazo para anular venció el ' + v.plazoAnular + ': registre una devolución');
-    const porAlm = {};
-    v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
-    Object.keys(porAlm).forEach(alm => {
-      const mov = Stock.ingreso({ det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + v.cliente.nom, ndoc: v.id, obs: 'Anulación de ' + v.id + ': ' + motivo, lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
-      v.movs.push(mov.id);
-    });
+    if (v.salida && UI.aFecha(UI.hoy()) > UI.aFecha(v.plazoAnular)) throw new Error('El plazo para anular venció el ' + v.plazoAnular + ': registre una devolución');
+    if (!v.salida) {
+      const lib = v.lineas.filter(l => l.comp > 0);
+      Stock.comprometer(lib.map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), -1);
+      lib.forEach(l => { l.comp = 0; });
+    } else {
+      const porAlm = {};
+      v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
+      Object.keys(porAlm).forEach(alm => {
+        const mov = Stock.ingreso({ det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + v.cliente.nom, ndoc: v.id, obs: 'Anulación de ' + v.id + ': ' + motivo, lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
+        v.movs.push(mov.id);
+      });
+    }
     v.pagos.filter(p => p.estado === 'Por validar').forEach(p => { p.estado = 'Anulado'; p.motivo = 'Venta anulada'; });
     const cobrado = Ventas.pagado(v) - Ventas.porDevolver(v);
     if (cobrado > 0.004) v.reembolsos.push({ id: Store.sig('ree', 'DD-', 6), origen: 'Anulación', monto: UI.r2(cobrado), estado: 'Pendiente', fecha: UI.ahora() });
     v.estado = 'Anulada';
     v.anulacion = { f: UI.ahora(), u: Store.usuario().nom, motivo };
-    Store.hist(v, 'Anulada', motivo + (cobrado > 0.004 ? ' · por devolver ' + UI.m(cobrado, v.mon) : ''));
+    Store.hist(v, 'Anulada', motivo + (v.salida ? ' · stock devuelto al almacén' : Ventas.tieneStock(v) ? ' · stock comprometido liberado' : '') + (cobrado > 0.004 ? ' · por devolver ' + UI.m(cobrado, v.mon) : ''));
     return v;
   }
 };
@@ -501,6 +544,7 @@ const Dev = {
     const v = Store.venta(ventaId);
     if (!v) throw new Error('No existe la venta ' + ventaId);
     if (v.estado !== 'Registrada') throw new Error('Solo se devuelve una venta Registrada (' + v.id + ' está ' + v.estado + ')');
+    if (!v.salida) throw new Error('La venta ' + v.id + ' aún no tiene salida de stock (sigue comprometido hasta que el pago confirmado cubra el total): no hay nada que devolver; si ya no va, anúlela');
     if (!Dev.candidatas(v).length) throw new Error('La venta no tiene productos: los servicios no se devuelven');
     const d = Object.assign({ id: Store.sig('dev', 'DEV-' + Store.anio() + '-', 6), fecha: UI.ahora(), venta: v.id, sede: v.sede, sedeNom: v.sedeNom, cliente: v.cliente, mon: v.mon, estado: 'Pendiente', usuario: Store.usuario().nom, movs: [], reembolso: null, hist: [] }, Dev._armar(v, x));
     Store.hist(d, 'Registrada', UI.n(d.lineas.reduce((t, l) => t + l.cant, 0), 0) + ' unidad(es) · ' + UI.m(d.total, d.mon));
@@ -520,6 +564,7 @@ const Dev = {
     if (!d || d.estado !== 'Pendiente') throw new Error('Solo se finaliza una devolución Pendiente');
     const v = Store.venta(d.venta);
     if (v.estado !== 'Registrada') throw new Error('La venta ' + v.id + ' ya no está Registrada');
+    if (!v.salida) throw new Error('La venta ' + v.id + ' no tiene salida de stock: solo se devuelve lo que ya salió');
     Dev._armar(v, { lineas: d.lineas.map(l => ({ n: l.n, cant: l.cant, tipo: l.tipo })), sustTipo: d.sustTipo, sustNum: d.sustNum, dcto: d.dcto }, d.id);
     const netoAntes = Ventas.neto(v), pagado = Ventas.pagado(v), pendiente = Ventas.porDevolver(v);
     const porAlm = {};

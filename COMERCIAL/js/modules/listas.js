@@ -1,4 +1,4 @@
-/* COMERCIAL V9 · CM-08 Listas de precios (cascada + simulador) · CM-09 Artículos de venta (datos de la pestaña Venta de GI-02) */
+/* COMERCIAL V9 · CL-40 Listas de precios (cascada + simulador; modales CL-41, CL-42) · CL-43 Artículos de venta (datos de la pestaña Venta de GI-02; modal CL-44) */
 const CM08 = {
   art: 'PT-0001', sim: { um: 'UND', sede: 'TDA-01', tipo: 'MINORISTA', mon: 'PEN' },
   ORDEN: { 'Tienda y tipo de cliente': 0, 'Tienda': 1, 'Tipo de cliente': 2, 'General': 3 },
@@ -12,10 +12,10 @@ const CM08 = {
     const filas = Store.d.listas.filter(l => l.art === a.cod).sort((x, y) => x.mon.localeCompare(y.mon) || x.um.localeCompare(y.um) || CM08.ORDEN[Listas.nivel(x)] - CM08.ORDEN[Listas.nivel(y)]);
     const sel = (campo, lista, val) => '<select onchange="CM08.sim.' + campo + '=this.value;App.refrescar()">' + UI.opts(lista, val) + '</select>';
 
-    let html = '<div class="screen-head"><h1>Listas de precios</h1><span class="code">CM-08</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM08.excel()">⇩ Excel</button></div>';
+    let html = '<div class="screen-head"><h1>Listas de precios</h1><span class="code">CL-40</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM08.excel()">⇩ Excel</button></div>';
     html += UI.aviso('<b>Cómo se elige el precio</b> (por artículo, unidad de venta y moneda), de lo más específico a lo general: ' +
       '<b>1.</b> tienda y tipo de cliente · <b>2.</b> tienda · <b>3.</b> tipo de cliente · <b>4.</b> general · <b>5.</b> precio sugerido del artículo (GI-02), solo en soles. ' +
-      'Si una línea no tiene precio en la moneda del documento, el cambio de moneda se revierte. El precio mínimo y el rango de descuento se controlan aparte (CM-09).', 'info');
+      'Si una línea no tiene precio en la moneda del documento, el cambio de moneda se revierte. El precio mínimo y el rango de descuento se controlan aparte (CL-43).', 'info');
     html += '<div class="card"><div class="formgrid c4">' +
       UI.campo('Artículo', '<select onchange="CM08.art=this.value;App.refrescar()">' + UI.opts(arts.map(x => ({ v: x.cod, t: x.cod + ' · ' + x.nom })), a.cod) + '</select>', { estilo: 'grid-column:span 2' }) +
       UI.dato('Precio sugerido · mínimo', UI.s(a.precio) + ' · ' + (a.precioMin ? UI.s(a.precioMin) + (a.verifMin || Store.d.cfg.verificarPrecioMin ? ' (se verifica)' : ' (no se verifica)') : 'sin mínimo')) +
@@ -50,7 +50,7 @@ const CM08 = {
   fila(id) {
     const a = Store.art(CM08.art), l = id ? Store.d.listas.find(x => x.id === id) : { um: (a.uVenta || [a.u])[0], sede: '', tipo: '', mon: 'PEN', precio: '' };
     UI.modal({
-      titulo: (id ? 'Editar ' + id : 'Nuevo precio') + ' · ' + a.cod,
+      titulo: (id ? 'Editar ' + id : 'Nuevo precio') + ' · ' + a.cod, code: 'CL-41',
       cuerpo: '<div class="formgrid">' + UI.dato('Artículo', UI.esc(a.nom), { full: true }) +
         UI.campo('Unidad de venta', '<select id="lp-um">' + UI.opts(a.uVenta || [a.u], l.um) + '</select>', { req: true }) +
         UI.campo('Moneda', '<select id="lp-mon">' + UI.opts(M.MONEDAS.map(m => m.cod), l.mon) + '</select>', { req: true }) +
@@ -66,7 +66,7 @@ const CM08 = {
     if (App.accion(() => Listas.guardar(x, id || null), l => 'Precio ' + l.id + ' guardado')) { UI.cerrar(); App.refrescar(); }
   },
   quitar(id) {
-    UI.confirmar('Quitar ' + id, '<p>Los documentos ya emitidos conservan su precio; los nuevos usarán el siguiente nivel de la cascada.</p>', () => { if (App.accion(() => Listas.quitar(id), id + ' quitado')) App.refrescar(); }, 'Quitar');
+    UI.confirmar('Quitar ' + id, '<p>Los documentos ya emitidos conservan su precio; los nuevos usarán el siguiente nivel de la cascada.</p>', () => { if (App.accion(() => Listas.quitar(id), id + ' quitado')) App.refrescar(); }, 'Quitar', 'CL-42');
   },
   excel() {
     UI.csv('listas-de-precios', ['Fila', 'Código', 'Artículo', 'UM', 'Tienda', 'Tipo de cliente', 'Nivel', 'Moneda', 'Precio'],
@@ -80,7 +80,7 @@ const CM09 = {
   render() {
     const f = CM09.f, q = f.q.toLowerCase(), ed = Store.puede('editar_precios');
     const arts = Store.d.arts.filter(a => a.venta && (!f.grupo || a.grupo === f.grupo) && (!q || (a.cod + ' ' + a.nom).toLowerCase().includes(q)));
-    return '<div class="screen-head"><h1>Artículos de venta</h1><span class="code">CM-09</span></div>' +
+    return '<div class="screen-head"><h1>Artículos de venta</h1><span class="code">CL-43</span></div>' +
       '<div class="card"><div class="filters">' + UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM09.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       UI.campo('Grupo de Artículo', '<select onchange="CM09.f.grupo=this.value;App.refrescar()">' + UI.opts([...new Set(Store.d.arts.map(a => a.grupo))], f.grupo, 'Todos') + '</select>') + '</div></div>' +
       UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio sugerido', 'num'], ['Precio mínimo', 'num'], ['Descuento', 'num'], 'IGV', 'Control de stock al vender', ['Disponible', 'num'], ['', '', '70px']], arts.map(a =>
@@ -91,12 +91,12 @@ const CM09 = {
         '<td class="num">' + (a.inv ? UI.n(Stock.totalDisp(a.cod), 0) : '—') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" onclick="CM09.editar(\'' + a.cod + '\')">Editar</button>' : '') + '</td></tr>'), { vacio: 'Sin artículos' }) +
       '<p class="hint">El maestro completo del artículo (grupo, categoría, unidades, lotes, atributos) vive en Inventarios (GI-02); aquí solo se ven y ajustan sus datos de venta. ' +
-      'Control de stock: <b>Bloquear</b> impide vender sin disponible · <b>Avisar y permitir</b> muestra el aviso y deja vender · <b>No verificar</b> vende sin mirar el stock. Los servicios no son inventariables: no llevan almacén, stock ni devolución.</p>';
+      'Control de stock (contra el Disponible, que ya descuenta lo comprometido por ventas pendientes): <b>Bloquear</b> impide vender sin disponible · <b>Avisar y permitir</b> muestra el aviso y deja vender · <b>No verificar</b> vende sin mirar el stock. Los servicios no son inventariables: no llevan almacén, stock ni devolución.</p>';
   },
   editar(cod) {
     const a = Store.art(cod);
     UI.modal({
-      titulo: 'Datos de venta · ' + a.cod,
+      titulo: 'Datos de venta · ' + a.cod, code: 'CL-44',
       cuerpo: '<div class="formgrid">' + UI.dato('Artículo', UI.esc(a.nom), { full: true }) +
         UI.campo('Precio sugerido (S/, por ' + a.u + ')', '<input id="av-precio" type="number" min="0" step="any" value="' + a.precio + '">', { req: true }) +
         UI.campo('Precio mínimo de venta (S/)', '<input id="av-min" type="number" min="0" step="any" value="' + a.precioMin + '">', { hint: '0 = sin mínimo' }) +

@@ -1,4 +1,4 @@
-/* COMERCIAL V9 · CM-07 Clientes: listado con estado comercial derivado, ficha y alta rápida desde los documentos */
+/* COMERCIAL V9 · CL-34 Clientes: listado con estado comercial derivado · CL-35 ficha · modales CL-36 (desactivar/reactivar) y CL-37 (alta rápida desde los documentos) */
 const CM07 = {
   f: { q: '', tipo: '', est: '', act: 'activos' },
   lista() {
@@ -8,7 +8,7 @@ const CM07 = {
   },
   render() {
     const act = Store.d.clientes.filter(c => c.activo), est = act.map(Cli.estadoComercial), cuenta = e => est.filter(x => x === e).length, f = CM07.f;
-    return '<div class="screen-head"><h1>Clientes</h1><span class="code">CM-07</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM07.excel()">⇩ Excel</button>' +
+    return '<div class="screen-head"><h1>Clientes</h1><span class="code">CL-34</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM07.excel()">⇩ Excel</button>' +
       (Store.puede('crear_cliente') ? '<button class="btn btn-primary" onclick="App.go(\'cm07f\',{nuevo:Date.now()})">+ Nuevo cliente</button>' : '') + '</div>' +
       UI.kpis([
         { l: 'Clientes activos', v: act.length, s: cuenta('Sin compras') + ' sin compras' },
@@ -75,7 +75,7 @@ const CM07F = {
     if (!nuevo && Store.puede('editar_cliente')) b.push('<button class="btn btn-' + (c.activo ? 'danger' : 'secondary') + '" onclick="CM07F.activo(' + !c.activo + ')">' + (c.activo ? 'Desactivar' : 'Reactivar') + '</button>');
     b.push('<button class="btn btn-secondary" onclick="App.go(\'cm07\')">Volver</button>');
     let html = '<div class="screen-head"><h1>' + (nuevo ? 'Nuevo cliente' : UI.esc(c.nom)) + '</h1>' + (nuevo ? '' : UI.estado(Cli.estadoComercial(c)) + (c.activo ? '' : ' ' + UI.estado('Inactivo')) + ' <span class="mini">' + c.cod + '</span>') +
-      '<span class="code">CM-07</span><div class="spacer"></div>' + b.join('') + '</div>';
+      '<span class="code">CL-35</span><div class="spacer"></div>' + b.join('') + '</div>';
     if (!nuevo) {
       const tabs = [['datos', 'Datos'], ['ven', 'Ventas (' + vs.length + ')'], ['cot', 'Cotizaciones (' + cs.length + ')'], ['dev', 'Devoluciones (' + ds.length + ')']];
       html += UI.kpis([
@@ -90,11 +90,11 @@ const CM07F = {
       html += '<div class="card">' + (nuevo ? '' : '<div class="formgrid c3" style="margin-bottom:12px">' + UI.dato('Código', '<b>' + c.cod + '</b>') + '</div>') + CM07F.form(c, ed) + '</div>' +
         '<p class="hint">Solo el documento, el nombre y el tipo son obligatorios. Estado comercial: <b>Nuevo</b> (primera compra en 30 días), <b>Activo</b> (compró en 60 días), <b>Por recuperar</b> (sin compras hace más de 60), <b>Sin compras</b>. «Inactivo» es la baja lógica del registro.</p>';
     } else if (CM07F.tab === 'ven') {
-      html += UI.tabla(['Venta', 'Fecha', 'Tienda', ['Total', 'num'], ['Saldo', 'num'], 'Pago', 'Estado'], vs.map(v => '<tr class="clickable" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})"><td><b>' + v.id + '</b><br><span class="mini">' + v.compNum + '</span></td><td class="mini">' + v.fecha + '</td><td class="mini">' + UI.esc(v.sedeNom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td><td class="num">' + UI.m(Ventas.deuda(v), v.mon) + '</td><td>' + UI.estado(Ventas.estadoPago(v)) + '</td><td>' + UI.estado(v.estado) + '</td></tr>'), { vacio: 'Sin ventas' });
+      html += UI.tabla(['Venta', 'Fecha de creación', 'Tienda', ['Total', 'num'], ['Saldo', 'num'], 'Pago', 'Estado'], vs.map(v => '<tr class="clickable" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})"><td><b>' + v.id + '</b><br><span class="mini">' + v.compNum + '</span></td><td class="mini">' + v.fecha + '</td><td class="mini">' + UI.esc(v.sedeNom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td><td class="num">' + UI.m(Ventas.deuda(v), v.mon) + '</td><td>' + UI.estado(Ventas.estadoPago(v)) + '</td><td>' + UI.estado(v.estado) + '</td></tr>'), { vacio: 'Sin ventas' });
     } else if (CM07F.tab === 'cot') {
-      html += UI.tabla(['Cotización', 'Fecha', 'Válida hasta', ['Total', 'num'], 'Estado'], cs.map(x => '<tr class="clickable" onclick="App.go(\'cm01f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.validez + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cotizaciones' });
+      html += UI.tabla(['Cotización', 'Fecha de creación', 'Válida hasta', ['Total', 'num'], 'Estado'], cs.map(x => '<tr class="clickable" onclick="App.go(\'cm01f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.validez + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cotizaciones' });
     } else {
-      html += UI.tabla(['Devolución', 'Fecha', 'Venta', ['Total', 'num'], 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.venta + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones' });
+      html += UI.tabla(['Devolución', 'Fecha de creación', 'Venta', ['Total', 'num'], 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.venta + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones' });
     }
     return html;
   },
@@ -107,7 +107,7 @@ const CM07F = {
   activo(v) {
     const c = Store.cli(App.params.id);
     UI.confirmar((v ? 'Reactivar ' : 'Desactivar ') + c.cod, '<p>' + (v ? 'El cliente vuelve a aparecer en los buscadores.' : 'El cliente no se borra: deja de aparecer en los buscadores y no se le puede vender ni cotizar. Su historial se conserva.') + '</p>',
-      () => { if (App.accion(() => Cli.cambiarActivo(c.cod, v), c.cod + (v ? ' reactivado' : ' desactivado'))) App.refrescar(); }, v ? 'Reactivar' : 'Desactivar');
+      () => { if (App.accion(() => Cli.cambiarActivo(c.cod, v), c.cod + (v ? ' reactivado' : ' desactivado'))) App.refrescar(); }, v ? 'Reactivar' : 'Desactivar', 'CL-36');
   }
 };
 App.pantalla('cm07f', {
@@ -121,7 +121,7 @@ const CLIQ = {
   abrir(cb) {
     CLIQ._cb = cb;
     UI.modal({
-      lg: true, titulo: 'Nuevo cliente',
+      lg: true, titulo: 'Nuevo cliente', code: 'CL-37',
       cuerpo: CM07F.form({ tipoDoc: 'DNI', doc: '', nom: '', tipo: 'MINORISTA', tel: '', email: '', dir: '', ubigeo: '', cond: 'CONTADO', obs: '' }, true, 'cq') +
         '<p class="hint" style="margin-top:8px">El cliente queda creado y seleccionado en el documento.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CLIQ.guardar()">Crear y seleccionar</button>'

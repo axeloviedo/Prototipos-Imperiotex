@@ -18,9 +18,9 @@ const M = {
 
   /* grupo = Grupo de Artículo V7; cat = categoría (define los parámetros de control, PR-13) */
   ARTICULOS: [
-    { cod: 'PT-0001', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '28' }, inv: true, costo: 0 },
-    { cod: 'PT-0002', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '30' }, inv: true, costo: 0 },
-    { cod: 'PT-0003', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', cat: 'PANTALÓN', attrs: { Color: 'NEGRO', Talla: '28' }, inv: true, costo: 0 },
+    { cod: 'PT-0001', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', alm: 'SB-ALM-PT', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '28' }, inv: true, costo: 0 },
+    { cod: 'PT-0002', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', alm: 'SB-ALM-PT', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '30' }, inv: true, costo: 0 },
+    { cod: 'PT-0003', nom: 'PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', alm: 'SB-ALM-PT', cat: 'PANTALÓN', attrs: { Color: 'NEGRO', Talla: '28' }, inv: true, costo: 0 },
     { cod: 'PPT-0021', nom: 'PANTALON WIDE LEG ZULEIKA LAVADO COLOR AZUL TALLA 28', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '28', Acabado: 'LAVADO' }, inv: true, costo: 0 },
     { cod: 'PPT-0023', nom: 'PANTALON WIDE LEG ZULEIKA LAVADO COLOR NEGRO TALLA 28', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Color: 'NEGRO', Talla: '28', Acabado: 'LAVADO' }, inv: true, costo: 0 },
     { cod: 'PPT-0024', nom: 'PANTALON WIDE LEG ZULEIKA LAVADO COLOR AZUL TALLA 30', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '30', Acabado: 'LAVADO' }, inv: true, costo: 0 },
@@ -30,7 +30,7 @@ const M = {
     { cod: 'PPT-0027', nom: 'PANTALON WIDE LEG ZULEIKA PIEZAS CORTADAS TALLA 30', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Talla: '30' }, inv: true, costo: 0 },
     { cod: 'PPT-0022F', nom: 'PANTALON WIDE LEG ZULEIKA CRUDO TALLA 28 FALLADO', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Talla: '28', Acabado: 'CRUDO', Estado: 'FALLADO' }, inv: true, costo: 0 },
     { cod: 'PPT-0024F', nom: 'PANTALON WIDE LEG ZULEIKA LAVADO COLOR AZUL TALLA 30 FALLADO', u: 'UND', grupo: 'PRODUCTOS EN PROCESO', alm: 'SB-ALM-PPT', cat: 'PANTALÓN', attrs: { Color: 'AZUL', Talla: '30', Acabado: 'LAVADO', Estado: 'FALLADO' }, inv: true, costo: 0 },
-    { cod: 'PT-0010', nom: 'PANTALON WIDE LEG THAIR MUESTRA', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', cat: 'PANTALÓN', attrs: { Talla: '28', Color: 'AZUL' }, inv: true, costo: 0 },
+    { cod: 'PT-0010', nom: 'PANTALON WIDE LEG THAIR MUESTRA', u: 'UND', grupo: 'PRODUCTOS TERMINADOS', alm: 'SB-ALM-PT', cat: 'PANTALÓN', attrs: { Talla: '28', Color: 'AZUL' }, inv: true, costo: 0 },
     { cod: 'MP-0012', nom: 'TELA DENIM 12 OZ AZUL', u: 'MT', grupo: 'MATERIA PRIMA', cat: 'TELAS', attrs: {}, inv: true, costo: 19.10 },
     { cod: 'MP-0031', nom: 'HILO POLIESTER AZUL', u: 'MT', grupo: 'MATERIA PRIMA', cat: 'HILOS', attrs: {}, inv: true, costo: 0.0017 },
     { cod: 'MP-0046', nom: 'CIERRE YKK RC-045 12CM', u: 'UND', grupo: 'MATERIA PRIMA', cat: 'AVÍOS DE CONFECCIÓN', attrs: {}, inv: true, costo: 0.85 },
@@ -50,40 +50,39 @@ const M = {
     { cod: 'TRC-0002', nom: 'ACTIVOS FIJOS Y EXTRAS' },
     { cod: 'TRC-0003', nom: 'SERVICIO DE TERCEROS', clase: 'servicio' }
   ],
-  UNIDADES_RECURSO: ['HORA', 'UND', 'DÍA', 'METRO', 'KG'],
-  CUENTAS_COSTO: [
-    { cod: '921101', nom: 'Mano de obra directa' },
-    { cod: '921201', nom: 'Servicios de terceros (maquila)' },
-    { cod: '921301', nom: 'Depreciación de maquinaria y equipo' },
-    { cod: '921401', nom: 'Energía eléctrica de planta' },
-    { cod: '921901', nom: 'Otros costos indirectos de fabricación' }
+  /* Unidades de medida: espejo del maestro de Inventarios (GI · Configuraciones → Unidades de Medida). La unidad de consumo del recurso se elige de aquí. */
+  UNIDADES: [
+    { cod: 'UND', nom: 'Unidad' }, { cod: 'MT', nom: 'Metro' }, { cod: 'CM', nom: 'Centímetro' }, { cod: 'KG', nom: 'Kilogramo' }, { cod: 'GR', nom: 'Gramo' },
+    { cod: 'DOC', nom: 'Docena' }, { cod: 'CONO', nom: 'Cono' }, { cod: 'ROLLO', nom: 'Rollo' }, { cod: 'CJ', nom: 'Caja' }, { cod: 'BOL', nom: 'Bolsa' }, { cod: 'PAR', nom: 'Par' },
+    { cod: 'HORA', nom: 'Hora' }, { cod: 'DÍA', nom: 'Día' }
   ],
 
-  /* Recursos iniciales (se guardan y editan en PR-11): GP-07 (V7) + REC-0008..0012 para la demo (REC-0011/0012: servicios de terceros con costo estándar).
+  /* Recursos iniciales (se guardan y editan en PR-11) + REC-0008..0012 para la demo (REC-0011/0012: servicios de terceros).
+     u = unidad de consumo (maestro de unidades) · costo = costo estándar por unidad · cuenta = cuenta mayor (número).
      prov = proveedor habitual del servicio (lo usa Tercerizar) */
   RECURSOS: [
-    { cod: 'REC-0001', nom: 'Operario de corte · turno mañana', tipo: 'RECURSO HUMANO', resp: '', activo: true, u: 'HORA', costo: 15.00, cuenta: '921101' },
-    { cod: 'REC-0002', nom: 'Costurera · línea 1', tipo: 'RECURSO HUMANO', resp: 'María Quispe (jefa de línea)', activo: true, u: 'HORA', costo: 12.80, cuenta: '921101' },
-    { cod: 'REC-0003', nom: 'Máquina de corte', tipo: 'ACTIVOS FIJOS Y EXTRAS', resp: 'Luis Torres', activo: true, u: 'HORA', costo: 22.50, cuenta: '921301' },
-    { cod: 'REC-0004', nom: 'Mesa de corte manual', tipo: 'ACTIVOS FIJOS Y EXTRAS', resp: '', activo: true, u: 'HORA', costo: 1.20, cuenta: '921301' },
-    { cod: 'REC-0005', nom: 'Energía eléctrica de planta', tipo: 'ACTIVOS FIJOS Y EXTRAS', resp: '', activo: true, u: 'HORA', costo: 1.90, cuenta: '921401' },
-    { cod: 'REC-0008', nom: 'Operario de acabado', tipo: 'RECURSO HUMANO', resp: '', activo: true, u: 'HORA', costo: 11.50, cuenta: '921101' },
-    { cod: 'REC-0009', nom: 'Patronista / tizado', tipo: 'RECURSO HUMANO', resp: 'Josselyne Ramos', activo: true, u: 'HORA', costo: 18.00, cuenta: '921101' },
-    { cod: 'REC-0010', nom: 'Máquina recta y remalladora', tipo: 'ACTIVOS FIJOS Y EXTRAS', resp: '', activo: true, u: 'HORA', costo: 3.20, cuenta: '921301' },
-    { cod: 'REC-0011', nom: 'Lavado · servicio de terceros', tipo: 'SERVICIO DE TERCEROS', resp: 'Lavandería Industrial del Sur', activo: true, u: 'UND', costo: 3.50, cuenta: '921201', prov: 'PRV-0003' },
-    { cod: 'REC-0012', nom: 'Acabado · servicio de terceros', tipo: 'SERVICIO DE TERCEROS', resp: 'Confecciones El Águila', activo: true, u: 'UND', costo: 1.80, cuenta: '921201', prov: 'PRV-0006' }
+    { cod: 'REC-0001', nom: 'Operario de corte · turno mañana', tipo: 'RECURSO HUMANO', activo: true, u: 'HORA', costo: 15.00, cuenta: '921101' },
+    { cod: 'REC-0002', nom: 'Costurera · línea 1', tipo: 'RECURSO HUMANO', activo: true, u: 'HORA', costo: 12.80, cuenta: '921101' },
+    { cod: 'REC-0003', nom: 'Máquina de corte', tipo: 'ACTIVOS FIJOS Y EXTRAS', activo: true, u: 'HORA', costo: 22.50, cuenta: '921301' },
+    { cod: 'REC-0004', nom: 'Mesa de corte manual', tipo: 'ACTIVOS FIJOS Y EXTRAS', activo: true, u: 'HORA', costo: 1.20, cuenta: '921301' },
+    { cod: 'REC-0005', nom: 'Energía eléctrica de planta', tipo: 'ACTIVOS FIJOS Y EXTRAS', activo: true, u: 'HORA', costo: 1.90, cuenta: '921401' },
+    { cod: 'REC-0008', nom: 'Operario de acabado', tipo: 'RECURSO HUMANO', activo: true, u: 'HORA', costo: 11.50, cuenta: '921101' },
+    { cod: 'REC-0009', nom: 'Patronista / tizado', tipo: 'RECURSO HUMANO', activo: true, u: 'HORA', costo: 18.00, cuenta: '921101' },
+    { cod: 'REC-0010', nom: 'Máquina recta y remalladora', tipo: 'ACTIVOS FIJOS Y EXTRAS', activo: true, u: 'HORA', costo: 3.20, cuenta: '921301' },
+    { cod: 'REC-0011', nom: 'Lavado · servicio de terceros', tipo: 'SERVICIO DE TERCEROS', activo: true, u: 'UND', costo: 3.50, cuenta: '921201', prov: 'PRV-0003' },
+    { cod: 'REC-0012', nom: 'Acabado · servicio de terceros', tipo: 'SERVICIO DE TERCEROS', activo: true, u: 'UND', costo: 1.80, cuenta: '921201', prov: 'PRV-0006' }
   ],
 
   /* Operarios iniciales (se guardan y editan en la demo): cada uno ocupa un recurso de mano de obra */
   OPERARIOS: [
-    { cod: 'OPE-001', nom: 'Josselyne Ramos', rec: 'REC-0009', sede: 'Zárate', activo: true },
-    { cod: 'OPE-002', nom: 'Luis Torres', rec: 'REC-0001', sede: 'Zárate', activo: true },
-    { cod: 'OPE-003', nom: 'Carlos Ramos', rec: 'REC-0001', sede: 'Zárate', activo: true },
-    { cod: 'OPE-004', nom: 'María Quispe', rec: 'REC-0002', sede: 'Zárate', activo: true },
-    { cod: 'OPE-005', nom: 'Ana García', rec: 'REC-0002', sede: 'Zárate', activo: true },
-    { cod: 'OPE-006', nom: 'Elena Vega', rec: 'REC-0002', sede: 'Zárate', activo: true },
-    { cod: 'OPE-007', nom: 'Jorge Mendoza', rec: 'REC-0008', sede: 'Gamarra', activo: true },
-    { cod: 'OPE-008', nom: 'Rosa Huamán', rec: 'REC-0008', sede: 'Gamarra', activo: true }
+    { cod: 'OPE-001', nom: 'Josselyne Ramos', rec: 'REC-0009', activo: true },
+    { cod: 'OPE-002', nom: 'Luis Torres', rec: 'REC-0001', activo: true },
+    { cod: 'OPE-003', nom: 'Carlos Ramos', rec: 'REC-0001', activo: true },
+    { cod: 'OPE-004', nom: 'María Quispe', rec: 'REC-0002', activo: true },
+    { cod: 'OPE-005', nom: 'Ana García', rec: 'REC-0002', activo: true },
+    { cod: 'OPE-006', nom: 'Elena Vega', rec: 'REC-0002', activo: true },
+    { cod: 'OPE-007', nom: 'Jorge Mendoza', rec: 'REC-0008', activo: true },
+    { cod: 'OPE-008', nom: 'Rosa Huamán', rec: 'REC-0008', activo: true }
   ],
 
   /* Proveedores de CO-02 (V7) con servicio para producción */
@@ -194,7 +193,7 @@ M.tiposRecurso = () => (typeof Store !== 'undefined' && Store.d && Store.d.tipos
 M.rec = cod => M.recursos().find(r => r.cod === cod);
 M.recActivos = filtro => M.recursos().filter(r => r.activo !== false && (!filtro || filtro(r)));
 M.tipoRec = nom => M.tiposRecurso().find(t => t.nom === nom);
-M.cuenta = cod => M.CUENTAS_COSTO.find(c => c.cod === cod);
+M.um = cod => M.UNIDADES.find(u => u.cod === cod);
 M.prov = cod => M.PROVEEDORES.find(p => p.cod === cod);
 M.ldm = id => M.LDMS.find(l => l.id === id);
 M.ldmsDe = art => M.LDMS.filter(l => l.art === art).sort((a, b) => (b.pred ? 1 : 0) - (a.pred ? 1 : 0));

@@ -32,7 +32,7 @@ const DOCUI = {
         : l.um + (l.factor > 1 ? '<br><span class="mini">= ' + l.factor + ' ' + a.u + '</span>' : '');
       const alm = !a.inv ? '<span class="mini">Servicio</span>' : ed ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'alm\',this.value)">' +
         UI.opts(M.ALMACENES.filter(x => x.cod !== Store.d.cfg.almMalEstado).map(x => ({ v: x.cod, t: x.cod })), l.alm) + '</select>' : '<span class="mini">' + l.alm + '</span>';
-      const disp = ro ? (l.costo != null && Store.puede('configurar_comercial') ? '<span class="mini">costo ' + UI.n(l.costo) + '</span>' : '') : a.inv ? UI.n(Stock.disp(l.alm, l.art), 0) + ' <span class="mini">' + a.u + '</span>' : '—';
+      const disp = ro ? (l.comp > 0 ? '<span class="warn-t">comprometido ' + UI.q(l.comp, a.u) + '</span>' : '') + (l.costo != null && Store.puede('configurar_comercial') ? (l.comp > 0 ? '<br>' : '') + '<span class="mini">costo ' + UI.n(l.costo) + '</span>' : '') : a.inv ? UI.n(Stock.disp(l.alm, l.art), 0) + ' <span class="mini">' + a.u + '</span>' : '—';
       const desc = !a.inv ? (ed ? '<input class="celda" style="width:100%;margin-top:4px" placeholder="Descripción personalizada para el cliente" value="' + UI.esc(l.desc) + '" onchange="' + ctx + '.cambiar(' + i + ',\'desc\',this.value)">'
         : (l.desc ? '<br><span class="mini">“' + UI.esc(l.desc) + '”</span>' : '')) : '';
       return '<tr class="' + (msgs.length ? 'con-msg' : '') + '"><td class="num">' + (i + 1) + '</td>' +
@@ -46,7 +46,7 @@ const DOCUI = {
         '<td>' + (ed ? '<button class="btn-link" title="Quitar la línea" onclick="' + ctx + '.quitar(' + i + ')">✕</button>' : '') + '</td></tr>' +
         (msgs.length ? '<tr class="linea-msg"><td></td><td colspan="10">' + msgs.join('<br>') + '</td></tr>' : '');
     });
-    return UI.tabla([['#', 'num', '34px'], 'Artículo', ['UM', '', '84px'], ['Almacén', '', '120px'], [ro ? '' : 'Disponible', 'num'], ['Cantidad', 'num'], ['Precio ' + M.sim(d.mon), 'num'], ['Dcto. unit.', 'num'], 'Obsequio', ['Total', 'num'], ['', '', '30px']],
+    return UI.tabla([['#', 'num', '34px'], 'Artículo', ['UM', '', '84px'], ['Almacén', '', '120px'], [ro ? 'Stock' : 'Disponible', 'num'], ['Cantidad', 'num'], ['Precio ' + M.sim(d.mon), 'num'], ['Dcto. unit.', 'num'], 'Obsequio', ['Total', 'num'], ['', '', '30px']],
       filas, { vacio: 'Sin líneas: agregue artículos o servicios' });
   },
 
@@ -66,7 +66,7 @@ const DOCUI = {
     const venta = tipo === 'Venta', comp = venta ? M.comp(d.comp) : null, sede = Store.sede(d.sede), cli = d.cliente || {};
     const titulo = venta ? comp.nom + ' ' + d.compNum : 'Cotización ' + d.id;
     const html = '<div class="head"><div><h1>IMPERIOTEX S.A.C.</h1><div class="mini">' + UI.esc(sede.nom) + ' · ' + UI.esc(sede.dir) + '</div></div>' +
-      '<div style="text-align:right"><h1>' + UI.esc(titulo) + '</h1><div class="mini">' + (venta ? 'Venta ' + d.id + ' · ' : '') + 'Fecha ' + d.fecha.slice(0, 10) + (venta ? '' : ' · Válida hasta ' + d.validez) + '</div></div></div>' +
+      '<div style="text-align:right"><h1>' + UI.esc(titulo) + '</h1><div class="mini">' + (venta ? 'Venta ' + d.id + ' · ' : '') + 'Fecha de creación ' + d.fecha.slice(0, 10) + (venta ? '' : ' · Válida hasta ' + d.validez) + '</div></div></div>' +
       '<div class="grid2"><div><b>Cliente:</b> ' + UI.esc(cli.nom) + '</div><div><b>Documento:</b> ' + UI.esc(cli.doc) + '</div>' +
       '<div><b>Condición de pago:</b> ' + ((M.cond(d.cond) || {}).nom || '') + (venta && Ventas.vencimiento(d) ? ' (vence ' + Ventas.vencimiento(d) + ')' : '') + '</div><div><b>Moneda:</b> ' + d.mon + '</div>' +
       '<div><b>Vendedor:</b> ' + UI.esc(DOCUI.vendedor(d.asesor)) + '</div>' + (venta && d.entrega ? '<div><b>Entrega:</b> ' + UI.esc(M.lugar(d.entrega.lugar).nom) + ' · ' + d.entrega.fecha + '</div>' : '') + '</div>' +
@@ -76,7 +76,7 @@ const DOCUI = {
       '</tbody></table><table style="width:300px;margin-left:auto"><tr><td>Op. gravada</td><td class="num">' + UI.m(d.gravada, d.mon) + '</td></tr>' +
       (d.exonerada ? '<tr><td>Op. exonerada</td><td class="num">' + UI.m(d.exonerada, d.mon) + '</td></tr>' : '') +
       '<tr><td>IGV</td><td class="num">' + UI.m(d.igv, d.mon) + '</td></tr><tr class="tot"><td>Total</td><td class="num">' + UI.m(d.total, d.mon) + '</td></tr></table>' +
-      (venta && d.pagos.length ? '<h2>Pagos</h2><table><thead><tr><th>Fecha</th><th>Medio</th><th>Operación</th><th class="num">Monto</th><th>Estado</th></tr></thead><tbody>' +
+      (venta && d.pagos.length ? '<h2>Pagos</h2><table><thead><tr><th>Fecha de creación</th><th>Medio</th><th>Operación</th><th class="num">Monto</th><th>Estado</th></tr></thead><tbody>' +
         d.pagos.map(p => '<tr><td>' + p.fecha + '</td><td>' + M.metodo(p.met).nom + (p.banco ? ' · ' + p.banco : '') + '</td><td>' + UI.esc(p.nop) + '</td><td class="num">' + UI.m(p.monto, d.mon) + '</td><td>' + p.estado + '</td></tr>').join('') + '</tbody></table>' : '') +
       (d.obs ? '<p><b>Observación:</b> ' + UI.esc(d.obs) + '</p>' : '') +
       '<p class="mini">Los precios incluyen IGV. ' + (venta ? 'Documento del prototipo: no tiene valor tributario (el envío a SUNAT está fuera de alcance).' : 'Esta cotización no reserva stock.') + '</p>';
@@ -93,15 +93,16 @@ const PAGOUI = {
     PAGOUI._v = v; PAGOUI._cb = cb;
     const mets = M.METODOS.filter(m => m.monedas.indexOf(v.mon) >= 0);
     UI.modal({
-      titulo: 'Registrar pago · ' + v.id,
+      titulo: 'Registrar pago · ' + v.id, code: 'CL-10',
       cuerpo: '<div class="formgrid">' + UI.dato('Cliente', UI.esc(v.cliente.nom)) + UI.dato('Saldo pendiente', '<b>' + UI.m(Ventas.deuda(v), v.mon) + '</b>') +
-        UI.dato('Entra a la caja', ses.id + ' · ' + UI.esc(ses.nom)) + UI.dato('Fecha', UI.ahora()) +
+        UI.dato('Entra a la caja', ses.id + ' · ' + UI.esc(ses.nom)) + UI.dato('Fecha de creación', UI.ahora()) +
         UI.campo('Medio de pago', '<select id="pg-met" onchange="PAGOUI.bancos()">' + UI.opts(mets.map(m => ({ v: m.cod, t: m.nom })), 'EFE') + '</select>', { req: true }) +
         UI.campo('Banco / procesador', '<select id="pg-banco"></select>') +
         UI.campo('N° de operación', '<input id="pg-nop">', { hint: 'Obligatorio si no es efectivo' }) +
         UI.campo('Voucher', '<input type="file" id="pg-vou" accept="image/*,.pdf">', { hint: 'Obligatorio si no es efectivo' }) +
         UI.campo('Monto (' + v.mon + ')', '<input id="pg-monto" type="number" min="0" step="any" value="' + Ventas.deuda(v) + '">', { req: true }) + '</div>' +
-        '<p class="hint" style="margin-top:10px">El pago queda <b>Por validar</b> hasta que caja lo valide (permiso valid_payments); la caja no se puede cerrar con pagos por validar.</p>',
+        '<p class="hint" style="margin-top:10px">El pago queda <b>Por validar</b> hasta que caja lo valide (permiso valid_payments); la caja no se puede cerrar con pagos por validar. ' +
+        'El stock de la venta sigue <b>comprometido</b> y sale (Salida GI-10) cuando los pagos validados cubren el total.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PAGOUI.guardar()">Registrar pago</button>'
     });
     PAGOUI.bancos();

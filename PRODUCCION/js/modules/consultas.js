@@ -25,7 +25,7 @@ const PR08 = {
           '<td class="num"><span class="' + (disp < 0 ? 'err-t' : '') + '">' + UI.n(disp) + '</span></td><td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' +
           '<td>' + (s.act > 0 && !(M.alm(s.alm) || {}).transito ? '<button class="btn-link" style="padding:0" onclick="PR08.fallado(\'' + s.alm + '\',\'' + s.art + '\')">Fallado</button>' : '') + '</td></tr>';
       }), { foot: '<tr><td colspan="8" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td><td></td></tr>' }) +
-      '<p class="hint">Disponible = Actual − Comprometido (T1). La materia prima se compromete al aprobarse la solicitud en GP (T7) o al liberar una orden creada en Producción, y se libera al emitirse o al cerrar la orden. No existe el tipo Ajuste: una regularización o un producto fallado se registran con una Salida y un Ingreso justificados.</p>';
+      '<p class="hint">Disponible = Actual − Comprometido (T1). La materia prima se compromete al aprobarse la Solicitud de Fabricación en Inventarios (T7) o al liberar una orden creada en Producción, y se libera al emitirse o al cerrar la orden. No existe el tipo Ajuste: una regularización o un producto fallado se registran con una Salida y un Ingreso justificados.</p>';
   },
   movimientos() {
     const f = PR08.f;

@@ -1,4 +1,5 @@
-/* COMERCIAL V9 · CM-04 Caja de la tienda (abrir, cobrar, validar, ingresos, egresos, devolver dinero, cerrar) · CM-05 Historial de cajas */
+/* COMERCIAL V9 · CL-18 Caja de la tienda (abrir, cobrar, validar, ingresos, egresos, devolver dinero, cerrar; modales CL-19 a CL-27)
+   · CL-28 Historial de cajas (modal CL-29). Validar el pago que completa el total de una venta saca su stock (Salida GI-10). */
 const CM04 = {
   mon: 'PEN', tab: 'cob',
   caja() { const s = Store.sede(); return M.CAJAS.find(c => c.sede === s.cod && c.mon === CM04.mon); },
@@ -15,7 +16,7 @@ const CM04 = {
     if (!cajas.find(c => c.mon === CM04.mon)) CM04.mon = cajas[0].mon;
     const caja = CM04.caja(), s = CM04.ses();
     const monsel = '<div class="monsel">' + cajas.map(c => '<span class="chip' + (c.mon === CM04.mon ? ' on' : '') + '" title="' + UI.esc(c.nom) + '" onclick="CM04.mon=\'' + c.mon + '\';App.refrescar()">' + c.mon + (Caja.abierta(sede.cod, c.mon) ? ' · abierta' : '') + '</span>').join('') + '</div>';
-    let html = '<div class="screen-head"><h1>Caja · ' + UI.esc(sede.nom) + '</h1><span class="code">CM-04</span>' + monsel + '<div class="spacer"></div>';
+    let html = '<div class="screen-head"><h1>Caja · ' + UI.esc(sede.nom) + '</h1><span class="code">CL-18</span>' + monsel + '<div class="spacer"></div>';
 
     if (!s) {
       const ult = Caja.ultima(caja.cod), cxc = CM04.porCobrar(sede.cod, CM04.mon), pend = Caja.reembolsosPendientes(sede.cod, CM04.mon);
@@ -57,7 +58,7 @@ const CM04 = {
   t_cob(s) {
     const lista = Caja.cobros(s), pv = lista.filter(x => x.p.estado === 'Por validar');
     return (pv.length && Store.puede('valid_payments') ? '<div class="card" style="padding:10px 14px;display:flex;align-items:center;gap:10px"><span>' + pv.length + ' pago(s) por validar por <b>' + UI.m(pv.reduce((t, x) => t + x.p.monto, 0), s.mon) + '</b></span><span style="flex:1"></span><button class="btn btn-primary btn-sm" onclick="CM04.validarTodos()">Validar todos</button></div>' : '') +
-      UI.tabla(['Pago', 'Fecha', 'Venta', 'Cliente', 'Medio', 'Operación / voucher', ['Monto', 'num'], 'Estado', ['', '', '160px']], lista.map(x => {
+      UI.tabla(['Pago', 'Fecha de creación', 'Venta', 'Cliente', 'Medio', 'Operación / voucher', ['Monto', 'num'], 'Estado', ['', '', '160px']], lista.map(x => {
         const p = x.p, v = x.v, m = M.metodo(p.met);
         return '<tr><td><b>' + p.id + '</b></td><td class="mini">' + p.fecha + '<br>' + UI.esc(p.usuario) + '</td>' +
           '<td><button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\',tab:\'pag\'})">' + v.id + '</button><br><span class="mini">' + v.compNum + '</span></td>' +
@@ -66,10 +67,10 @@ const CM04 = {
           '<td>' + UI.estado(p.estado) + (p.validado ? '<br><span class="mini">' + p.validado.f.slice(11) + ' · ' + UI.esc(p.validado.u) + '</span>' : '') + (p.motivo ? '<br><span class="mini">' + UI.esc(p.motivo) + '</span>' : '') + '</td>' +
           '<td>' + (p.estado === 'Por validar' && Store.puede('valid_payments') ? '<button class="btn btn-primary btn-sm" onclick="CM04.validar(\'' + v.id + '\',\'' + p.id + '\')">Validar</button> <button class="btn-link" onclick="CM04.rechazar(\'' + v.id + '\',\'' + p.id + '\')">Rechazar</button>' : '') + '</td></tr>';
       }), { vacio: 'Aún no hay cobros en esta caja' }) +
-      '<p class="hint">Un cobro Por validar no cuenta en el arqueo. Se valida al comprobar el efectivo, el voucher del POS o el abono de la transferencia, y se rechaza si no llegó. Validar uno a uno evita que un pago erróneo frene a los demás.</p>';
+      '<p class="hint">Un cobro Por validar no cuenta en el arqueo ni saca stock: cuando los pagos validados de una venta cubren su total se registra la Salida de almacén y se libera lo comprometido. Se valida al comprobar el efectivo, el voucher del POS o el abono de la transferencia, y se rechaza si no llegó. Validar uno a uno evita que un pago erróneo frene a los demás.</p>';
   },
   t_cxc(s, pend, cxc) {
-    return UI.tabla(['Venta', 'Fecha', 'Cliente', 'Condición', ['Total', 'num'], ['Pagado', 'num'], ['Saldo', 'num'], ['', '', '90px']], cxc.map(v => {
+    return UI.tabla(['Venta', 'Fecha de creación', 'Cliente', 'Condición', ['Total', 'num'], ['Pagado', 'num'], ['Saldo', 'num'], ['', '', '90px']], cxc.map(v => {
       const vto = Ventas.vencimiento(v);
       return '<tr><td><button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})">' + v.id + '</button><br><span class="mini">' + v.compNum + '</span></td><td class="mini">' + v.fecha + '</td>' +
         '<td>' + UI.esc(v.cliente.nom) + '</td><td class="mini">' + M.cond(v.cond).nom + (vto ? '<br><span class="' + (Ventas.vencida(v) ? 'err-t' : '') + '">vence ' + vto + '</span>' : '') + '</td>' +
@@ -79,7 +80,7 @@ const CM04 = {
   },
   t_mov(s) {
     const lista = Caja.movs(s).filter(m => m.tipo !== 'Devolución');
-    return UI.tabla(['Movimiento', 'Fecha', 'Tipo', 'Categoría', 'Descripción', ['Monto', 'num'], 'Estado', ['', '', '120px']], lista.map(m =>
+    return UI.tabla(['Movimiento', 'Fecha de creación', 'Tipo', 'Categoría', 'Descripción', ['Monto', 'num'], 'Estado', ['', '', '120px']], lista.map(m =>
       '<tr><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '<br>' + UI.esc(m.usuario) + '</td><td>' + UI.badge(m.tipo, m.tipo === 'Ingreso' ? 'var(--confirmado)' : 'var(--parcial)') + '</td>' +
       '<td>' + UI.esc(m.cat) + '</td><td>' + UI.esc(m.desc) + (m.editado ? '<br><span class="mini">editado ' + m.editado.f + '</span>' : '') + (m.anulado ? '<br><span class="mini">' + UI.esc(m.anulado.motivo) + '</span>' : '') + '</td>' +
       '<td class="num"><span class="' + (m.tipo === 'Ingreso' ? 'ok-t' : 'err-t') + '">' + (m.tipo === 'Ingreso' ? '+' : '−') + UI.m(m.monto, s.mon) + '</span></td><td>' + UI.estado(m.estado) + '</td>' +
@@ -89,13 +90,13 @@ const CM04 = {
   t_dev(s, pend) {
     const hechas = Caja.movs(s).filter(m => m.tipo === 'Devolución');
     return '<div class="sec">Pendientes de entregar al cliente (' + UI.esc(Store.sede(s.sede).nom) + ', ' + s.mon + ')</div>' +
-      UI.tabla(['Venta', 'Origen', 'Cliente', 'Fecha', ['Monto', 'num'], ['', '', '140px']], pend.map(x =>
+      UI.tabla(['Venta', 'Origen', 'Cliente', 'Fecha de creación', ['Monto', 'num'], ['', '', '140px']], pend.map(x =>
         '<tr><td><button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + x.v.id + '\',tab:\'pag\'})">' + x.v.id + '</button></td>' +
         '<td>' + (x.re.origen === 'Anulación' ? 'Anulación de la venta' : '<button class="btn-link" style="padding:0" onclick="App.go(\'cm03f\',{id:\'' + x.re.origen + '\'})">' + x.re.origen + '</button>') + '</td>' +
         '<td>' + UI.esc(x.v.cliente.nom) + '</td><td class="mini">' + x.re.fecha + '</td><td class="num"><b>' + UI.m(x.re.monto, s.mon) + '</b></td>' +
         '<td>' + (Store.puede('crear_caja') ? '<button class="btn btn-primary btn-sm" onclick="CM04.devolver(\'' + x.v.id + '\',\'' + x.re.id + '\')">Devolver dinero</button>' : '') + '</td></tr>'), { vacio: 'No hay devoluciones de dinero pendientes' }) +
       '<div class="sec">Entregadas en esta caja</div>' +
-      UI.tabla(['Movimiento', 'Fecha', 'Descripción', 'Medio', ['Monto', 'num'], 'Estado', ['', '', '80px']], hechas.map(m =>
+      UI.tabla(['Movimiento', 'Fecha de creación', 'Descripción', 'Medio', ['Monto', 'num'], 'Estado', ['', '', '80px']], hechas.map(m =>
         '<tr><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '<br>' + UI.esc(m.usuario) + '</td><td>' + UI.esc(m.desc) + '</td><td>' + M.metodo(m.met).nom + (m.banco ? ' · ' + m.banco : '') + (m.nop ? '<br><span class="mini">' + UI.esc(m.nop) + '</span>' : '') + '</td>' +
         '<td class="num err-t">−' + UI.m(m.monto, s.mon) + '</td><td>' + UI.estado(m.estado) + '</td>' +
         '<td>' + (m.estado === 'Procesado' && Store.puede('editar_caja') ? '<button class="btn-link" onclick="CM04.anularMov(\'' + m.id + '\')">Anular</button>' : '') + '</td></tr>'), { vacio: 'Sin devoluciones de dinero en esta caja' }) +
@@ -106,7 +107,7 @@ const CM04 = {
   abrir() {
     const caja = CM04.caja();
     UI.modal({
-      titulo: 'Abrir ' + UI.esc(caja.nom),
+      titulo: 'Abrir ' + UI.esc(caja.nom), code: 'CL-19',
       cuerpo: '<div class="formgrid">' + UI.dato('Tienda', UI.esc(Store.sede().nom)) + UI.dato('Moneda', caja.mon) +
         UI.campo('Efectivo inicial (' + caja.mon + ')', '<input id="ab-monto" type="number" min="0" step="any" value="0">', { req: true }) +
         UI.campo('Observación', '<input id="ab-obs">') + '</div><p class="hint" style="margin-top:10px">Solo puede haber una caja abierta por tienda y moneda. La caja es de la tienda: todo su personal cobra contra ella.</p>',
@@ -117,7 +118,7 @@ const CM04 = {
   cobrar() {
     const s = CM04.ses();
     UI.modal({
-      lg: true, titulo: 'Cobrar · ventas con saldo en ' + s.mon,
+      lg: true, titulo: 'Cobrar · ventas con saldo en ' + s.mon, code: 'CL-20',
       cuerpo: '<div class="filters" style="margin-bottom:8px">' + UI.campo('Cliente, documento o venta', '<input id="cb-q" oninput="CM04.pintarCobro()" placeholder="Buscar…" style="min-width:260px">') + '</div><div id="cb-body"></div>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cerrar</button>'
     });
@@ -131,26 +132,26 @@ const CM04 = {
       '<td><button class="btn btn-primary btn-sm" onclick="CM04.cobrarVenta(\'' + v.id + '\')">Cobrar</button></td></tr>'), { vacio: 'Sin ventas con saldo' });
   },
   cobrarVenta(id) { PAGOUI.abrir(Store.venta(id), () => { CM04.tab = 'cob'; App.refrescar(); }); },
-  validar(vid, pid) { if (App.accion(() => Ventas.validarPago(Store.venta(vid), pid), 'Pago ' + pid + ' validado')) App.refrescar(); },
+  validar(vid, pid) { if (App.accion(() => Ventas.validarPago(Store.venta(vid), pid), () => CM02V.msgValidado(Store.venta(vid), pid))) App.refrescar(); },
   rechazar(vid, pid) {
-    UI.motivo('Rechazar pago ' + pid, '<p>El pago queda Anulado y el saldo de la venta vuelve a estar pendiente.</p>', null,
-      mot => { if (App.accion(() => Ventas.rechazarPago(Store.venta(vid), pid, mot), 'Pago rechazado')) { UI.cerrar(); App.refrescar(); } }, 'Rechazar');
+    UI.motivo('Rechazar pago ' + pid, '<p>El pago queda Anulado y el saldo de la venta vuelve a estar pendiente. No mueve stock: la venta sigue con su stock comprometido.</p>', null,
+      mot => { if (App.accion(() => Ventas.rechazarPago(Store.venta(vid), pid, mot), 'Pago rechazado')) { UI.cerrar(); App.refrescar(); } }, 'Rechazar', 'CL-11');
   },
   validarTodos() {
     const pv = Caja.porValidar(CM04.ses());
-    UI.confirmar('Validar ' + pv.length + ' pago(s)', '<p>Confirme que comprobó el efectivo, los vouchers y los abonos de:</p><ul class="errlist">' + pv.map(x => '<li>' + x.p.id + ' · ' + UI.esc(x.v.cliente.nom) + ' · ' + M.metodo(x.p.met).nom + ' ' + UI.m(x.p.monto, x.v.mon) + '</li>').join('') + '</ul>', () => {
-      App.accion(() => pv.forEach(x => Ventas.validarPago(x.v, x.p.id)), pv.length + ' pago(s) validados');
+    UI.confirmar('Validar ' + pv.length + ' pago(s)', '<p>Confirme que comprobó el efectivo, los vouchers y los abonos de los pagos siguientes. Las ventas cuyo pago quede completo registran su Salida de stock:</p><ul class="errlist">' + pv.map(x => '<li>' + x.p.id + ' · ' + UI.esc(x.v.cliente.nom) + ' · ' + M.metodo(x.p.met).nom + ' ' + UI.m(x.p.monto, x.v.mon) + '</li>').join('') + '</ul>', () => {
+      App.accion(() => pv.forEach(x => Ventas.validarPago(x.v, x.p.id)), () => { const n = new Set(pv.filter(x => x.v.salida && x.v.salida.pago === x.p.id).map(x => x.v.id)).size; return pv.length + ' pago(s) validados' + (n ? ' · ' + n + ' venta(s) con pago completo: salió su stock' : ''); });
       App.refrescar();
-    }, 'Validar todos');
+    }, 'Validar todos', 'CL-21');
   },
   mov(tipo, id) {
     const m = id ? Store.d.cmovs.find(x => x.id === id) : null, cats = tipo === 'Ingreso' ? Store.d.cfg.catIngreso : Store.d.cfg.catEgreso, s = CM04.ses();
     UI.modal({
-      titulo: (m ? 'Editar ' + m.id : 'Nuevo ' + tipo.toLowerCase()) + ' · ' + s.id,
+      titulo: (m ? 'Editar ' + m.id : 'Nuevo ' + tipo.toLowerCase()) + ' · ' + s.id, code: 'CL-22',
       cuerpo: '<div class="formgrid">' + UI.campo('Categoría', '<select id="mv-cat">' + UI.opts(cats, m ? m.cat : '', 'Seleccionar…') + '</select>', { req: true }) +
         UI.campo('Monto (' + s.mon + ')', '<input id="mv-monto" type="number" min="0" step="any" value="' + (m ? m.monto : '') + '">', { req: true }) +
         UI.campo('Descripción', '<input id="mv-desc" value="' + (m ? UI.esc(m.desc) : '') + '" placeholder="Mínimo 5 caracteres">', { req: true, full: true }) +
-        UI.dato('Fecha', m ? m.fecha : UI.ahora()) + UI.dato('Medio', 'Efectivo de caja') + '</div>',
+        UI.dato('Fecha de creación', m ? m.fecha : UI.ahora()) + UI.dato('Medio', 'Efectivo de caja') + '</div>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM04.guardarMov(\'' + tipo + '\',\'' + (id || '') + '\')">Guardar</button>'
     });
   },
@@ -162,13 +163,13 @@ const CM04 = {
   anularMov(id) {
     const m = Store.d.cmovs.find(x => x.id === id);
     UI.motivo('Anular ' + id, '<p>' + UI.esc(m.tipo + ' · ' + m.desc) + ' · ' + UI.m(m.monto, CM04.mon) + '.' + (m.tipo === 'Devolución' ? ' La devolución de dinero vuelve a quedar pendiente.' : '') + '</p>', null,
-      mot => { if (App.accion(() => Caja.anularMov(id, mot), id + ' anulado')) { UI.cerrar(); App.refrescar(); } }, 'Anular');
+      mot => { if (App.accion(() => Caja.anularMov(id, mot), id + ' anulado')) { UI.cerrar(); App.refrescar(); } }, 'Anular', 'CL-23');
   },
   devolver(vid, reid) {
     const v = Store.venta(vid), re = v.reembolsos.find(x => x.id === reid), s = CM04.ses();
     const mets = M.METODOS.filter(m => m.monedas.indexOf(s.mon) >= 0 && m.cod !== 'POS');
     UI.modal({
-      titulo: 'Devolver dinero · ' + v.id,
+      titulo: 'Devolver dinero · ' + v.id, code: 'CL-24',
       cuerpo: '<div class="formgrid">' + UI.dato('Cliente', UI.esc(v.cliente.nom)) + UI.dato('Monto a devolver', '<b>' + UI.m(re.monto, v.mon) + '</b>') +
         UI.dato('Origen', re.origen === 'Anulación' ? 'Anulación de la venta' : re.origen) + UI.dato('Sale de la caja', s.id) +
         UI.campo('Cómo se devuelve', '<select id="dv-met" onchange="PAGOUI.bancos(\'dv-met\',\'dv-banco\')">' + UI.opts(mets.map(m => ({ v: m.cod, t: m.nom })), 'EFE') + '</select>', { req: true }) +
@@ -190,7 +191,7 @@ const CM04 = {
   reporte() {
     const s = CM04.ses(), r = Caja.resumen(s), sup = Store.puede('configurar_comercial');
     UI.modal({
-      lg: true, titulo: 'Reporte del día · ' + s.id,
+      lg: true, titulo: 'Reporte del día · ' + s.id, code: 'CL-25',
       cuerpo: '<p class="hint" style="margin-bottom:8px">' + UI.esc(s.nom) + ' · abierta el ' + s.abre.f + ' por ' + UI.esc(s.abre.u) + '</p>' + CM04.htmlResumen(s, r, sup),
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cerrar</button><button class="btn btn-primary" onclick="CM05.imprimir(\'' + s.id + '\')">⎙ PDF</button>'
     });
@@ -199,7 +200,7 @@ const CM04 = {
     const s = CM04.ses(), r = Caja.resumen(s);
     if (r.nPorValidar) { UI.toast('Hay ' + r.nPorValidar + ' pago(s) por validar: valídelos o recházelos antes de cerrar'); CM04.tab = 'cob'; App.refrescar(); return; }
     UI.modal({
-      titulo: 'Cerrar ' + s.id + ' · conteo de efectivo',
+      titulo: 'Cerrar ' + s.id + ' · conteo de efectivo', code: 'CL-26',
       cuerpo: '<p>Cuente el efectivo del cajón y escriba el total. El sistema calcula la diferencia <b>después</b> de confirmar (conteo ciego).</p><div class="formgrid" style="margin-top:10px">' +
         UI.campo('Efectivo contado (' + s.mon + ')', '<input id="ci-cont" type="number" min="0" step="any">', { req: true }) + UI.campo('Observación', '<input id="ci-obs">') + '</div>' +
         '<p class="hint" style="margin-top:10px">Los cobros con tarjeta, Yape o transferencia no se cuentan: ya están validados contra su voucher o abono. Una caja cerrada no se reabre.</p>',
@@ -210,7 +211,7 @@ const CM04 = {
     const s = CM04.ses(), r = App.accion(() => Caja.cerrar(s, UI.v('ci-cont'), UI.v('ci-obs')), x => x.id + ' cerrada');
     if (!r) return;
     UI.modal({
-      titulo: r.id + ' cerrada',
+      titulo: r.id + ' cerrada', code: 'CL-27',
       cuerpo: '<div class="formgrid">' + UI.dato('Efectivo esperado', UI.m(r.cierre.esperado, r.mon)) + UI.dato('Efectivo contado', UI.m(r.cierre.contado, r.mon)) + UI.dato('Diferencia', CM04.dif(r.cierre.dif, r.mon), { full: true }) + '</div>' + CM04.htmlResumen(r, r.cierre.resumen, true),
       pie: '<button class="btn btn-secondary" onclick="CM05.imprimir(\'' + r.id + '\')">⎙ PDF</button><button class="btn btn-primary" onclick="UI.cerrar();App.refrescar()">Aceptar</button>'
     });
@@ -236,7 +237,7 @@ const CM05 = {
         '<td class="num">' + (s.cierre || sup ? UI.m(s.cierre ? s.cierre.esperado : r.esperado, s.mon) : '••••') + '</td><td class="num">' + (s.cierre ? UI.m(s.cierre.contado, s.mon) : '—') + '</td>' +
         '<td class="num">' + (s.cierre ? CM04.dif(s.cierre.dif, s.mon) : '—') + '</td><td>' + UI.estado(s.estado) + '</td></tr>';
     });
-    return '<div class="screen-head"><h1>Historial de cajas</h1><span class="code">CM-05</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM05.excel()">⇩ Excel</button></div>' +
+    return '<div class="screen-head"><h1>Historial de cajas</h1><span class="code">CL-28</span><div class="spacer"></div><button class="btn btn-secondary" onclick="CM05.excel()">⇩ Excel</button></div>' +
       '<div class="card"><div class="filters">' +
       UI.campo('Tienda', '<select onchange="CM05.f.sede=this.value;App.refrescar()">' + UI.opts(M.SEDES.map(s => ({ v: s.cod, t: s.nom })), f.sede, 'Todas') + '</select>') +
       UI.campo('Moneda', '<select onchange="CM05.f.mon=this.value;App.refrescar()">' + UI.opts(M.MONEDAS.map(m => m.cod), f.mon, 'Todas') + '</select>') +
@@ -250,7 +251,7 @@ const CM05 = {
     const s = Store.sesion(id), r = s.cierre ? s.cierre.resumen : Caja.resumen(s), sup = Store.puede('configurar_comercial');
     const cobros = Caja.cobros(s), movs = Caja.movs(s);
     UI.modal({
-      ancho: '900px', titulo: s.id + ' · ' + UI.esc(s.nom),
+      ancho: '900px', titulo: s.id + ' · ' + UI.esc(s.nom), code: 'CL-29',
       cuerpo: '<div class="formgrid c4">' + UI.dato('Estado', UI.estado(s.estado)) + UI.dato('Apertura', s.abre.f + '<br><span class="mini">' + UI.esc(s.abre.u) + '</span>') +
         UI.dato('Cierre', s.cierre ? s.cierre.f + '<br><span class="mini">' + UI.esc(s.cierre.u) + '</span>' : '') + UI.dato('Diferencia', s.cierre ? CM04.dif(s.cierre.dif, s.mon) : '') + '</div>' +
         '<div class="sec">Resumen</div>' + CM04.htmlResumen(s, r, sup || !!s.cierre) +
@@ -266,7 +267,7 @@ const CM05 = {
       Object.keys(r.met).map(k => '<tr><td>' + M.metodo(k).nom + '</td><td class="num">' + UI.n(r.met[k].cobros) + '</td><td class="num">' + UI.n(r.met[k].devol) + '</td></tr>').join('') + '</tbody></table>' +
       '<table style="width:320px;margin-left:auto"><tr><td>Efectivo inicial</td><td class="num">' + UI.m(s.inicial, s.mon) + '</td></tr><tr><td>Ingresos</td><td class="num">' + UI.m(r.ingresos, s.mon) + '</td></tr><tr><td>Egresos</td><td class="num">' + UI.m(r.egresos, s.mon) + '</td></tr>' +
       '<tr class="tot"><td>Efectivo esperado</td><td class="num">' + UI.m(r.esperado, s.mon) + '</td></tr>' + (s.cierre ? '<tr><td>Contado</td><td class="num">' + UI.m(s.cierre.contado, s.mon) + '</td></tr><tr class="tot"><td>Diferencia</td><td class="num">' + UI.m(s.cierre.dif, s.mon) + '</td></tr>' : '') + '</table>' +
-      '<h2>Movimientos de caja</h2><table><thead><tr><th>Movimiento</th><th>Fecha</th><th>Tipo</th><th>Descripción</th><th class="num">Monto</th><th>Estado</th></tr></thead><tbody>' +
+      '<h2>Movimientos de caja</h2><table><thead><tr><th>Movimiento</th><th>Fecha de creación</th><th>Tipo</th><th>Descripción</th><th class="num">Monto</th><th>Estado</th></tr></thead><tbody>' +
       Caja.movs(s).map(m => '<tr><td>' + m.id + '</td><td>' + m.fecha + '</td><td>' + m.tipo + '</td><td>' + UI.esc(m.desc) + '</td><td class="num">' + UI.n(m.monto) + '</td><td>' + m.estado + '</td></tr>').join('') + '</tbody></table>';
     UI.imprimir('Caja ' + s.id, html);
   },

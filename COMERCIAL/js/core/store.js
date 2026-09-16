@@ -11,11 +11,24 @@ const Store = {
     Cot.barrer();
   },
   guardar() { try { localStorage.setItem(Store.KEY, JSON.stringify(Store.d)); } catch (e) { /* sin almacenamiento: la demo sigue en memoria */ } },
+  /* reinicio GLOBAL del prototipo: Inventarios, Compras, Producción y Comercial guardan con el prefijo 'imperiotex.' */
+  PREFIJO: 'imperiotex.',
+  borrarTodo() {
+    const borradas = [];
+    try {
+      const claves = [];
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf(Store.PREFIJO) === 0) claves.push(k); }
+      claves.forEach(k => { localStorage.removeItem(k); borradas.push(k); });
+    } catch (e) { /* sin almacenamiento: no hay nada que borrar */ }
+    return borradas;
+  },
   reiniciar() {
-    UI.confirmar('Reiniciar datos de demo', '<p>Se descartan clientes, cotizaciones, ventas, devoluciones, cajas y movimientos registrados y se vuelve al escenario inicial.</p>', () => {
-      try { localStorage.removeItem(Store.KEY); } catch (e) { }
-      Demo.crear(); Store.guardar(); App.nav(); App.go('cm02'); UI.toast('Demo reiniciada');
-    }, 'Reiniciar');
+    UI.confirmar('Reiniciar todo el prototipo', '<p>Se borran <b>todos</b> los datos guardados del prototipo general (claves <code>imperiotex.*</code>), no solo los de Comercial:</p>' +
+      '<ul class="errlist"><li>Comercial: clientes, cotizaciones, ventas, devoluciones, cajas y movimientos.</li><li>Inventarios, Compras y Producción: también se pierde lo registrado (incluidas las Solicitudes de Fabricación y de Materiales).</li></ul>' +
+      '<p>Comercial vuelve a su escenario inicial; los demás módulos lo harán al abrirlos.</p>', () => {
+      Store.borrarTodo();
+      Demo.crear(); Store.guardar(); App.nav(); App.go('cm02'); UI.toast('Prototipo reiniciado: se borraron los datos de todos los módulos');
+    }, 'Reiniciar todo', 'CL-46');
   },
 
   /* correlativos: sig('ven','VEN-2026-',6) -> VEN-2026-000231 */

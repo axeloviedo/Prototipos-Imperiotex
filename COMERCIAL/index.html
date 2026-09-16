@@ -12,7 +12,7 @@
   <div class="logo"><b>IMPERIOTEX · SARA BQ</b><span>ERP - Comercial (V9)</span></div>
   <nav id="nav"></nav>
   <div class="foot">Prototipo funcional · Ventas y caja sobre Logística V9<br>
-    <button class="btn-link" style="color:#fff;padding:4px 0" onclick="Store.reiniciar()">↺ Reiniciar datos de demo</button></div>
+    <button class="btn-link" style="color:#fff;padding:4px 0" title="Borra los datos guardados de Inventarios, Compras, Producción y Comercial" onclick="Store.reiniciar()">↺ Reiniciar todo el prototipo</button></div>
 </aside>
 
 <div id="main">
@@ -22,11 +22,10 @@
     <a class="homebtn" href="../index.html" title="Volver a la portada de módulos">⌂ Inicio</a>
     <div class="company-sel"><label>Módulo:</label>
       <select onchange="if(this.value)location.href=this.value">
-        <option value="../Prototipo_GI.html">Inventarios (GI)</option>
-        <option value="../Prototipo_CO.html">Compras (CO)</option>
-        <option value="../Prototipo_GP.html">Gestión de Pedido (GP)</option>
+        <option value="../INVENTARIOS/index.html">Inventarios (GI)</option>
+        <option value="../COMPRAS/index.html">Compras (CO)</option>
         <option value="../PRODUCCION/index.html">Producción (PRODUCCION)</option>
-        <option value="" selected>Comercial (CM)</option>
+        <option value="" selected>Comercial (CL)</option>
       </select>
     </div>
     <div class="company-sel"><label>Empresa:</label>
@@ -68,6 +67,7 @@
 <script src="js/modules/clientes.js"></script>
 <script src="js/modules/listas.js"></script>
 <script src="js/modules/configuracion.js"></script>
+<script src="js/modules/solicitudes.js"></script>
 <script>App.iniciar();</script>
 </body>
 </html>

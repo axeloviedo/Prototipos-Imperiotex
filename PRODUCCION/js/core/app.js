@@ -4,7 +4,7 @@ const App = {
   MENU: [
     { g: 'Fabricación', items: [['pr01', '✂', 'Órdenes de Fabricación'], ['pr03', '✎', 'Solicitudes de Fabricación'], ['pr05', '⇄', 'Solicitudes de materiales'], ['pr04', '☷', 'Referencias'], ['pr07', '▦', 'Plan de producción']] },
     { g: 'Consultas', items: [['pr08', '▤', 'Existencias y movimientos'], ['pr09', '◔', 'Costos']] },
-    { g: 'Maestros', items: [['pr10', '≡', 'Listas de materiales'], ['pr11', '☺', 'Recursos'], ['pr12', '◇', 'Tipos de recurso'], ['pr13', '⚙', 'Configuración']] }
+    { g: 'Maestros', items: [['pr10', '≡', 'Listas de materiales'], ['pr11', '☺', 'Recursos'], ['pr12', '◇', 'Tipos de recurso']] }
   ],
 
   /* def: {titulo, menu (ítem del menú a resaltar), miga(params), render(params) -> html, despues(params)} */

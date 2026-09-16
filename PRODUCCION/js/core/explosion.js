@@ -4,7 +4,7 @@
 const Explosion = {
   fabricable(cod) { return M.ldmsDe(cod).length > 0; },
 
-  /* materia prima total (lo que no se fabrica) si se fabrica todo lo fabricable: lo que GP compromete al aprobar */
+  /* materia prima total (lo que no se fabrica) si se fabrica todo lo fabricable: lo que se compromete al aprobar la Solicitud de Fabricación */
   bruto(productos) {
     const req = {};
     const visitar = (art, cant, ldmId) => {

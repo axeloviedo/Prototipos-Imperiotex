@@ -204,3 +204,6 @@ table.matriz th,table.matriz td{text-align:center}
 .relbox.cur{border-color:var(--primario);box-shadow:0 0 0 2px rgba(31,58,95,.15)}
 .relarrow{align-self:center;color:var(--texto-sec);font-size:18px;padding-top:18px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+/* PR-05: acciones que simulan a otro módulo (solo prototipo, no se desarrollan en esta pantalla) */
+.btn-sim{display:inline-block;margin-top:4px;background:repeating-linear-gradient(45deg,#FFF7ED,#FFF7ED 6px,#FFEDD5 6px,#FFEDD5 12px);border:1px dashed #C2410C;color:#9A3412;border-radius:6px;padding:3px 8px;font-size:11.5px;cursor:pointer;font-family:inherit}
+.btn-sim:hover{border-style:solid}
