@@ -3,6 +3,7 @@
 > 2026-09-15 · `PROTOTIPOS V9/COMERCIAL/`. Prototipo navegable del área comercial que encaja con Inventarios (GI), Compras (CO), Gestión de Pedido (GP) y Producción (GPV7).
 > Los documentos `01`–`11` de esta carpeta describen un sistema de ventas que ya funciona. Son el **lineamiento funcional**, no la fuente de verdad: dentro de V9 manda lo que se decide aquí y en `../00_DECISIONES_CERRADAS.md`.
 > El modelo de datos está en `13-modelo-datos-v9.md`, los contratos funcionales en `14-contratos-funcionales.md` y los códigos de pantallas y modales (CL-xx) en `15-codigos-pantallas.md`.
+> **Base de datos compartida (2026-09-16):** Comercial trabaja sobre `BD.d` (clave `imperiotex.bd`), con el mismo stock, movimientos y artículos que Inventarios, Compras y Producción. Ver §11.
 > **Revisión 2026-09-16:** ver §10 «Decisiones cerradas de la revisión 2026-09-16». Se aplican sobre el código que está en el repo (Cotización → Venta → Devolución, con pagos por validar en caja y sin orden de venta cargada). Donde choquen con K1–K17, manda §10.
 > **Tercera versión (2026-09-15), simplificada a pedido del usuario:** «debe ser más simple, tal como lo hace SAP B1». Reemplaza la versión anterior, en la que la venta tenía estados de orden y de entrega, el comprobante iba aparte y los pagos se validaban.
 
@@ -13,13 +14,13 @@
 | Qué | Dónde |
 |---|---|
 | Prototipo | `COMERCIAL/index.html` (multi-archivo, igual que `GPV7`) |
-| Reglas de negocio, sin pantalla | `js/core/precios.js` (listas y totales), `stock.js`, `ventas.js` (`Cli`, `Doc`, `Cot`, `OV`, `Ventas`, `Dev`), `caja.js`, `config.js` |
-| Datos de la demo | `js/data/maestros.js`, `js/data/demo.js` |
+| Reglas de negocio, sin pantalla | `js/core/precios.js` (listas y totales), `ventas.js` (`Cli`, `Doc`, `Cot`, `OV`, `Ventas`, `Dev`), `caja.js`, `config.js` |
+| Datos | `../COMPARTIDO/bd/datos/maestros-comercial.js` (maestros y colecciones de Comercial), `js/data/maestros.js` (fachada `M` de lectura), `js/data/demo.js` (`Demo.historia()`) · stock: `../COMPARTIDO/bd/stock.js` |
 | Pantallas | `js/modules/*.js`: una por submódulo; `documento.js` reúne las piezas compartidas |
 
 - En Chrome o Edge se abre con doble clic. Dentro del panel del ERP hay que servir la carpeta `PROTOTIPOS V9` por HTTP y entrar a `/COMERCIAL/index.html`, igual que con GPV7.
-- Lo registrado se guarda en `localStorage`. **↺ Reiniciar todo el prototipo** borra todas las claves `imperiotex.*` (Inventarios, Compras, Producción y Comercial) y vuelve Comercial a su escenario inicial (§10, R6).
-- Las fechas de la demo son **relativas al día en que se arma** (ayer, hoy, hace 20 días). Así la validez de las cotizaciones y el plazo de anulación siempre tienen sentido.
+- Lo registrado se guarda en la base compartida (`localStorage` `imperiotex.bd`). El selector **Datos** de la barra superior y **↺ Reiniciar todo el prototipo** (CL-46) reinician TODOS los módulos con «Solo maestros» o «Con operación» (§11).
+- Las fechas de la historia de la demo son fijas: 27/07/2026 a 31/07/2026 (§11).
 - El selector **Usuario** de la barra superior cambia de perfil y de tienda para probar los permisos.
 
 ---
@@ -83,7 +84,7 @@ Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, es
 
 > La pantalla de Órdenes de venta (antes CM-13, `js/modules/ordenes.js`) es de otra versión: `index.html` no la carga y no tiene código CL.
 
-**Vista compartida (2026-09-15, actualizada 2026-09-16).** CL-30 y CL-31 no duplican código. Están en el menú **Abastecimiento** y abren las pantallas de `INVENTARIOS/index.html` sin su menú (`?vista=comercial&usuario=…#gi21` y `#gi13`). Las Solicitudes de Fabricación y de Materiales, con el comprometido que dejan, se guardan en `localStorage` (`imperiotex.v9.solicitudes`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos son `ver_solicitud_fabricacion` (antes `ver_solicitud_pedido`) y `crear_solicitud_materiales`, para Vendedor y Supervisor comercial.
+**Vista compartida (2026-09-15, actualizada 2026-09-16).** CL-30 y CL-31 no duplican código. Están en el menú **Abastecimiento** y abren las pantallas de `INVENTARIOS/index.html` sin su menú (`?vista=comercial&usuario=…#gi21` y `#gi13`). Las Solicitudes de Fabricación y de Materiales, con el comprometido que dejan, se guardan en la base compartida (`BD.d.sfs` y `BD.d.sols`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos son `ver_solicitud_fabricacion` (antes `ver_solicitud_pedido`) y `crear_solicitud_materiales`, para Vendedor y Supervisor comercial.
 
 Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen **PDF** (vista de impresión).
 
@@ -157,14 +158,14 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 
 | Usuario | Perfil | Tienda |
 |---|---|---|
-| USER12 Lucía Paredes (por defecto) | Supervisor comercial | Tienda Gamarra 1 |
-| USER10 Karina Salas | Vendedor | Tienda Gamarra 1 |
-| USER11 Pedro Ríos | Cajero | Tienda Gamarra 1 |
+| USER12 Lucía Paredes (por defecto) | Supervisor comercial | Tienda #1 · Galería "Ya" (SB-TIENDA01) |
+| USER10 Karina Salas | Vendedor | Tienda #1 · Galería "Ya" (SB-TIENDA01) |
+| USER11 Pedro Ríos | Cajero | Tienda #1 · Galería "Ya" (SB-TIENDA01) |
 | USER13 Diego Campos | Vendedor | Local Mayorista |
 | USER14 Rosa Medina | Cajero | Local Mayorista |
-| USER15 Iván Torres | Vendedor | Tienda Gamarra 2 |
+| USER15 Iván Torres | Vendedor | Tienda #2 · Galería "Damero" (SB-TIENDA02) |
 
-Escenario:
+Escenario (versión anterior a la base compartida; la historia vigente está en §11):
 
 - **Cotizaciones.** Una vencida, una cancelada, una en dólares para exportación y una abierta con un servicio personalizado.
 - **Mayorista.** Una cotización se copia a una orden de venta con envío por agencia. Esa orden se atiende **por partes**: se vende la mitad de PT-0003 con factura pagada por transferencia (sale el stock) y lo demás sigue comprometido. Luego se registra una devolución en mal estado, con el dinero por devolver en la caja mayorista.
@@ -223,3 +224,27 @@ Escenario:
 | # | Pregunta abierta |
 |---|---|
 | Q-C8 | ¿Una venta a crédito debe entregar (sacar stock) antes de cobrar? Hoy sigue la misma regla que el contado (R1.b). |
+
+---
+
+## 11. Base de datos compartida (2026-09-16)
+
+> Contrato: `../../docs/16_BASE_DATOS_COMPARTIDA.md`. Comercial deja de tener datos propios en `localStorage` (se eliminó `imperiotex.v9.comercial`) y su `js/core/stock.js`.
+
+| # | Cambio | Detalle |
+|---|---|---|
+| B1 | **Una sola base** | `Store.d` es `BD.d`; `Store.iniciar` → `BD.iniciar`, `Store.guardar` → `BD.guardar`, `Store.sig` → `BD.sig` con series propias (`cli`, `cot`, `ven`, `dev`, `pag`, `caja`, `cmov`, `ree`, `lp`, `comp_<serie>`). `BD.alCambiar` refresca la pantalla cuando otro módulo guarda. `Store.completarBase()` agrega los datos de Comercial que falten a una base guardada antes. |
+| B2 | **Maestros de Comercial** | `COMPARTIDO/bd/datos/maestros-comercial.js`: `maestros.comercial` (tiendas, cajas, monedas, condiciones, medios de pago, comprobantes y series, entrega, agencias, motivos, control de stock, afectación, tipos de documento y de cliente, ubigeos, usuarios, perfiles), servicios `SERV-VTA-0001..0003` (grupo SRV, `origen: 'comercial'`) y sus categorías; colecciones `clientes` (8), `listas` (22), `comercial.cfg` y vacías `cots`, `ventas`, `devs`, `sesiones`, `cmovs`. `js/data/maestros.js` es solo la fachada `M` que lee la base. |
+| B3 | **Tiendas reales** | TDA-01 Tienda #1 Galería "Ya" → **SB-TIENDA01** · TDA-02 Tienda #2 Galería "Damero" → **SB-TIENDA02** · MAY-01 Local Mayorista → **SB-CENTRAL** (a confirmar). Devoluciones en mal estado → **SB-LIQUID**. Los almacenes elegibles en las líneas son los de venta de la base (producto terminado, liquidación, online y tiendas SB). |
+| B4 | **Artículos** | Se venden los de `BD.d.maestros.articulos` con `venta: true`: Zuleika PT-0001..0004 (pestaña Venta: `precioVenta`, `precioMin`, `uVenta`, `dctoMin`, `dctoMax`, `stockCtrl`) y los servicios SERV-VTA-*. CL-43/CL-44 editan esa pestaña en la base; `verifMin` es un campo que agrega Comercial. Estado activo = `estado !== 'Inactivo'`. |
+| B5 | **Stock compartido** | Todo con `Stock` de `COMPARTIDO/bd/stock.js`, `modulo: 'Comercial'` y tipo de movimiento: venta **SAL-VENTA**, devolución y anulación con salida **ING-DEVCLI**, devolución en mal estado: ING-DEVCLI a la tienda y **TRF-LIQUID** a SB-LIQUID, reposición de tienda **TRF-REPTIENDA**, carga inicial de la demo **ING-INICIAL**. Lo que vende Comercial aparece en el Kardex y movimientos de Inventarios; lo que fabrica Producción aparece disponible para vender. |
+| B6 | **Cambio a R1.a** | El `Stock` compartido no deja el Actual en negativo. Con *Avisar y permitir* se puede registrar la venta aunque el comprometido supere al Actual, pero **validar el pago que completa el total se rechaza** (sin cambios a medias) hasta que haya Actual suficiente. |
+| B7 | **CL-32** | Existencias de todos los almacenes de la base (por defecto los de venta), movimientos de todos los módulos con filtros por tipo, tipo de movimiento (`tipoMov`), módulo y almacén; Kardex de cualquier almacén. |
+| B8 | **Escenarios y reinicio** | `BDSelector` en la barra superior («Datos: Solo maestros · Con operación · ↺ Reiniciar»). CL-46 se conserva y llama a `BD.reiniciar()` con el escenario actual y recarga. El usuario activo de la demo se guarda en `localStorage` `imperiotex.comercial.usuario` (el reinicio lo borra). En «Solo maestros» hay clientes, listas y configuración, sin cotizaciones, ventas, cajas ni movimientos. |
+| B9 | **Demo.historia()** | Ya no crea el estado. Sobre la base (después de la historia de Producción, que deja PT en SB-CENTRAL): si falta producto terminado, carga inicial ING-INICIAL solo de lo que falta; reposición TRF-REPTIENDA a SB-TIENDA01 y SB-TIENDA02; 27/07 cotizaciones (una anulada, una de Tienda #2); 28-29/07 mayorista en docenas → factura a crédito (compromete en SB-CENTRAL), exportación en USD vigente hasta el 31/12/2026 y una con servicio; 30/07 caja de Tienda #1 con cuatro ventas validadas (salen), egreso y cierre con S/ 2.00 de faltante; 31/07 cajas abiertas, venta anulada (libera), pago parcial validado de la mayorista (sigue comprometida), cambio de prenda con devolución de dinero, factura de servicios, devolución pendiente en mal estado, venta mixta con Yape por validar (comprometida) y caja chica. Sin DOM; la ejecuta el generador de `escenario-operacion.js`. |
+
+| # | Propuesta para el núcleo |
+|---|---|
+| PN1 | `BD.iniciar` debería completar los maestros y colecciones de área que falten en una base ya guardada (hoy lo hace `Store.completarBase`). |
+| PN2 | Agregar `verifMin` (verificar precio mínimo por artículo) a la pestaña Venta del artículo (§3.2). |
+| PN3 | Aclarar en el contrato si el local mayorista vende desde SB-CENTRAL o desde un almacén propio. |

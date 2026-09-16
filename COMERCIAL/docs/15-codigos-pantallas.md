@@ -47,7 +47,7 @@
 | CL-29 | Modal | Detalle de una caja | `CM05.ver` | `js/modules/caja.js` |
 | CL-30 | Pantalla | Solicitudes de Fabricación (vista compartida de Inventarios GI-21 / GI-22 / GI-23) | `cm11` → `../INVENTARIOS/index.html?vista=comercial#gi21` | `js/modules/solicitudes.js` |
 | CL-31 | Pantalla | Solicitudes de Materiales (vista compartida de Inventarios GI-13) | `cm12` → `../INVENTARIOS/index.html?vista=comercial#gi13` | `js/modules/solicitudes.js` |
-| CL-32 | Pantalla | Existencias y movimientos (Existencias, Movimientos, Kardex) | `cm06` | `js/modules/consultas.js` |
+| CL-32 | Pantalla | Existencias y movimientos de la base compartida (Existencias de todos los almacenes, Movimientos de todos los módulos con tipo de movimiento, Kardex) | `cm06` | `js/modules/consultas.js` |
 | CL-33 | Modal | Movimiento de stock (detalle) | `CM06.verMov` | `js/modules/consultas.js` |
 | CL-34 | Pantalla | Clientes (listado) | `cm07` | `js/modules/clientes.js` |
 | CL-35 | Ficha | Cliente (Datos, Ventas, Cotizaciones, Devoluciones) | `cm07f` | `js/modules/clientes.js` |
@@ -61,7 +61,7 @@
 | CL-43 | Pantalla | Artículos de venta | `cm09` | `js/modules/listas.js` |
 | CL-44 | Modal | Datos de venta del artículo | `CM09.editar` | `js/modules/listas.js` |
 | CL-45 | Pantalla | Configuración comercial (parámetros, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
-| CL-46 | Modal | Reiniciar todo el prototipo | `Store.reiniciar` | `js/core/store.js` |
+| CL-46 | Modal | Reiniciar todo el prototipo (llama a `BD.reiniciar()` con el escenario actual y recarga; el selector «Datos» de la barra superior es `BDSelector` del núcleo, sin código CL) | `Store.reiniciar` | `js/core/store.js` |
 
 ## Equivalencia con los códigos anteriores
 

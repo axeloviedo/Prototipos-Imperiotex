@@ -115,7 +115,7 @@ const CM03F = {
         '<td><select class="celda" onchange="CM03F.linea(' + c.n + ',\'tipo\',this.value)">' + UI.opts(M.TIPOS_DEV, s.tipo) + '</select></td>' +
         '<td class="num">' + UI.n(c.precio) + '</td><td class="num">' + UI.n(UI.r2(c.precio * (s.cant || 0))) + '</td></tr>';
     }) : (dev ? dev.lineas : []).map(l => '<tr><td class="num">' + l.n + '</td><td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + '</span></td><td>' + l.um + '</td>' +
-      '<td class="mini">' + (l.tipo === 'Mal estado' ? Store.d.cfg.almMalEstado : l.alm) + '</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>' +
+      '<td class="mini">' + (l.tipo === 'Mal estado' ? Store.cfg().almMalEstado : l.alm) + '</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>' +
       '<td class="num"><b>' + UI.q(l.cant) + '</b></td><td>' + l.tipo + '</td><td class="num">' + UI.n(l.precio) + '</td><td class="num">' + UI.n(l.total) + '</td></tr>');
     html += '<div class="card"><div class="sec">Productos de la venta <span class="mini">(los servicios no se devuelven · el máximo descuenta las otras devoluciones no anuladas)</span></div>' +
       UI.tabla([['Línea', 'num', '50px'], 'Artículo', 'UM', ed ? 'Almacén de la venta' : 'Almacén de ingreso', ['Vendido', 'num'], ['Ya devuelto', 'num'], ['Máximo', 'num'], ['A devolver', 'num'], 'Tipo', ['Precio neto', 'num'], ['Total', 'num']], filas, { vacio: 'La venta no tiene productos' }) + '</div>';
@@ -145,7 +145,7 @@ const CM03F = {
       html += '<div class="card"><div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:300px">' +
         '<div class="sec">' + (fin ? 'Efectos aplicados' : dev && dev.estado === 'Anulada' ? 'Sin efectos (anulada)' : 'Efectos al finalizar') + '</div><ul class="errlist">' +
         '<li>Ingreso de almacén GI-09 «Devoluciones de Clientes» (concepto contable 23)' + (dev && dev.movs.length ? ': ' + dev.movs.map(id => '<button class="btn-link" style="padding:0" onclick="CM06.verMov(\'' + id + '\')">' + id + '</button>').join(', ') : '') + ', al costo con el que salió.</li>' +
-        '<li>Normal y Cambio vuelven al almacén de la venta; Mal estado va a ' + Store.d.cfg.almMalEstado + (malEstado ? ' (' + malEstado + ' línea(s))' : '') + '.</li>' +
+        '<li>Normal y Cambio vuelven al almacén de la venta; Mal estado va a ' + Store.cfg().almMalEstado + (malEstado ? ' (' + malEstado + ' línea(s))' : '') + '.</li>' +
         '<li>Dinero: ' + dinero + '.</li>' +
         (Dev.tieneCambio(prev) ? '<li>Hay líneas de <b>Cambio</b>: después de finalizar, registre la venta de lo que se lleva el cliente.</li>' : '') +
         '</ul></div><table class="grid totales"><tr><td>Bruto</td><td class="num">' + UI.m(prev.bruto, v.mon) + '</td></tr><tr><td>Descuento</td><td class="num">' + UI.m(prev.dcto, v.mon) + '</td></tr>' +

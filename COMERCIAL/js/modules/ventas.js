@@ -266,7 +266,7 @@ const CM02V = {
   },
   t_det(v) {
     const costo = UI.r2(v.lineas.reduce((t, l) => t + (l.costo || 0) * l.cant, 0));
-    const base = v.mon === 'USD' ? UI.r2(v.subtotal * Store.d.cfg.tc) : v.subtotal;
+    const base = v.mon === 'USD' ? UI.r2(v.subtotal * Store.cfg().tc) : v.subtotal;
     return '<div class="card">' + DOCUI.lineas('CM02V', v, { soloLectura: true }) + DOCUI.totales(v) +
       (Store.puede('configurar_comercial') && costo ? '<p class="hint" style="text-align:right;margin-top:8px">Costo de lo vendido (costo promedio del almacén al salir): ' + UI.s(costo) + ' · margen sobre la base sin IGV: <b>' + UI.s(base - costo) + '</b></p>' : '') + '</div>';
   },

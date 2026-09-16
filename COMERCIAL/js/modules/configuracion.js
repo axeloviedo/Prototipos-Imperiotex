@@ -10,7 +10,7 @@ const CM10 = {
     ['ver_solicitud_fabricacion', 'Solicitudes de Fabricación: ver, crear, editar y enviar (pantalla compartida GI-21/GI-22/GI-23 de Inventarios)'], ['crear_solicitud_materiales', 'Solicitudes de Materiales: crear y consultar (pantalla compartida GI-13 de Inventarios)']
   ],
   render() {
-    const c = Store.d.cfg, ed = Store.puede('configurar_comercial');
+    const c = Store.cfg(), ed = Store.puede('configurar_comercial');
     const dis = ed ? '' : ' disabled';
     let html = '<div class="screen-head"><h1>Configuración comercial</h1><span class="code">CL-45</span><div class="spacer"></div>' + (ed ? '<button class="btn btn-primary" onclick="CM10.guardar()">Guardar parámetros</button>' : '') + '</div>';
     if (!ed) html += UI.aviso('Solo lectura: los parámetros los cambia un perfil con configurar_comercial.', 'info');
@@ -30,7 +30,7 @@ const CM10 = {
 
     html += '<div class="sec">Tiendas, almacenes, cajas y series</div>' +
       UI.tabla(['Tienda', 'Dirección', 'Canal', 'Vende desde', 'Cajas', 'Series (nota de venta · boleta · factura)'], M.SEDES.map(s =>
-        '<tr><td><b>' + s.cod + '</b> · ' + UI.esc(s.nom) + '</td><td class="mini">' + UI.esc(s.dir) + '</td><td class="mini">' + s.canal + '</td><td>' + s.alm + '</td>' +
+        '<tr><td><b>' + s.cod + '</b> · ' + UI.esc(s.nom) + '</td><td class="mini">' + UI.esc(s.dir) + '</td><td class="mini">' + s.canal + '</td><td>' + s.alm + '<br><span class="mini">' + UI.esc(M.almNom(s.alm)) + '</span></td>' +
         '<td class="mini">' + M.CAJAS.filter(k => k.sede === s.cod).map(k => k.cod + (Caja.abierta(s.cod, k.mon) ? ' (abierta)' : '')).join('<br>') + '</td>' +
         '<td>' + ['NV', 'BV', 'FA'].map(k => M.SERIES[s.cod][k]).join(' · ') + '</td></tr>'));
     html += '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:1;min-width:360px"><div class="sec">Medios de pago</div>' +
@@ -43,7 +43,7 @@ const CM10 = {
     html += '<div class="sec">Perfiles y permisos (por acción)</div>' +
       UI.tabla(['Permiso', 'Qué permite'].concat(perfiles), CM10.PERMISOS.map(p => '<tr><td class="mini">' + p[0] + '</td><td>' + p[1] + '</td>' + perfiles.map(k => '<td style="text-align:center">' + (M.PERFILES[k].indexOf(p[0]) >= 0 ? '<b class="ok-t">✓</b>' : '') + '</td>').join('') + '</tr>'), { clase: 'matriz' }) +
       '<div class="sec">Usuarios de la demo</div>' +
-      UI.tabla(['Usuario', 'Perfil', 'Tienda asignada', ''], M.USUARIOS.map(u => '<tr><td>' + u.cod + ' · ' + UI.esc(u.nom) + '</td><td>' + u.perfil + '</td><td>' + UI.esc(Store.sede(u.sede).nom) + '</td><td>' + (u.cod === Store.d.usuario ? '<b>en uso</b>' : '<button class="btn-link" onclick="App.cambiarUsuario(\'' + u.cod + '\')">Usar</button>') + '</td></tr>')) +
+      UI.tabla(['Usuario', 'Perfil', 'Tienda asignada', ''], M.USUARIOS.map(u => '<tr><td>' + u.cod + ' · ' + UI.esc(u.nom) + '</td><td>' + u.perfil + '</td><td>' + UI.esc(Store.sede(u.sede).nom) + '</td><td>' + (u.cod === Store.usuario().cod ? '<b>en uso</b>' : '<button class="btn-link" onclick="App.cambiarUsuario(\'' + u.cod + '\')">Usar</button>') + '</td></tr>')) +
       '<p class="hint">Cada usuario tiene una tienda asignada: abre, cobra y cierra la caja de esa tienda. Los permisos se exigen en cada acción (no solo se ocultan botones). El selector «Usuario» de la barra superior cambia de perfil para recorrer la demo.</p>';
     return html;
   },

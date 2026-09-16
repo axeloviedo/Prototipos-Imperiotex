@@ -11,14 +11,15 @@
 <aside id="sidebar">
   <div class="logo"><b>IMPERIOTEX · SARA BQ</b><span>ERP - Comercial (V9)</span></div>
   <nav id="nav"></nav>
-  <div class="foot">Prototipo funcional · Ventas y caja sobre Logística V9<br>
-    <button class="btn-link" style="color:#fff;padding:4px 0" title="Borra los datos guardados de Inventarios, Compras, Producción y Comercial" onclick="Store.reiniciar()">↺ Reiniciar todo el prototipo</button></div>
+  <div class="foot">Prototipo funcional · Ventas y caja sobre la base de datos compartida<br>
+    <button class="btn-link" style="color:#fff;padding:4px 0" title="Reinicia la base compartida de Inventarios, Compras, Producción y Comercial con el escenario actual" onclick="Store.reiniciar()">↺ Reiniciar todo el prototipo</button></div>
 </aside>
 
 <div id="main">
   <div id="topbar">
     <div id="breadcrumb">Comercial</div>
     <div class="spacer"></div>
+    <div id="bd-sel" style="margin-right:10px"></div>
     <a class="homebtn" href="../index.html" title="Volver a la portada de módulos">⌂ Inicio</a>
     <div class="company-sel"><label>Módulo:</label>
       <select onchange="if(this.value)location.href=this.value">
@@ -56,12 +57,11 @@
 <script src="../COMPARTIDO/bd/explosion.js"></script>
 <script src="../COMPARTIDO/bd/documentos.js"></script>
 <script src="../COMPARTIDO/bd/selector.js"></script>
-<!-- núcleo (orden obligatorio) -->
+<!-- núcleo de Comercial (orden obligatorio; el stock es el compartido: COMPARTIDO/bd/stock.js) -->
 <script src="js/core/ui.js"></script>
 <script src="js/data/maestros.js"></script>
 <script src="js/core/store.js"></script>
 <script src="js/core/precios.js"></script>
-<script src="js/core/stock.js"></script>
 <script src="js/core/ventas.js"></script>
 <script src="js/core/caja.js"></script>
 <script src="js/core/config.js"></script>

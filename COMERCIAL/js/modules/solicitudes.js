@@ -1,7 +1,7 @@
 /* COMERCIAL V9 · CL-30 Solicitudes de Fabricación y CL-31 Solicitudes de Materiales (menú Abastecimiento).
    No se duplican: son las mismas pantallas de Inventarios (INVENTARIOS/index.html) abiertas en vista compartida
    (?vista=comercial): GI-21 listado, GI-22 formulario y GI-23 ficha de la Solicitud de Fabricación (documentos SF-000001)
-   y GI-13 Solicitudes de Materiales. Los datos viven en localStorage 'imperiotex.v9.solicitudes', así Logística y Comercial
+   y GI-13 Solicitudes de Materiales. Los datos viven en la base compartida (BD.d.sfs y BD.d.sols, clave 'imperiotex.bd'), así Logística y Comercial
    trabajan sobre las mismas solicitudes. Producción solo ve las Solicitudes de Fabricación aprobadas (PR-03). */
 const Compartida = {
   src(hash) {

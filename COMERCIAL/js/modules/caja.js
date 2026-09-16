@@ -145,7 +145,7 @@ const CM04 = {
     }, 'Validar todos', 'CL-21');
   },
   mov(tipo, id) {
-    const m = id ? Store.d.cmovs.find(x => x.id === id) : null, cats = tipo === 'Ingreso' ? Store.d.cfg.catIngreso : Store.d.cfg.catEgreso, s = CM04.ses();
+    const m = id ? Store.d.cmovs.find(x => x.id === id) : null, cats = tipo === 'Ingreso' ? Store.cfg().catIngreso : Store.cfg().catEgreso, s = CM04.ses();
     UI.modal({
       titulo: (m ? 'Editar ' + m.id : 'Nuevo ' + tipo.toLowerCase()) + ' · ' + s.id, code: 'CL-22',
       cuerpo: '<div class="formgrid">' + UI.campo('Categoría', '<select id="mv-cat">' + UI.opts(cats, m ? m.cat : '', 'Seleccionar…') + '</select>', { req: true }) +

@@ -45,7 +45,7 @@ const Arts = {
     if (dctoMin > dctoMax) throw new Error('El descuento mínimo no puede ser mayor que el máximo');
     if (M.AFECTACION.indexOf(x.igv) < 0) throw new Error('Elija la afectación del IGV');
     if (a.inv && !M.STOCK_CTRL.find(s => s.v === x.stockCtrl)) throw new Error('Elija el control de stock al vender');
-    return Object.assign(a, { precio: UI.r2(precio), precioMin: UI.r2(precioMin), verifMin: !!x.verifMin, dctoMin, dctoMax, igv: x.igv, stockCtrl: a.inv ? x.stockCtrl : '' });
+    return Object.assign(a, { precioVenta: UI.r2(precio), precioMin: UI.r2(precioMin), verifMin: !!x.verifMin, dctoMin, dctoMax, igv: x.igv, stockCtrl: a.inv ? x.stockCtrl : '' });
   }
 };
 
@@ -53,22 +53,22 @@ const Cfg = {
   guardar(x) {
     Store.exigir('configurar_comercial', 'cambiar la configuración comercial');
     const n = (v, min, max, nom) => { const k = Number(v); if (v === '' || isNaN(k) || k < min || k > max) throw new Error(nom + ' debe estar entre ' + min + ' y ' + max); return k; };
-    const c = Store.d.cfg;
+    const c = Store.cfg();
     const igv = n(x.igv, 0, 30, 'El IGV'), tc = n(x.tc, 0.01, 99, 'El tipo de cambio'), dv = n(x.diasValidez, 1, 90, 'La validez de la cotización'), da = n(x.diasAnulacion, 0, 30, 'El plazo para anular');
-    if (!M.alm(x.almMalEstado)) throw new Error('Elija el almacén para devoluciones en mal estado');
+    if (!M.ALMACENES.some(a => a.cod === x.almMalEstado)) throw new Error('Elija el almacén para devoluciones en mal estado');
     Object.assign(c, { igv, tc: UI.r4(tc), diasValidez: Math.round(dv), diasAnulacion: Math.round(da), verificarPrecioMin: !!x.verificarPrecioMin, almMalEstado: x.almMalEstado });
     return c;
   },
   agregarCat(tipo, nombre) {
     Store.exigir('configurar_comercial', 'cambiar la configuración comercial');
-    const lista = tipo === 'Ingreso' ? Store.d.cfg.catIngreso : Store.d.cfg.catEgreso, nom = String(nombre || '').trim();
+    const lista = tipo === 'Ingreso' ? Store.cfg().catIngreso : Store.cfg().catEgreso, nom = String(nombre || '').trim();
     if (nom.length < 3) throw new Error('Escriba el nombre de la categoría');
     if (lista.some(x => x.toLowerCase() === nom.toLowerCase())) throw new Error('La categoría ya existe');
     lista.push(nom);
   },
   quitarCat(tipo, nombre) {
     Store.exigir('configurar_comercial', 'cambiar la configuración comercial');
-    const lista = tipo === 'Ingreso' ? Store.d.cfg.catIngreso : Store.d.cfg.catEgreso;
+    const lista = tipo === 'Ingreso' ? Store.cfg().catIngreso : Store.cfg().catEgreso;
     if (lista.length <= 1) throw new Error('Debe quedar al menos una categoría');
     const i = lista.indexOf(nombre);
     if (i >= 0) lista.splice(i, 1);
