@@ -4,7 +4,7 @@
 const PRUI = {
   inp(id, ph, on) { return '<input type="number" min="0" step="any" id="' + id + '" placeholder="' + (ph || '') + '" oninput="' + (on || '') + '" style="width:100px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px">'; },
   chips(ids) { return ids.length ? '<div class="chips" style="margin-top:4px">' + ids.map(id => '<span class="chip" style="cursor:pointer" onclick="PRUI.doc(\'' + id + '\')">' + id + '</span>').join('') + '</div>' : ''; },
-  doc(id) { UI.cerrar(); if (id.indexOf('SOL-') === 0) App.go('pr05', { id }); else if (id.indexOf('OC-') === 0) PRCOS.verOC(id); else if (id.indexOf('T001-') === 0) PRENV.verGre(id); else PR08.verMov(id); },
+  doc(id) { UI.cerrar(); if (id.indexOf('SOL-') === 0) App.go('pr05', { id }); else if (id.indexOf('OC-') === 0) PRCOS.verOC(id); else if (id.indexOf('T001-') === 0) PRENV.verGre(id); else if (id.indexOf('ST-') === 0) PRENV.verST(id); else PR08.verMov(id); },
   nomOpe(cod) { return (Prod.operario(cod) || {}).nom || cod; },
   nomRec(cod) { return (M.rec(cod) || {}).nom || cod; },
   barra(of) {
@@ -143,9 +143,19 @@ const PRENV = {
     return '<div class="card" style="padding:10px 14px"><b style="font-size:13px">Fase tercerizada</b> <span class="mini">' + UI.esc(prov ? M.provNom(prov) + ' (' + prov + ')' : 'proveedor') +
       ' · los materiales se envían a ' + UI.esc(Prod.almTercero(of)) + ' con guía de remisión y lo producido vuelve a ' + of.alm + ' con el recibo</span>' +
       '<div style="margin-top:6px"><span class="mini">Compra del servicio:</span> ' + PRENV.compra(of) + '</div>' +
-      UI.tabla(['Envío', 'Fecha', ['Cantidad', 'num'], 'Guía de remisión', 'Transferencias'], (of.envios || []).map(e =>
-        '<tr><td><b>' + e.n + '</b></td><td class="mini">' + e.f + '</td><td class="num">' + UI.q(e.cant, M.u(of.art)) + '</td><td>' + PRUI.chips(e.guias || []) + '</td><td>' + PRUI.chips(e.movs) + '</td></tr>'),
+      UI.tabla(['Envío', 'Fecha', ['Cantidad', 'num'], 'Solicitud de transferencia', 'Guía de remisión', 'Movimiento'], (of.envios || []).map(e =>
+        '<tr><td><b>' + e.n + '</b></td><td class="mini">' + e.f + '</td><td class="num">' + UI.q(e.cant, M.u(of.art)) + '</td><td>' + PRUI.chips(e.sts || []) + '</td><td>' + PRUI.chips(e.guias || []) + '</td><td>' + PRUI.chips(e.movs) + '</td></tr>'),
         { vacio: 'Sin envíos', estilo: 'margin:8px 0 0' }) + '</div>';
+  },
+  verST(id) {
+    const t = BD.trf(id); if (!t) { UI.toast('Solicitud de transferencia no encontrada'); return; }
+    UI.modal({
+      titulo: 'Solicitud de transferencia ' + t.id, lg: true,
+      cuerpo: '<div class="formgrid c3">' + UI.dato('Estado', UI.esc(t.estado)) + UI.dato('Tipo de movimiento', UI.esc(t.tipoMov + ' · ' + ((BD.tipoMov(t.tipoMov) || {}).nom || ''))) + UI.dato('Fecha', t.fecha) +
+        UI.dato('Origen → destino', UI.esc(t.origen + ' → ' + t.destino)) + UI.dato('Orden', UI.esc(t.of || '—')) + UI.dato('Movimientos', UI.esc(t.movs.join(', ') || '—')) + UI.dato('Observación', UI.esc(t.obs), { full: true }) + '</div>' +
+        '<div class="sec" style="margin-top:12px">Líneas</div>' + UI.tabla(['Código', 'Artículo', ['Cantidad', 'num'], ['Recibido', 'num']], t.lineas.map(l => '<tr><td>' + l.art + '</td><td>' + UI.esc(M.nomArt(l.art)) + '</td><td class="num">' + UI.q(l.cant, M.u(l.art)) + '</td><td class="num">' + UI.n(l.recibido || 0) + '</td></tr>')) +
+        '<p class="hint">Transferencia en dos pasos (Inventarios GI-11): aprobar compromete el origen y suma Pedido en el destino; recibir mueve el stock. El envío al proveedor la registra directa porque el almacén de tránsito es virtual.</p>'
+    });
   },
   verGre(id) {
     const g = BD.d.gres.find(x => x.id === id); if (!g) { UI.toast('Guía no encontrada'); return; }
@@ -166,7 +176,7 @@ const PRENV = {
         UI.campo('Cantidad a producir que se envía', '<input id="env-cant" type="number" min="0" step="any" value="' + Math.max(0, UI.r4(of.cant - enviado)) + '" oninput="PRENV.resumen()">', { req: true }) +
         UI.campo('Fecha', '<input id="env-fecha" type="datetime-local" value="' + UI.dtLocal() + '">') + '</div>' +
         UI.dato('Proveedor', UI.esc(M.provNom(Prod.provServicio(of)) || '—') + '<br><span class="mini">compra del servicio: ' + PRENV.compra(of) + '</span>', { estilo: 'margin-top:8px' }) +
-        '<div id="env-res" style="margin-top:10px"></div><p class="hint">Transferencia (tipo TRF-FABRIC) con guía de remisión «Traslado de bienes para transformación»; se ve en Inventarios (GI-07 / GI-14).</p>',
+        '<div id="env-res" style="margin-top:10px"></div><p class="hint">Solicitud de transferencia directa (tipo TRF-FABRIC: se crea, aprueba y recibe en el acto porque el tránsito es virtual) con guía de remisión «Traslado de bienes para transformación»; se ve en Inventarios (GI-11 / GI-07 / GI-14).</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PRENV.guardar()">Registrar envío</button>'
     });
     PRENV.resumen();
@@ -181,7 +191,7 @@ const PRENV = {
   },
   guardar() {
     const of = PR02.of();
-    const r = App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha: UI.dtTexto(UI.v('env-fecha')) }), x => 'Envío ' + x.n + ': ' + x.movs.join(', ') + ' · GRE ' + x.guia);
+    const r = App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha: UI.dtTexto(UI.v('env-fecha')) }), x => 'Envío ' + x.n + ': ' + x.sts.join(', ') + ' · ' + x.movs.join(', ') + ' · GRE ' + x.guia);
     if (r) { UI.cerrar(); PR02.tab = 'emi'; App.refrescar(); }
   }
 };

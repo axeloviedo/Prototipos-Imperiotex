@@ -3,15 +3,16 @@
    y CONSULTA su avance real. Logística las atiende en Inventarios (GI-13): define por línea Transferencia o Compra,
    transfiere (GI-11) o crea la OC; Compras la aprueba y registra el ingreso o la conformidad del servicio. Aquí no se simula nada de eso. */
 const EST_SOL = { Borrador: 'var(--borrador)', Pendiente: 'var(--pendiente)', Aprobada: 'var(--aprobado-sol)', 'En proceso': 'var(--prp)', Atendida: 'var(--completada)', Rechazada: 'var(--cancelada)', Anulada: 'var(--cancelada)' };
-const EST_LINEA = { Pendiente: 'var(--pendiente)', Transferido: 'var(--confirmado)', 'En compra': 'var(--prp)', Recibido: 'var(--completada)' };
+const EST_LINEA = { Pendiente: 'var(--pendiente)', 'En transferencia': 'var(--aprobada)', Transferido: 'var(--confirmado)', 'En compra': 'var(--prp)', Recibido: 'var(--completada)' };
 const PR05 = {
   f: 'abiertas',
   GI13: '../INVENTARIOS/index.html#gi13',
-  /* línea con su estado real: Pendiente · Transferido (TRF) · En compra (OC y su estado) · Recibido */
+  /* línea con su estado real: Pendiente · En transferencia (ST aprobada, falta confirmar la recepción en GI-11) · Transferido · En compra (OC y su estado) · Recibido */
   linea(l) {
     const u = Prod.uItem(l.art);
     let doc = '';
     if (l.doc && /^OC-/.test(l.doc)) { const oc = BD.oc(l.doc); doc = UI.esc(l.doc) + (oc ? ' · ' + UI.esc(oc.est) + ' · ' + UI.esc(M.provNom(oc.prov)) : ''); }
+    else if (l.doc && /^ST-/.test(l.doc)) { const t = BD.trf(l.doc); doc = '<button class="btn-link" style="padding:0" onclick="PRUI.doc(\'' + l.doc + '\')">' + UI.esc(l.doc) + '</button>' + (t ? ' · ' + UI.esc(t.estado) + (t.estado === 'Aprobada' || t.estado === 'Parcial' ? ' (recepción por confirmar en GI-11)' : '') : ''); }
     else if (l.doc) doc = '<button class="btn-link" style="padding:0" onclick="PR08.verMov(\'' + l.doc + '\')">' + UI.esc(l.doc) + '</button>';
     return '<div style="margin-bottom:4px">' + UI.esc(Prod.nomItem(l.art)) + ' <span class="mini">' + l.art + '</span> × <b>' + UI.q(l.cant, u) + '</b> ' + UI.badge(l.estado, EST_LINEA[l.estado] || 'var(--borrador)') +
       '<br><span class="mini">' + (l.prop ? l.prop + (l.origen ? ' desde ' + l.origen : '') : 'sin propósito (lo define Logística)') +

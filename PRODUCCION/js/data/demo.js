@@ -3,7 +3,7 @@
    (Docs.*, Stock.*, Prod.*), así el stock, los compromisos y los costos cuadran en los cuatro módulos.
    No toca el DOM: la usa el generador de COMPARTIDO/bd/datos/escenario-operacion.js (node). Fechas de julio 2026 con BD.reloj.
    1) Compra de materia prima (OC de bienes por proveedor: crear → enviar → V°B° → aprobar → ingreso en SB-CENTRAL-MP → factura)
-      y transferencia con guía a SB-ZARATE-MP.
+      y abastecimiento a SB-ZARATE-MP en dos pasos (Solicitud de Transferencia: crear → aprobar → recibir al día siguiente) con guía.
    2) SF azul (PT-0001/0002) aprobada y FABRICADA completa: piezas → crudo → lavado tercerizado
       (SOL del servicio → OC de servicio → envío con GRE → retorno → conformidad → factura) → producto final.
    3) SF negro (PT-0003/0004) en curso: crudo T30 a medias, lavado T28 enviado a la lavandería, lavado T30 con el servicio pedido.
@@ -98,11 +98,13 @@ const Demo = {
       Demo._en('03/07/2026 10:' + String(10 + k * 20), 'logistica'); Docs.oc.recibir(oc.id, { alm: 'SB-CENTRAL-MP', obs: 'Guía del proveedor 001-00' + (4510 + k) });
       Demo._en('03/07/2026 16:' + String(10 + k * 20), 'compras'); Docs.fac.crear({ oc: oc.id, ndoc: 'F001-000' + (812 + k) });
     });
-    Demo._en('04/07/2026 08:30', 'logistica');
     const lineasMP = Object.keys(porProv).sort().flatMap(p => porProv[p]).map(x => ({ art: x.art, cant: x.cant }));
-    const trf = Stock.transferencia({ det: 'Transferencia - Abastecimiento a planta', tipoMov: 'TRF-INTERNO', origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', ndoc: ocsMP.map(o => o.id).join(', '), modulo: 'Inventarios', obs: 'Materia prima para la campaña de julio', lineas: lineasMP });
-    if (!trf.ok) throw new Error(trf.error);
-    Docs.gre.crear({ motivo: 'Traslado entre establecimientos de la misma empresa', origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', mov: trf.mov.id, lineas: lineasMP, obs: 'Abastecimiento a planta Zárate' });
+    Demo._en('04/07/2026 08:30', 'logistica');
+    const st = Docs.trf.crear({ origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', tipoMov: 'TRF-INTERNO', obs: 'Abastecimiento a planta Zárate: materia prima de la campaña de julio (' + ocsMP.map(o => o.id).join(', ') + ')', lineas: lineasMP });
+    Demo._en('04/07/2026 09:15', 'gerencia'); Docs.trf.aprobar(st.id);
+    Demo._en('05/07/2026 10:00', 'logistica');
+    const movST = Docs.trf.recibir(st.id);
+    Docs.gre.crear({ motivo: 'Traslado entre establecimientos de la misma empresa', origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', mov: movST.id, lineas: lineasMP, obs: 'Abastecimiento a planta Zárate · ' + st.id });
 
     /* ---------- 2) SF azul: fabricada completa con lavado tercerizado ---------- */
     const sf1 = Demo._sf('02/07/2026 10:00', '02/07/2026 15:30', '03/07/2026 09:00',

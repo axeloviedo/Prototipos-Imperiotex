@@ -1,15 +1,29 @@
 # GPV7 · Producción — diseño (simple, orientado a SAP Business One)
 
-> Revisión 8 · 2026-09-16 · `PROTOTIPOS` rama `feat/datos-compartidos`. ERP estándar (confección, pastelería o cualquier fabricación).
+> Revisión 9 · 2026-09-16 · `PROTOTIPOS` rama `feat/datos-compartidos`. ERP estándar (confección, pastelería o cualquier fabricación).
 
-## 0. Datos compartidos (revisión 8)
+## 0. Datos compartidos y decisiones cerradas (revisión 9)
 
-- Producción trabaja **100 % sobre la base compartida** `BD.d` (`COMPARTIDO/bd`, contrato en `docs/16_BASE_DATOS_COMPARTIDA.md`): maestros, stock, movimientos, solicitudes de fabricación (`sfs`), solicitudes de materiales (`sols`), OC (`ocs`), facturas, GRE y órdenes de fabricación (`ofs`). Ya no hay clave propia ni `Store`: `BD.iniciar('USER05 · Producción')`, `BD.guardar()`, `BD.sig`.
+- Producción trabaja **100 % sobre la base compartida** `BD.d` (`COMPARTIDO/bd`, contrato en `docs/16_BASE_DATOS_COMPARTIDA.md`): maestros, stock (Actual · Comprometido · **Pedido**), movimientos, solicitudes de fabricación (`sfs`), solicitudes de materiales (`sols`), solicitudes de transferencia (`trfs`), OC (`ocs`), facturas, GRE y órdenes de fabricación (`ofs`). Ya no hay clave propia ni `Store`: `BD.iniciar('USER05 · Producción')`, `BD.guardar()`, `BD.sig`.
 - `M` (maestros) solo **lee** `BD.d.maestros`; se editan aquí **recursos, tipos de recurso y operarios** (PR-11/PR-12). Las listas de materiales se editan en Inventarios (GI-17).
 - `Stock`, `Explosion` y `Docs` son los compartidos. Producción agrega a `Explosion` `necesidades` y `refs` (dependen de sus órdenes).
-- Barra superior: selector compartido **Datos: Solo maestros | Con operación · ↺ Reiniciar** (reinicia los cuatro módulos). Si otro módulo guarda en otra pestaña, la pantalla se refresca.
+- **Dos escenarios de datos**, elegidos en la barra superior (**Datos: Solo maestros | Con operación · ↺ Reiniciar**, reinicia los cuatro módulos): **Solo maestros** = maestros completos sin stock, movimientos ni documentos (empezar de cero) · **Con operación** = maestros más la operación que registra `Demo.historia()` (§9) junto con las historias de los otros módulos. Si otro módulo guarda en otra pestaña, la pantalla se refresca.
 - Familia de trabajo **ZULEIKA**: piezas PPT-0001..0004 → crudo PPT-0005..0008 → lavado tercerizado PPT-0009..0012 (crudo en SB-TRANSITO + servicio SRV-0001) → terminado PT-0001..0004 en SB-CENTRAL. Materia prima en SB-ZARATE-MP, en proceso en SB-ZARATE-PP.
-- **Tipos de movimiento**: emisión SAL-USOPROD (SAL-MAQUILA si consume material en tránsito, en poder del proveedor) · recibo ING-PROD · envío al proveedor TRF-FABRIC · producto fallado AJU-FALTANTE + AJU-SOBRANTE.
+- **Tipos de movimiento que usa Producción** (maestro `tiposMovimiento`):
+
+| Operación | Movimiento | Tipo |
+|---|---|---|
+| Emisión para producción (Manual) y consumo por notificación al recibir | Salida | **SAL-USOPROD** |
+| Emisión del material que está en el almacén de tránsito (en poder del proveedor del servicio) | Salida | **SAL-MAQUILA** |
+| Recibo de producción (también el retorno del servicio tercerizado) | Ingreso | **ING-PROD** |
+| Envío al proveedor del servicio | Transferencia (ST directa) | **TRF-FABRIC** |
+| Producto fallado | Salida del artículo + Ingreso del «… FALLADO» | **SAL-FALLADO + ING-FALLADO** |
+
+- **Decisiones cerradas** (`docs/00_DECISIONES_CERRADAS.md`) aplicadas en Producción:
+  - **J1 · No existe el tipo Ajuste.** Una regularización es un ingreso (ING-REGULARIZ) o una salida (SAL-REGULARIZ) con motivo y observación; Producción no las registra.
+  - **J2 · Producto fallado = salida + ingreso**: salida del artículo (SAL-FALLADO) e ingreso del artículo «… FALLADO» al mismo costo (ING-FALLADO), motivo «Producto fallado» y observación; opcional orden de reproceso (§5).
+  - **J3 · La tercerización vive en la OF**: *Tercerizar / Cambiar servicio* en la orden; envío = transferencia al almacén de tránsito; retorno = recibo de producción; el servicio se compra con una OC de servicio normal (§4).
+  - **T2/T7 · Transferencia en dos pasos** (`Docs.trf`, Solicitud de Transferencia ST-000001): *aprobar* compromete el origen y suma Pedido en el destino; *recibir* mueve el stock (parcial o total) en GI-11. **Enviar al proveedor** usa `Docs.trf.directa` (crea, aprueba y recibe en el acto) porque el almacén de tránsito es virtual; la GRE se enlaza con el movimiento y la ST. Si la orden había comprometido ese material en su almacén (fase tercerizada a mano), lo libera antes para que la ST lo comprometa. Una línea de Solicitud de materiales atendida por transferencia queda **En transferencia** (con su ST) hasta que Logística confirma la recepción: PR-05 muestra ese estado.
 
 ## 1. Órdenes de Fabricación
 
@@ -41,7 +55,7 @@ No se recibe más de lo pendiente. Al cerrar: se libera lo comprometido, lo emit
 1. Al emitir (o al recibir por notificación) falta stock en el almacén de la línea: se emite lo que hay.
 2. Por la diferencia se crea una **Solicitud de materiales sin propósito**: Producción solo indica **qué** y **a dónde**.
 3. **Logística** revisa existencias y define el propósito **por línea** (una misma solicitud puede tener ambas):
-   - **Transferencia** → elige el almacén de origen; se registra una transferencia (GI-11) por almacén de origen.
+   - **Transferencia** → elige el almacén de origen; se crea una Solicitud de Transferencia aprobada (GI-11) por almacén de origen; la línea queda «En transferencia» hasta que se confirma la recepción y pasa a «Transferido».
    - **Compra** → Logística crea la OC; al llegar se registra el **ingreso** (GI-09) o la **conformidad** si es un servicio.
    - Estados: Borrador → Pendiente → Aprobada → En proceso → Atendida · Rechazada · Anulada.
 4. Producción hace otra emisión o registra el recibo.
@@ -55,14 +69,14 @@ No se recibe más de lo pendiente. Al cerrar: se libera lo comprometido, lo emit
 ## 4. Servicios de terceros y fase tercerizada (compra real del servicio)
 
 - En la lista y la orden el servicio es un **recurso** con **costo estándar** y **proveedor habitual**, con el mismo código del artículo de servicio (p. ej. `SRV-0001` Lavandería Landeo, `PROV-0005`). El lavado de Zuleika ya viene tercerizado por su lista: crudo en `SB-TRANSITO` + `SRV-0001`.
-- Recorrido: (1) **Pedir servicio** (PR-02) crea una Solicitud de materiales con la línea del servicio por la cantidad de la orden, destino el almacén de tránsito (no se duplica si ya hay una) → (2) Logística la aprueba como Compra y crea la **OC de servicio** (GI-13) → (3) Compras la aprueba (CO-07): la OC aparece en **Costo** → (4) **Enviar al proveedor**: transferencia TRF-FABRIC al tránsito + **GRE** «Traslado de bienes para transformación» con el proveedor del servicio → (5) **retorno**: emisión del material en tránsito + recibo (consume el servicio al estándar) → (6) Compras da **conformidad** y registra la **factura**: aparece en Costo.
+- Recorrido: (1) **Pedir servicio** (PR-02) crea una Solicitud de materiales con la línea del servicio por la cantidad de la orden, destino el almacén de tránsito (no se duplica si ya hay una) → (2) Logística la aprueba como Compra y crea la **OC de servicio** (GI-13) → (3) Compras la aprueba (CO-07): la OC aparece en **Costo** → (4) **Enviar al proveedor**: Solicitud de Transferencia directa TRF-FABRIC al tránsito (`Docs.trf.directa`) + **GRE** «Traslado de bienes para transformación» con el proveedor del servicio → (5) **retorno**: emisión del material en tránsito + recibo (consume el servicio al estándar) → (6) Compras da **conformidad** y registra la **factura**: aparece en Costo.
 - **Costo**: contraste **estándar vs OC vs factura** (costo de compra = factura, o la OC si aún no hay factura, − notas de crédito). OC y factura llegan solas desde Compras (`of.compras`); solo la **nota de crédito** se vincula a mano.
 - **Tercerizar / Cambiar servicio** (orden sin envíos, emisiones ni recibos): si la orden no lleva servicio, sus materiales pasan al tránsito, se quitan los recursos propios y se agrega el servicio; si ya lo lleva, se cambia el servicio y/o el proveedor (se anula la solicitud del servicio si aún está pendiente; si Logística ya la atendió, no se cambia). Opcionalmente pide el servicio.
 
 ## 5. Producto fallado (corte, confección, lavandería, acabado)
 
 No existe el tipo Ajuste. Desde **Existencias** (botón *Fallado*):
-1. **Ajuste por faltante** (AJU-FALTANTE) del artículo original y **ajuste por sobrante** (AJU-SOBRANTE) del artículo `… FALLADO` al mismo costo, con motivo y observación obligatoria (documento `FALL-nnnn`). El artículo fallado se crea en el maestro (GI-02).
+1. **Salida** del artículo original (SAL-FALLADO) e **Ingreso** del artículo `… FALLADO` (ING-FALLADO) al mismo costo, con motivo «Producto fallado» y observación obligatoria (documento `FALL-nnnn`). No existe el tipo Ajuste (J1). El artículo fallado se crea en el maestro (GI-02).
 2. Opcional: **orden de reproceso** (Especial) que vuelve a fabricar el artículo consumiendo el fallado y **solo con mano de obra**, en el mismo N° Referencia para el recosteo.
 3. Si el defecto es de un **servicio tercerizado**: además, Compras gestiona la **nota de crédito o devolución de compra** (CO-11 / CO-12) y se vincula en Costo.
 
@@ -100,7 +114,7 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 ## 9. Demo (`Demo.historia()`)
 
 - Los datos ya no se crean al abrir Producción: vienen del escenario elegido. `Demo.historia()` parte de «Solo maestros» y registra, solo con `Docs.*`, `Stock.*` y `Prod.*` y fechas de julio 2026 (`BD.reloj`), la operación con la que se genera `escenario-operacion.js`. No toca el DOM.
-- **Compra de materia prima**: dos OC de bienes (PROV-0001 telas, PROV-0002 avíos) → V°B° → aprobación → ingreso en SB-CENTRAL-MP → factura; transferencia con GRE a SB-ZARATE-MP.
+- **Compra de materia prima**: dos OC de bienes (PROV-0001 telas, PROV-0002 avíos) → V°B° → aprobación → ingreso en SB-CENTRAL-MP → factura; abastecimiento a SB-ZARATE-MP **en dos pasos** (Solicitud de Transferencia TRF-INTERNO: creada y aprobada el 04/07, recepción confirmada el 05/07) con GRE.
 - **SF-000001** (PT-0001 × 40, PT-0002 × 30): **Fabricada**. Piezas, crudo, lavado tercerizado completo (SOL → OC de servicio → envío con GRE → retorno → conformidad → factura, una con S/ 3,00 de diferencia) y terminado en SB-CENTRAL.
 - **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 enviado a la lavandería con OC aprobada; lavado T30 con el servicio pedido (SOL pendiente en Logística).
 - **SF-000003** (PT-0001..0004 × 20): **aprobada sin órdenes**, con su materia prima comprometida.

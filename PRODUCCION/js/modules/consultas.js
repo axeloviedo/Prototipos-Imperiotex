@@ -10,7 +10,7 @@ const PR08 = {
   },
   existencias() {
     const f = PR08.f, q = f.q.toLowerCase();
-    const filas = BD.d.stock.filter(s => (f.cero || s.act || s.comp) && (!f.alm || s.alm === f.alm) && (!f.grupo || (M.art(s.art) || {}).grupo === f.grupo) &&
+    const filas = BD.d.stock.filter(s => (f.cero || s.act || s.comp || s.ped) && (!f.alm || s.alm === f.alm) && (!f.grupo || (M.art(s.art) || {}).grupo === f.grupo) &&
       (!q || s.art.toLowerCase().includes(q) || M.nomArt(s.art).toLowerCase().includes(q)))
       .sort((a, b) => a.alm.localeCompare(b.alm) || a.art.localeCompare(b.art));
     const valor = filas.reduce((a, s) => a + s.act * s.costo, 0);
@@ -19,13 +19,13 @@ const PR08 = {
       UI.campo('Grupo de artículo', '<select onchange="PR08.f.grupo=this.value;App.refrescar()">' + UI.opts(M.GRUPOS.map(g => ({ v: g.cod, t: g.cod + ' · ' + g.nom })), f.grupo, 'Todos') + '</select>') +
       UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="PR08.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       '<label class="check"><input type="checkbox"' + (f.cero ? ' checked' : '') + ' onchange="PR08.f.cero=this.checked;App.refrescar()"> Mostrar en cero</label></div></div>' +
-      UI.tabla(['Almacén', 'Código', 'Artículo', 'UM', ['Actual', 'num'], ['Comprometido', 'num'], ['Disponible', 'num'], ['Costo prom.', 'num'], ['Valor', 'num'], ['', '', '70px']], filas.map(s => {
+      UI.tabla(['Almacén', 'Código', 'Artículo', 'UM', ['Actual', 'num'], ['Comprometido', 'num'], ['Disponible', 'num'], ['Pedido', 'num'], ['Costo prom.', 'num'], ['Valor', 'num'], ['', '', '70px']], filas.map(s => {
         const disp = UI.r4(s.act - s.comp);
         return '<tr><td class="mini">' + s.alm + '</td><td>' + s.art + '</td><td>' + UI.esc(M.nomArt(s.art)) + '</td><td>' + M.u(s.art) + '</td><td class="num">' + UI.n(s.act) + '</td><td class="num">' + UI.n(s.comp) + '</td>' +
-          '<td class="num"><span class="' + (disp < 0 ? 'err-t' : '') + '">' + UI.n(disp) + '</span></td><td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' +
+          '<td class="num"><span class="' + (disp < 0 ? 'err-t' : '') + '">' + UI.n(disp) + '</span></td><td class="num">' + (s.ped ? UI.n(s.ped) : '—') + '</td><td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' +
           '<td>' + (s.act > 0 && !(M.alm(s.alm) || {}).transito ? '<button class="btn-link" style="padding:0" onclick="PR08.fallado(\'' + s.alm + '\',\'' + s.art + '\')">Fallado</button>' : '') + '</td></tr>';
-      }), { foot: '<tr><td colspan="8" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td><td></td></tr>' }) +
-      '<p class="hint">Stock de la base compartida (todos los módulos). Disponible = Actual − Comprometido. La materia prima se compromete al aprobarse la Solicitud de Fabricación en Inventarios; al crear las órdenes la solicitud libera su compromiso y cada orden compromete lo suyo, que se libera al emitir o al cerrar la orden. Un producto fallado se registra con un ajuste por faltante del artículo y un ajuste por sobrante del artículo fallado al mismo costo.</p>';
+      }), { foot: '<tr><td colspan="9" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td><td></td></tr>' }) +
+      '<p class="hint">Stock de la base compartida (todos los módulos). Disponible = Actual − Comprometido. Pedido = mercadería en camino (OC aprobadas y transferencias aprobadas sin recibir), solo informativo. La materia prima se compromete al aprobarse la Solicitud de Fabricación en Inventarios; al crear las órdenes la solicitud libera su compromiso y cada orden compromete lo suyo, que se libera al emitir o al cerrar la orden. No existe el tipo Ajuste: un producto fallado se registra con una salida del artículo (SAL-FALLADO) y un ingreso del artículo fallado al mismo costo (ING-FALLADO).</p>';
   },
   movimientos() {
     const f = PR08.f;
@@ -76,7 +76,7 @@ const PR08 = {
         '<div class="formgrid c3" style="margin-top:8px">' + UI.campo('Mano de obra', sel('fa-rec', M.recActivos(r => r.tipo === 'RECURSO HUMANO').map(r => ({ v: r.cod, t: r.nom })), '', '—')) +
         UI.campo('Horas por unidad', '<input id="fa-h" type="number" min="0" step="any">') +
         UI.campo(Prod.nombreRef(), '<input id="fa-ref" value="' + (ult ? ult.ref : '') + '">', { hint: 'Para recostear con las demás órdenes' }) + '</div></div>' +
-        '<p class="hint">Se registra un ajuste por faltante (AJU-FALTANTE) del artículo y un ajuste por sobrante (AJU-SOBRANTE) del artículo fallado al mismo costo. Si el defecto es de un servicio de terceros, vincule la nota de crédito o devolución de compra en la pestaña Costo de la orden del servicio.</p>',
+        '<p class="hint">Se registra una salida del artículo (SAL-FALLADO) y un ingreso del artículo fallado (ING-FALLADO) al mismo costo, con motivo «Producto fallado». No existe el tipo Ajuste. Si el defecto es de un servicio de terceros, vincule la nota de crédito o devolución de compra en la pestaña Costo de la orden del servicio.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PR08.guardarFallado(\'' + alm + '\',\'' + art + '\')">Registrar</button>'
     });
   },

@@ -9,10 +9,12 @@
    - Si falta stock se emite lo que hay y se crea una Solicitud de materiales (Docs.sol): Logística la atiende en Inventarios (GI-13).
    - Servicio de terceros: recurso con costo estándar (mismo código que el artículo SRV). Se pide con una Solicitud de materiales,
      Logística crea la OC de servicio, Compras la aprueba y factura (Docs.oc / Docs.fac agregan of.compras) y aquí se contrasta.
-   - Envío al proveedor: transferencia al almacén de tránsito + GRE «Traslado de bienes para transformación» (Docs.gre).
-   - Tipos de movimiento (estructura organizativa, BD.d.maestros.tiposMovimiento): emisión SAL-USOPROD (SAL-MAQUILA si se consume en un almacén de tránsito,
-     es decir material en poder del proveedor) · recibo ING-PROD · envío al proveedor TRF-FABRIC · producto fallado AJU-FALTANTE + AJU-SOBRANTE.
-   - Producto fallado: salida del artículo + ingreso del artículo "FALLADO" al mismo costo; el reproceso es una orden Especial solo con mano de obra. */
+   - Envío al proveedor (J3, T2/T7): Solicitud de Transferencia directa (Docs.trf.directa: crea, aprueba y recibe; el tránsito es virtual)
+     al almacén de tránsito + GRE «Traslado de bienes para transformación» (Docs.gre) enlazada al movimiento.
+   - Tipos de movimiento (BD.d.maestros.tiposMovimiento): emisión SAL-USOPROD (SAL-MAQUILA si se consume en un almacén de tránsito,
+     es decir material en poder del proveedor) · recibo ING-PROD · envío al proveedor TRF-FABRIC · producto fallado SAL-FALLADO + ING-FALLADO.
+   - Producto fallado (J1: no existe el tipo Ajuste; J2): salida del artículo + ingreso del artículo "FALLADO" al mismo costo;
+     el reproceso es una orden Especial solo con mano de obra. */
 const Prod = {
   MODULO: 'Producción',
   _hist(of, a, d) { of.hist.push({ f: UI.ahora(), a, d: d || '', u: BD.usuario }); },
@@ -334,20 +336,28 @@ const Prod = {
     });
     const prov = Prod.provServicio(of);
     of.envios = of.envios || [];
-    const env = { n: of.envios.length + 1, f: d.fecha || UI.ahora(), cant, prov, guias: [], guia: '', movs: [] };
+    const env = { n: of.envios.length + 1, f: d.fecha || UI.ahora(), cant, prov, sts: [], guias: [], guia: '', movs: [] };
     Object.values(rutas).forEach(g => {
-      const r = Stock.transferencia({ det: 'Transferencia - Envío a servicio de terceros', tipoMov: 'TRF-FABRIC', origen: g.origen, destino: g.destino, ndoc: of.id, doc: of.id, modulo: Prod.MODULO, fecha: env.f,
-        lineas: g.items.map(x => ({ art: x.m.cod, cant: x.cant })), obs: 'Traslado de bienes para transformación' + (prov ? ' · ' + M.provNom(prov) : '') });
-      if (!r.ok) throw new Error(r.error);
+      /* lo que la propia orden comprometió en su almacén (fase tercerizada a mano) se libera antes: la ST compromete el origen al aprobarse */
+      const lib = g.items.map(x => ({ x, c: x.m.almPropio && x.m.comp > 0 ? Math.min(x.m.comp, x.cant) : 0 }));
+      lib.forEach(y => { if (y.c > 0) { Stock.liberar(y.x.m.almPropio, y.x.m.cod, y.c); y.x.m.comp = UI.r4(y.x.m.comp - y.c); } });
+      let r;
+      try {
+        r = Docs.trf.directa({ origen: g.origen, destino: g.destino, tipoMov: 'TRF-FABRIC', of: of.id, fecha: env.f, modulo: 'Producción',
+          lineas: g.items.map(x => ({ art: x.m.cod, cant: x.cant })), obs: 'Envío ' + env.n + ' de ' + of.id + ' · traslado de bienes para transformación' + (prov ? ' · ' + M.provNom(prov) : '') });
+      } catch (e) {
+        lib.forEach(y => { if (y.c > 0) { Stock.comprometer(y.x.m.almPropio, y.x.m.cod, y.c); y.x.m.comp = UI.r4(y.x.m.comp + y.c); } });
+        throw e;
+      }
+      env.sts.push(r.trf.id);
       env.movs.push(r.mov.id);
-      g.items.forEach(x => { if (x.m.almPropio && x.m.comp > 0) { const l = Math.min(x.m.comp, x.cant); Stock.liberar(x.m.almPropio, x.m.cod, l); x.m.comp = UI.r4(x.m.comp - l); } });
       const gre = Docs.gre.crear({ motivo: 'Traslado de bienes para transformación', origen: g.origen, destino: g.destino, prov, mov: r.mov.id, of: of.id,
-        lineas: g.items.map(x => ({ art: x.m.cod, cant: x.cant })), obs: 'Envío ' + env.n + ' de ' + of.id });
+        lineas: g.items.map(x => ({ art: x.m.cod, cant: x.cant })), obs: 'Envío ' + env.n + ' de ' + of.id + ' · ' + r.trf.id });
       env.guias.push(gre.id);
     });
     env.guia = env.guias.join(', ');
     of.envios.push(env);
-    Prod._hist(of, 'Envío al proveedor ' + env.n, UI.n(cant, 0) + ' ' + M.u(of.art) + ' · ' + env.movs.join(', ') + ' · GRE ' + env.guia);
+    Prod._hist(of, 'Envío al proveedor ' + env.n, UI.n(cant, 0) + ' ' + M.u(of.art) + ' · ' + env.sts.join(', ') + ' · ' + env.movs.join(', ') + ' · GRE ' + env.guia);
     return env;
   },
 
@@ -499,7 +509,7 @@ const Prod = {
     Prod._hist(of, 'Nota de crédito ' + doc, (R.nom || c.rec) + ' · ' + UI.s(importe));
   },
 
-  /* ---------- producto fallado: ajuste por faltante del artículo (AJU-FALTANTE) + ajuste por sobrante del artículo "FALLADO" al mismo costo (AJU-SOBRANTE) ---------- */
+  /* ---------- producto fallado (J1 no hay tipo Ajuste · J2): salida del artículo (SAL-FALLADO) + ingreso del artículo "FALLADO" al mismo costo (ING-FALLADO) ---------- */
   MOTIVOS_FALLA: ['Defecto de corte', 'Defecto de confección', 'Defecto de lavandería (servicio de terceros)', 'Defecto de acabado', 'Otro'],
   falladoDe(art) { const a = M.art(art); return a ? M.ARTICULOS.find(x => x.nom === a.nom + ' FALLADO') || null : null; },
   reclasificarFallado(d) {
@@ -510,9 +520,9 @@ const Prod = {
     if (!obs) throw new Error('Justifique el movimiento en la observación');
     if (Stock.act(d.alm, A.cod) + 0.00005 < cant) throw new Error('Solo hay ' + UI.n(Stock.act(d.alm, A.cod)) + ' de ' + A.nom + ' en ' + d.alm);
     const doc = BD.sig('fall', 'FALL-', 4), costo = Stock.costo(d.alm, A.cod), just = d.motivo + ' · ' + obs;
-    const s = Stock.ajuste({ tipoMov: 'AJU-FALTANTE', alm: d.alm, ndoc: doc, doc, modulo: Prod.MODULO, lineas: [{ art: A.cod, cant, liberar: 0 }], obs: 'Producto fallado → ' + F.cod + ' · ' + just });
+    const s = Stock.salida({ det: 'Salida - Producto fallado', tipoMov: 'SAL-FALLADO', alm: d.alm, destino: F.cod, ndoc: doc, doc, modulo: Prod.MODULO, lineas: [{ art: A.cod, cant, liberar: 0 }], obs: 'Producto fallado → ' + F.cod + ' · ' + just });
     if (!s.ok) throw new Error(s.error);
-    const i = Stock.ajuste({ tipoMov: 'AJU-SOBRANTE', alm: d.alm, ndoc: doc, doc, modulo: Prod.MODULO, lineas: [{ art: F.cod, cant, costo }], obs: 'Producto fallado de ' + A.cod + ' · ' + just });
+    const i = Stock.ingreso({ det: 'Ingreso - Producto fallado', tipoMov: 'ING-FALLADO', alm: d.alm, origen: A.cod, ndoc: doc, doc, modulo: Prod.MODULO, lineas: [{ art: F.cod, cant, costo }], obs: 'Producto fallado de ' + A.cod + ' · ' + just });
     if (!i.ok) throw new Error(i.error);
     return { doc, salida: s.mov.id, ingreso: i.mov.id, costo };
   },

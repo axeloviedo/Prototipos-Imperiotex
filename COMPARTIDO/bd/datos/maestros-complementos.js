@@ -92,6 +92,10 @@ const BD_COMPLEMENTOS = (() => {
     });
   });
 
+  /* artículos «… FALLADO» de crudo y lavado (decisión J2: producto fallado = salida del artículo + ingreso del fallado al mismo costo) */
+  articulos.filter(a => a.grupo === 'PPT' && (a.subcat === 'CRUDO' || a.subcat === 'LAVADO')).forEach(a => articulos.push(Object.assign({}, a,
+    { cod: a.cod + 'F', nom: a.nom + ' FALLADO', desc: a.desc + ' (fallado)', produccion: false, attrs: Object.assign({}, a.attrs, { Estado: 'FALLADO' }) })));
+
   /* ---------- recursos ---------- */
   const tiposRecurso = [
     { cod: 'TRC-0001', nom: 'RECURSO HUMANO', clase: 'humano' },
