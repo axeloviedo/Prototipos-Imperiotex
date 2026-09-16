@@ -10,7 +10,7 @@ const PR03 = {
         '<td class="mini">' + sf.lineas.map(l => UI.esc(M.nomArt(l.art)) + ' × ' + l.cant).join('<br>') + '</td><td class="num">' + UI.n(sf.lineas.reduce((a, l) => a + l.cant, 0), 0) + '</td>' +
         '<td>' + UI.badge(sf.est, EST_SF[sf.est] || 'var(--borrador)') + '</td><td>' + (sf.ref || '—') + '</td>' +
         '<td><button class="btn btn-' + (sf.ofs.length ? 'secondary' : 'primary') + ' btn-sm" onclick="App.go(\'pr03d\',{id:\'' + sf.id + '\'})">' + (sf.ofs.length ? '👁 Ver' : 'Crear órdenes') + '</button></td></tr>')) +
-      '<p class="hint">Solo llegan las Solicitudes de Pedido <b>aprobadas</b> (V°B° de Logística y Gerencia). Se crean, editan y aprueban en GP-01, pantalla compartida por Logística y Comercial; Producción no las modifica: crea sus órdenes.</p>';
+      '<p class="hint">Solo llegan las Solicitudes de Pedido <b>aprobadas</b> (V°B° de Logística y Gerencia). Se crean, editan y aprueban en Inventarios (GP-01), pantalla compartida por Logística y Comercial; Producción no las modifica: crea sus órdenes.</p>';
   }
 };
 App.pantalla('pr03', { titulo: 'Solicitudes de Fabricación', render: PR03.render });

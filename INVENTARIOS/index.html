@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventarios (GI) · IMPERIOTEX</title>
+<link rel="stylesheet" href="../COMPARTIDO/css/base.css">
+</head>
+<body>
+
+<!-- ============ SIDEBAR ============ -->
+<aside id="sidebar">
+  <div class="logo"><b id="logoEmp">IMPERIOTEX · SARA BQ</b><span>ERP - Gestión de Inventarios (GI)</span></div>
+  <nav>
+    <div class="nav-item" data-go="gi00"><span class="ic">◫</span> Inicio</div>
+    <div class="nav-item" data-go="gi05"><span class="ic">▦</span> Inventario</div>
+    <div class="nav-item" data-go="gi06"><span class="ic">⎘</span> Kardex</div>
+    <div class="nav-item" data-go="gi20"><span class="ic">▤</span> Saldos por Fecha</div>
+    <div class="nav-item" data-go="gi18"><span class="ic">⟳</span> Rotación de Artículos</div>
+    <div class="nav-item" data-go="gi07"><span class="ic">⇄</span> Movimientos</div>
+    <div class="nav-item" data-go="gp01"><span class="ic">✂</span> Solicitudes de Pedido</div>
+    <div class="nav-item" data-go="gi13"><span class="ic">✎</span> Solicitudes de Materiales</div>
+    <div class="nav-item" data-go="gi14"><span class="ic">🖹</span> Guías de Remisión Electrónicas</div>
+    <div class="nav-group open" id="mstGroup" onclick="toggleGrp('mstGroup','mstSub')"><span class="ic">▤</span> Maestros <span class="caret">▶</span></div>
+    <div class="nav-sub open" id="mstSub">
+      <div class="nav-item" data-go="gi01">Artículos</div>
+      <div class="nav-item" data-go="gi03">Almacenes</div>
+      <div class="nav-item" data-go="gi17">Listas de Materiales</div>
+    </div>
+    <div class="nav-group open" id="cfgGroup" onclick="toggleGrp('cfgGroup','cfgSub')"><span class="ic">⚙</span> Configuraciones <span class="caret">▶</span></div>
+    <div class="nav-sub open" id="cfgSub">
+      <div class="nav-item" data-go="mcfg">Configuración General</div>
+      <div class="nav-item" data-go="gi19">Series de Documentos</div>
+      <div class="nav-item" data-go="mtipos">Grupos de Artículo</div>
+      <div class="nav-item" data-go="mcat">Categorías</div>
+      <div class="nav-item" data-go="msub">Sub categorías</div>
+      <div class="nav-item" data-go="mum">Unidades de Medida</div>
+      <div class="nav-item" data-go="mconv">Conversiones de UM</div>
+      <div class="nav-item" data-go="matr">Atributos</div>
+      <div class="nav-item" data-go="mbc">Tipos de Código de Barra</div>
+      <div class="nav-item" data-go="msede">Sedes</div>
+    </div>
+  </nav>
+  <div class="foot">Prototipo funcional · Módulo GI<br>Base: 02_BPD_GESTION_DE_INVENTARIO + 01_BPD_GESTION_PEDIDO<br><a href="#" style="color:#fff" onclick="gpReiniciarCompartido();return false">↺ Reiniciar solicitudes de demo</a></div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<div id="main">
+  <div id="topbar">
+    <div id="breadcrumb">Inicio</div>
+    <div class="spacer"></div>
+    <a class="homebtn" href="../index.html" title="Volver a la portada de módulos">⌂ Inicio</a>
+    <div class="company-sel"><label>Módulo:</label>
+      <select id="selModulo" onchange="irModulo(this.value)"><option value="" selected>Inventarios (GI)</option><option value="../COMPRAS/index.html">Compras (CO)</option><option value="../PRODUCCION/index.html">Producción (PRODUCCION)</option><option value="../COMERCIAL/index.html">Comercial (CM)</option></select>
+    </div>
+    <div class="company-sel"><label>Empresa:</label>
+      <select id="selEmpresa" onchange="cambiarEmpresa(this.value)">
+        <option value="IMPERIOTEX" selected>IMPERIOTEX</option>
+        <option value="CATINNA NOW">CATINNA NOW</option>
+      </select>
+    </div>
+    <div class="bell" onclick="toggleBell(event)">🔔<span class="dot"></span></div>
+    <div class="userchip"><div class="avatar">U0</div><span>USER00 · Logística</span></div>
+  </div>
+
+  <!-- CT-07 campana -->
+  <div id="bellDrop">
+    <div class="h">Notificaciones</div>
+    <div class="it" onclick="go('gi05');toggleBell(event)"><span class="dot" style="background:var(--stock-cero);margin-top:4px"></span><div>Stock agotado: HILO POLIESTER NEGRO - ALM MP Avíos<br><small>Hoy 09:12 · Alerta de mínimos</small></div></div>
+    <div class="it" onclick="go('gi05');toggleBell(event)"><span class="dot" style="background:var(--stock-bajo);margin-top:4px"></span><div>Por agotarse: TELA DENIM 12 OZ AZUL - ALM MP Telas<br><small>Hoy 08:40 · Disponible ≤ mínimo</small></div></div>
+    <div class="it" onclick="go('gi07');toggleBell(event)"><span class="dot" style="background:var(--aprobada);margin-top:4px"></span><div>Transferencia TRF-000214 pendiente de confirmar en destino<br><small>Ayer 17:05 · Tienda Gamarra 1</small></div></div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<div id="modales"></div>
+<div class="toast" id="toast"></div>
+
+<!-- núcleo compartido -->
+<script src="../COMPARTIDO/js/vistas.js"></script>
+<!-- HTML de pantallas y modales (Inventarios y Compras: cada módulo abre las pantallas del otro que su flujo necesita) -->
+<script src="vistas/maestros.js"></script>
+<script src="vistas/configuracion-general.js"></script>
+<script src="vistas/articulos.js"></script>
+<script src="vistas/listas-materiales.js"></script>
+<script src="vistas/almacenes.js"></script>
+<script src="vistas/grupo-articulo.js"></script>
+<script src="vistas/panel.js"></script>
+<script src="vistas/saldos.js"></script>
+<script src="vistas/rotacion.js"></script>
+<script src="vistas/kardex.js"></script>
+<script src="vistas/ingresos.js"></script>
+<script src="vistas/movimientos.js"></script>
+<script src="vistas/salidas.js"></script>
+<script src="vistas/existencias.js"></script>
+<script src="vistas/transferencias.js"></script>
+<script src="vistas/buscador-articulos.js"></script>
+<script src="vistas/solicitudes-materiales.js"></script>
+<script src="vistas/gre.js"></script>
+<script src="vistas/solicitudes-pedido.js"></script>
+<script src="vistas/sp-requerimientos.js"></script>
+<script src="vistas/sp-aprobacion.js"></script>
+<script src="../COMPRAS/vistas/panel.js"></script>
+<script src="../COMPRAS/vistas/sugerido.js"></script>
+<script src="../COMPRAS/vistas/costos-destino.js"></script>
+<script src="../COMPRAS/vistas/proveedores.js"></script>
+<script src="../COMPRAS/vistas/ordenes-compra.js"></script>
+<script src="../COMPRAS/vistas/facturas.js"></script>
+<script src="../COMPRAS/vistas/reclamos.js"></script>
+<script src="../COMPRAS/vistas/notas-credito.js"></script>
+<script src="../COMPARTIDO/js/nucleo.js"></script>
+<script src="js/rutas.js"></script>
+<script src="../COMPRAS/js/rutas.js"></script>
+<!-- datos y lógica (el orden importa) -->
+<script src="js/datos/maestros.js"></script>
+<script src="js/datos/articulos.js"></script>
+<script src="js/modulos/maestros.js"></script>
+<script src="js/modulos/configuracion-general.js"></script>
+<script src="js/modulos/articulos.js"></script>
+<script src="js/modulos/listas-materiales.js"></script>
+<script src="js/modulos/almacenes.js"></script>
+<script src="js/modulos/grupo-articulo.js"></script>
+<script src="js/modulos/panel.js"></script>
+<script src="js/modulos/saldos.js"></script>
+<script src="js/modulos/rotacion.js"></script>
+<script src="js/modulos/ingresos.js"></script>
+<script src="js/modulos/movimientos.js"></script>
+<script src="js/modulos/salidas.js"></script>
+<script src="js/modulos/existencias.js"></script>
+<script src="js/modulos/transferencias.js"></script>
+<script src="js/modulos/buscador-articulos.js"></script>
+<script src="js/modulos/solicitudes-materiales.js"></script>
+<script src="js/modulos/gre.js"></script>
+<script src="../COMPRAS/js/modulos/panel.js"></script>
+<script src="../COMPRAS/js/modulos/sugerido.js"></script>
+<script src="../COMPRAS/js/modulos/costos-destino.js"></script>
+<script src="../COMPRAS/js/modulos/proveedores.js"></script>
+<script src="../COMPRAS/js/modulos/ordenes-compra.js"></script>
+<script src="../COMPRAS/js/modulos/facturas.js"></script>
+<script src="../COMPRAS/js/modulos/reclamos.js"></script>
+<script src="../COMPRAS/js/modulos/notas-credito.js"></script>
+<script src="js/modulos/solicitudes-pedido.js"></script>
+<script src="js/modulos/sp-requerimientos.js"></script>
+<script src="js/modulos/sp-aprobacion.js"></script>
+<script src="js/modulos/solicitudes-compartidas.js"></script>
+<script src="../COMPARTIDO/js/arranque.js"></script>
+<script>arrancar('gi00');</script>
+</body>
+</html>

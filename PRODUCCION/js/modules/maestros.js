@@ -8,7 +8,7 @@ const PR10 = {
     const lista = M.LDMS.map(l => '<tr class="clickable" onclick="PR10.art=\'' + l.art + '\';App.refrescar()"><td><b>' + l.id + '</b></td><td>' + l.art + '<br><span class="mini">' + UI.esc(M.nomArt(l.art)) + '</span></td>' +
       '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + UI.esc(l.desc) + '</span></td><td>' + (l.pred ? UI.badge('Predeterminada', 'var(--confirmado)') : '<span class="mini">Alternativa</span>') + '</td>' +
       '<td class="num">' + l.items.filter(i => i.tipo === 'Artículo').length + '</td><td class="num">' + l.items.filter(i => i.tipo === 'Recurso').length + '</td></tr>');
-    return '<div class="screen-head"><h1>Listas de materiales</h1><span class="code">PR-10</span><div class="spacer"></div><a class="btn btn-secondary" style="text-decoration:none" href="../Prototipo_GI.html" target="_blank">Editar en GI-17</a></div>' +
+    return '<div class="screen-head"><h1>Listas de materiales</h1><span class="code">PR-10</span><div class="spacer"></div><a class="btn btn-secondary" style="text-decoration:none" href="../INVENTARIOS/index.html#gi17" target="_blank">Editar en GI-17</a></div>' +
       UI.aviso('Las listas se mantienen en Inventarios (GI-17) y Producción las consulta. Una lista es la <b>fórmula de un artículo</b>: sus materiales, recursos e instrucciones. ' +
         'Si uno de sus materiales también tiene lista, es un artículo fabricable y puede tener su propia orden de fabricación.', 'info') +
       '<div class="card"><div class="filters">' + UI.campo('Artículo', '<select onchange="PR10.art=this.value;App.refrescar()" style="min-width:420px">' + UI.opts(fabr.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), PR10.art) + '</select>') + '</div></div>' +

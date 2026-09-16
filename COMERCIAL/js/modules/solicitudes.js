@@ -1,11 +1,11 @@
 /* COMERCIAL V9 · CM-11 Solicitudes de Pedido y CM-12 Solicitudes de Materiales.
-   No se duplican: son las mismas pantallas GP-01 y GI-13 de Logística (Prototipo_GP.html) abiertas en vista compartida
+   No se duplican: son las mismas pantallas GP-01 y GI-13 de Logística (INVENTARIOS/index.html) abiertas en vista compartida
    (?vista=comercial). Los datos viven en localStorage 'imperiotex.v9.solicitudes', así Logística y Comercial trabajan
    sobre las mismas solicitudes. Producción solo ve las Solicitudes de Pedido aprobadas (PR-03). */
 const Compartida = {
   src(hash) {
     const u = Store.usuario();
-    return '../Prototipo_GP.html?vista=comercial&usuario=' + encodeURIComponent(u.cod + ' · ' + u.nom + ' (Comercial)') + '#' + hash;
+    return '../INVENTARIOS/index.html?vista=comercial&usuario=' + encodeURIComponent(u.cod + ' · ' + u.nom + ' (Comercial)') + '#' + hash;
   },
   render(hash, nota) {
     return '<p class="hint" style="margin:0 0 8px">' + nota + '</p>' +

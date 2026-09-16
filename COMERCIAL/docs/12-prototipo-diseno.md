@@ -79,7 +79,7 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 | CM-11 | Solicitudes de Pedido | **Misma pantalla GP-01/GP-03 de Logística**: crear, editar, enviar, V°B°, aprobar, rechazar |
 | CM-12 | Solicitudes de Materiales | **Misma pantalla GI-13 de Logística**: Comercial crea y consulta; Logística aprueba y define Compra o Transferencia |
 
-**Vista compartida (2026-09-15).** CM-11 y CM-12 no duplican código. Abren las pantallas de `Prototipo_GP.html` sin su menú (`?vista=comercial&usuario=…`). Las Solicitudes de Pedido y de Materiales, con el comprometido que dejan, se guardan en `localStorage` (`imperiotex.v9.solicitudes`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos nuevos son `ver_solicitud_pedido` y `crear_solicitud_materiales` (Vendedor y Supervisor comercial). En el listado GP-01 se quitó la columna «Artículos solicitados».
+**Vista compartida (2026-09-15).** CM-11 y CM-12 no duplican código. Abren las pantallas de `INVENTARIOS/index.html` sin su menú (antes `Prototipo_GP.html`) (`?vista=comercial&usuario=…`). Las Solicitudes de Pedido y de Materiales, con el comprometido que dejan, se guardan en `localStorage` (`imperiotex.v9.solicitudes`). Así Logística y Comercial ven y editan los mismos documentos. Producción solo ve las aprobadas en PR-03. Los permisos nuevos son `ver_solicitud_pedido` y `crear_solicitud_materiales` (Vendedor y Supervisor comercial). En el listado GP-01 se quitó la columna «Artículos solicitados».
 
 Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen **PDF** (vista de impresión).
 
