@@ -1,5 +1,5 @@
-/* INVENTARIOS · GP-03 Alertas de stock y requerimientos de materia prima por línea */
-/* ===== GP-03 · Paneles automáticos: alertas de stock y requerimientos de MP ===== */
+/* INVENTARIOS · GI-23 Alertas de stock y requerimientos de materia prima por línea */
+/* ===== GI-23 · Paneles automáticos: alertas de stock y requerimientos de MP ===== */
 /* Umbrales mínimos por variante (maestro) */
 /* Mínimos por artículo y almacén: viven en GI-02, pestaña Planificación de Stock */
 const UMBRALES={"PT-0001":15,"PT-0002":10,"PT-0003":18};

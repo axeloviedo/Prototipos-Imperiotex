@@ -4,7 +4,7 @@ Prototipos funcionales de pantallas del ERP. Cada módulo es una carpeta con su 
 
 | Módulo | Entrada | Contenido |
 |---|---|---|
-| Inventarios (GI) | `INVENTARIOS/index.html` | Artículos, almacenes, existencias, Kardex, movimientos, **Solicitudes de Pedido**, solicitudes de materiales, GRE, listas de materiales y configuraciones |
+| Inventarios (GI) | `INVENTARIOS/index.html` | Artículos, almacenes, existencias, Kardex, movimientos, **Solicitudes de Fabricación**, solicitudes de materiales, GRE, listas de materiales y configuraciones |
 | Compras (CO) | `COMPRAS/index.html` | Proveedores, órdenes de compra, facturas, costos de destino, sugerido, reclamos y notas de crédito |
 | Producción | `PRODUCCION/index.html` | Órdenes de fabricación, **Recursos y Tipos de recurso**, costos |
 | Comercial (CM) | `COMERCIAL/index.html` | Cotización, orden de venta, venta, caja y devoluciones |
@@ -16,6 +16,11 @@ Sirve esta carpeta con un servidor local y entra a `http://localhost:8000`:
 ```bash
 python -m http.server 8000
 ```
+
+## Datos compartidos y reinicio
+
+- Las **Solicitudes de Fabricación** (GI-21/22/23, documentos SF-000001) y las **Solicitudes de Materiales** (GI-13) son las mismas en Inventarios, Compras y Comercial; Producción ve las aprobadas en PR-03. Viven en `localStorage` (`imperiotex.v9.solicitudes` y `imperiotex.v9.sf-produccion`).
+- **↺ Reiniciar todo el prototipo** (en cualquier módulo) borra todas las claves `imperiotex.` y todos los módulos vuelven a los datos de demo.
 
 ## Estructura de Inventarios y Compras
 

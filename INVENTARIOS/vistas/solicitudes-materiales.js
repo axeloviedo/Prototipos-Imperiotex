@@ -20,7 +20,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="sol-count"></span></div>
     </div>
-    <p class="hint">Cualquier área solicita <b>qué</b> necesita y <b>a dónde</b>. Logística revisa existencias y, <b>por cada línea</b>, define el propósito: <b>Compra</b> (se crea la Orden de Compra) o <b>Transferencia</b> (se crea la transferencia GI-11 desde el almacén de origen). <span class="warn" title="Aclaración">ℹ</span> Una Solicitud de Materiales no es una Solicitud de Pedido de Fabricación (GP).</p>
+    <p class="hint">Cualquier área solicita <b>qué</b> necesita y <b>a dónde</b>. Logística revisa existencias y, <b>por cada línea</b>, define el propósito: <b>Compra</b> (se crea la Orden de Compra) o <b>Transferencia</b> (se crea la transferencia GI-11 desde el almacén de origen). <span class="warn" title="Aclaración">ℹ</span> Una Solicitud de Materiales no es una Solicitud de Fabricación (GI-21).</p>
   </section>
 
   <!-- ==================================================== GI-13F · Solicitud (Crear / Ver) -->

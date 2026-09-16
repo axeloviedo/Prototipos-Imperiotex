@@ -7,7 +7,7 @@
 | Qué | Archivo |
 |---|---|
 | Inicio de los prototipos | `index.html` |
-| Inventarios (GI), con las Solicitudes de Pedido | `INVENTARIOS/index.html` |
+| Inventarios (GI), con las Solicitudes de Fabricación | `INVENTARIOS/index.html` |
 | Compras (CO) | `COMPRAS/index.html` |
 | Código común de Inventarios y Compras | `COMPARTIDO/` |
 | Producción, con Recursos y Tipos de recurso | `PRODUCCION/index.html` — diseño en `PRODUCCION/docs/00_DISENO_SOLUCION.md` |
@@ -55,6 +55,13 @@
 - Inventarios y Compras cargan los mismos archivos: ya no hay copias de las pantallas de GI dentro de CO ni de GP. Cuando las copias no coincidían, se tomó la versión del módulo dueño de la pantalla. La excepción es GI-13, que usa la versión de GP porque es la vista compartida con Comercial.
 - Las Solicitudes de Pedido y de Materiales (`localStorage` `imperiotex.v9.solicitudes`) ahora se comparten también con Compras.
 - La lista de materiales (GI-17) sigue tomando los recursos de un espejo del maestro de Producción (`RECURSOS_LDM` en `INVENTARIOS/js/modulos/listas-materiales.js`).
+
+## Solicitudes de Fabricación y mejoras de Producción (2026-09-16)
+
+- La **Solicitud de Pedido** pasa a llamarse **Solicitud de Fabricación**: documentos numerados **SF-000001** y pantallas **GI-21** (bandeja), **GI-22** (nueva) y **GI-23** (revisión) en Inventarios. Modales: GI-22b buscador de artículos, GI-23a V°B° de Logística, GI-23b aprobación de Gerencia, GI-23c rechazo, GI-23d solicitar modificación, GI-23e agregar material manual.
+- **Datos compartidos:** Logística y Comercial crean, editan y aprueban las mismas solicitudes; Producción (PR-03) solo ve las aprobadas y, al crear sus órdenes, la solicitud queda «Convertida en Orden» para todos. La demo es la misma en los tres módulos.
+- **Reinicio global:** «↺ Reiniciar todo el prototipo» (Inventarios, Compras, Producción y Comercial) borra todas las claves `imperiotex.` de `localStorage` y todos vuelven a la demo.
+- **Producción:** recurso sin *Responsable / operador*, unidad de consumo del maestro de unidades, **Costo Estándar** y **Cuenta Mayor** numérica; operarios sin sede y con cualquier recurso; se retiró PR-13 (el nombre de la referencia se edita desde PR-04); PR-05 permite crear solicitudes y marca como **⚙ Simular Logística** lo que en realidad hace Logística. Detalle en `PRODUCCION/docs/00_DISENO_SOLUCION.md` §3, §8.1–8.3.
 
 ## No incluido
 

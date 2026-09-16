@@ -1,5 +1,5 @@
-/* INVENTARIOS · GP-03 Solicitudes de materiales generadas, V°B° y decisiones con trazabilidad */
-/* ===== GP-03 · Ola 3: solicitudes de materiales generadas y bloqueo del V°B° ===== */
+/* INVENTARIOS · GI-23 Solicitudes de materiales generadas, V°B° y decisiones con trazabilidad */
+/* ===== GI-23 · Ola 3: solicitudes de materiales generadas y bloqueo del V°B° ===== */
 let SOL_SEQ=33, SOL_OC_SEQ=236;
 function spSolKeyDe(cod){
   if(!SP.scs)return null;
@@ -30,8 +30,8 @@ function generarSOLdesdeSP(){
   const lines=faltantes.map(m=>({cod:m.cod,nom:m.nom,u:m.u,qty:Math.round(Math.abs(m.dif)*100)/100,prop:"",origen:"",doc:""}));
   SOLS[k]={id:"SOL-0000"+SOL_SEQ,estado:"Pendiente",user:USUARIO_GP,freq:"2026-07-31",
    alm:(faltantes[0].alm||"SB-ALM-MPT · MP Telas"),
-   obs:"Déficit de materia prima de la Solicitud de Pedido "+SP.id+" ("+SP.lineas.length+" artículo(s), "+spTotal(SP)+" prendas). Destino de producción: "+(SP.almDestino||"—")+".",
-   nota:"Generada desde "+SP.id+" (GP-03): una sola solicitud multi-línea con "+lines.length+" material(es) en déficit.",
+   obs:"Déficit de materia prima de la Solicitud de Fabricación "+SP.id+" ("+SP.lineas.length+" artículo(s), "+spTotal(SP)+" prendas). Destino de producción: "+(SP.almDestino||"—")+".",
+   nota:"Generada desde "+SP.id+" (GI-23): una sola solicitud multi-línea con "+lines.length+" material(es) en déficit.",
    origenSP:SPkey, lines:lines};
   SOL_LISTA.unshift({k:k,freq:"31/07/2026",crea:"19/07/2026"});
   SP.scs=SP.scs||[];
@@ -77,7 +77,7 @@ function renderVBaviso(){
   }
 }
 
-/* ===== GP-03 · Ola 4: decisiones con trazabilidad ===== */
+/* ===== GI-23 · Ola 4: decisiones con trazabilidad ===== */
 const HOY_GP="19/07/2026";
 function spHistSet(a,d,e){
   const h=SP.hist.find(x=>x.a===a);
@@ -88,16 +88,16 @@ function preVB(){
      y las compras se gestionan en paralelo. Solo se avisa. */
   const pend=spBloqueoVB();
   if(pend.length)toast("Aviso: "+pend.length+" material(es) sin cobertura. Puede dar el V°B° igualmente: la fabricación arranca con lo disponible.");
-  openModal('m-gp03a');
+  openModal('m-gi23a');
 }
 function darVB(){
-  closeModal('m-gp03a');
+  closeModal('m-gi23a');
   SP.vb=true;
   spHistSet("V°B° Logística",HOY_GP+" 11:20 · Judith","ok");
   cerrarSiCompleto("V°B° de Logística registrado");
 }
 function aprobarSP(){
-  closeModal('m-gp03b');
+  closeModal('m-gi23b');
   SP.ger=true;
   spHistSet("Aprobación Gerencia",HOY_GP+" 15:40 · David","ok");
   cerrarSiCompleto("Aprobación de Gerencia registrada");
@@ -128,7 +128,7 @@ function cerrarSiCompleto(msg){
 function rechazarSP(){
   const m=document.getElementById('sp-motivo-rech').value.trim();
   if(!m){toast("El motivo del rechazo es obligatorio");return}
-  closeModal('m-gp03c');
+  closeModal('m-gi23c');
   SP.est="Rechazada"; SP.ger=false; SP.motivo=m;
   spHistSet("Aprobación Gerencia","Rechazada el "+HOY_GP+" · David","no");
   SP.hist.push({a:"Rechazo de Gerencia",d:HOY_GP+" 16:05 · David — Motivo: "+m,e:"no"});
@@ -139,7 +139,7 @@ function rechazarSP(){
 function devolverSP(){
   const c=document.getElementById('sp-coment-mod').value.trim();
   if(!c){toast("El comentario para Comercial es obligatorio");return}
-  closeModal('m-gp03d');
+  closeModal('m-gi23d');
   SP.est="Borrador"; SP.vb=false; SP.ger=false; SP.devuelta=c;
   spHistSet("V°B° Logística","Pendiente · Judith","pend");
   spHistSet("Aprobación Gerencia","Pendiente · David","pend");

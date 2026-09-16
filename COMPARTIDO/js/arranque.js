@@ -38,7 +38,7 @@ function arrancar(inicio){
   renderCCD();
   renderSugerido();
   /* en la vista compartida de Comercial solo se abren sus pantallas */
-  go(typeof VISTA_CM!=='undefined' && VISTA_CM ? 'gp01' : inicio);
+  go(typeof VISTA_CM!=='undefined' && VISTA_CM ? 'gi21' : inicio);
   aplicarHash();
   window.addEventListener('hashchange',aplicarHash);
 }

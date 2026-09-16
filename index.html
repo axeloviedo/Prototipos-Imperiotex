@@ -69,7 +69,7 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
     <br><br>
     <b>2. Regularizar inventario = Ingreso o Salida.</b> Con motivo y observación, sin tipo de movimiento propio ni visto bueno.
     <br><br>
-    <b>3. Solicitudes de Pedido en Inventarios y Recursos en Producción.</b> Ya no hay un módulo Gestión de Pedido aparte: Logística planifica las <b>Solicitudes de Pedido</b> desde Inventarios y el maestro de <b>Recursos</b> y sus tipos vive en Producción, que ejecuta las <b>Órdenes de Fabricación</b> agrupadas por <b>N° Referencia</b>, con emisión y recibo directos. La tercerización se decide en la propia orden y el servicio se compra con una OC de servicio normal.
+    <b>3. Solicitudes de Fabricación en Inventarios y Recursos en Producción.</b> Ya no hay un módulo Gestión de Pedido aparte: Logística planifica las <b>Solicitudes de Fabricación</b> desde Inventarios y el maestro de <b>Recursos</b> y sus tipos vive en Producción, que ejecuta las <b>Órdenes de Fabricación</b> agrupadas por <b>N° Referencia</b>, con emisión y recibo directos. La tercerización se decide en la propia orden y el servicio se compra con una OC de servicio normal.
   </div>
 
   <h2>Prototipados</h2>
@@ -78,7 +78,7 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
       <div class="ic" style="background:var(--gi)">▦</div>
       <h3>Inventarios</h3>
       <div class="code">GI · 02_BPD_GESTION_DE_INVENTARIO + 01_BPD_GESTION_PEDIDO</div>
-      <p>Maestro de artículos con atributos y duplicado, maestros de unidades y conversiones, listas de materiales, almacenes, existencias, Kardex, movimientos, solicitudes de pedido (alertas de stock, requerimientos de materia prima y decisiones con trazabilidad), solicitudes de materiales, guías de remisión y configuración general.</p>
+      <p>Maestro de artículos con atributos y duplicado, maestros de unidades y conversiones, listas de materiales, almacenes, existencias, Kardex, movimientos, solicitudes de fabricación (alertas de stock, requerimientos de materia prima y decisiones con trazabilidad), solicitudes de materiales, guías de remisión y configuración general.</p>
       <div class="meta"><span class="pill ok">24 pantallas + 9 maestros</span><span class="pill">Logística · Almacén · Comercial</span></div>
     </a>
 
@@ -94,7 +94,7 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
       <div class="ic" style="background:#7C3AED">⚙</div>
       <h3>Producción</h3>
       <div class="code">PRODUCCION · ÓRDENES DE FABRICACIÓN</div>
-      <p>Órdenes de fabricación agrupadas por N° Referencia, desde las solicitudes de pedido aprobadas en Inventarios o creadas en planta. Maestro de recursos y sus tipos. Emisión y recibo de producción directos, solicitudes de materiales por faltantes, tercerización en la propia orden y costo real contrastado con OC, factura y nota de crédito.</p>
+      <p>Órdenes de fabricación agrupadas por N° Referencia, desde las solicitudes de fabricación aprobadas en Inventarios o creadas en planta. Maestro de recursos y sus tipos. Emisión y recibo de producción directos, solicitudes de materiales por faltantes, tercerización en la propia orden y costo real contrastado con OC, factura y nota de crédito.</p>
       <div class="meta"><span class="pill ok">10 opciones de menú + ficha de OF</span><span class="pill">Producción · Logística</span></div>
     </a>
 
@@ -117,8 +117,8 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
   <div class="flow">
     <div class="frow"><div class="n">1</div>
       <div class="t">El pedido comercial enciende la compra
-        <small>Solicitud de Pedido <span class="chip c-gi">GI</span> → déficit de materia prima → Solicitud de Materiales <span class="chip c-gi">GI</span> → Orden de Compra <span class="chip c-co">CO</span></small></div>
-      <a class="btn" href="INVENTARIOS/index.html#gp01">Abrir en GI</a></div>
+        <small>Solicitud de Fabricación <span class="chip c-gi">GI</span> → déficit de materia prima → Solicitud de Materiales <span class="chip c-gi">GI</span> → Orden de Compra <span class="chip c-co">CO</span></small></div>
+      <a class="btn" href="INVENTARIOS/index.html#gi21">Abrir en GI</a></div>
 
     <div class="frow"><div class="n">2</div>
       <div class="t">La compra llega al almacén
@@ -132,7 +132,7 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
 
     <div class="frow"><div class="n">4</div>
       <div class="t">La solicitud aprobada pasa a fabricación
-        <small>Solicitud de Pedido aprobada <span class="chip c-gi">GI</span> → Órdenes de Fabricación con su N° Referencia <span class="chip c-pr">Producción</span> → emisión y recibo de producción</small></div>
+        <small>Solicitud de Fabricación aprobada <span class="chip c-gi">GI</span> → Órdenes de Fabricación con su N° Referencia <span class="chip c-pr">Producción</span> → emisión y recibo de producción</small></div>
       <a class="btn" href="PRODUCCION/index.html#pr03">Abrir en Producción</a></div>
 
     <div class="frow"><div class="n">5</div>
@@ -148,7 +148,7 @@ footer{margin-top:34px;font-size:11.5px;color:var(--texto-sec);text-align:center
 
   <div class="nota">
     <b>Cómo leer estos prototipos.</b> Cada módulo es una carpeta con su <code>index.html</code>, y su código está repartido en archivos pequeños por pantalla (<code>vistas/</code> para el HTML y <code>js/</code> para la lógica), para que varias personas trabajen a la vez sin pisarse. Un módulo carga también las pantallas de los otros que su flujo necesita, sin copiarlas: por ejemplo, desde Inventarios se aprueba una Solicitud de Materiales y se crea su Orden de Compra con los mismos archivos de Compras. Por eso el maestro de artículos y sus configuraciones se ven igual desde Inventarios y Compras.
-    <br><br>Conviene abrirlos desde un servidor local (por ejemplo <code>python -m http.server</code> en esta carpeta). Las Solicitudes de Pedido y de Materiales se comparten entre Inventarios, Compras y Comercial; lo demás que se registra en un módulo no viaja a los otros: son demostraciones independientes que arrancan siempre con los mismos datos de ejemplo. Los campos marcados con <b>⚠</b> son supuestos a confirmar con el área.
+    <br><br>Conviene abrirlos desde un servidor local (por ejemplo <code>python -m http.server</code> en esta carpeta). Las Solicitudes de Fabricación y de Materiales se comparten entre Inventarios, Compras y Comercial; lo demás que se registra en un módulo no viaja a los otros: son demostraciones independientes que arrancan siempre con los mismos datos de ejemplo. Los campos marcados con <b>⚠</b> son supuestos a confirmar con el área.
   </div>
 
   <footer>Prototipos funcionales · IMPERIOTEX y CATINNA NOW · Diseño de pantallas sobre la arquitectura de ERPNext</footer>

@@ -1,5 +1,5 @@
-/* PRODUCCION · Maestros de Producción: PR-10 Listas de materiales · PR-11 Recursos (ficha y operarios) ·
-   PR-12 Tipos de recurso · PR-13 Configuración */
+/* PRODUCCION · Maestros de Producción: PR-10 Listas de materiales · PR-11 Recursos (ficha y operarios) · PR-12 Tipos de recurso.
+   No hay pantalla de configuración: el nombre de la referencia es una etiqueta que se edita desde PR-04. */
 const PR10 = {
   art: 'PT-0001',
   render() {
@@ -51,7 +51,7 @@ const PR11 = {
         UI.campo('Tipo de recurso', '<select onchange="PR11.f.tipo=this.value;PR11.pintar()">' + UI.opts(M.tiposRecurso().map(x => x.nom), f.tipo, 'Todos') + '</select>') +
         UI.campo('Estado', '<select onchange="PR11.f.est=this.value;PR11.pintar()">' + UI.opts(PR11.ESTADOS, f.est, 'Todos') + '</select>') + '</div></div>' +
         '<div id="pr11-body"></div>' +
-        '<p class="hint">No mueven almacén: su costo entra a la orden con el costo por unidad de consumo vigente al emitir o recibir. Un servicio de terceros se contrasta con la OC o la factura en la pestaña Costo de la orden.</p>'
+        '<p class="hint">No mueven almacén: su costo entra a la orden con el costo estándar vigente al emitir o recibir. Un servicio de terceros se contrasta con la OC o la factura en la pestaña Costo de la orden.</p>'
         : PR11.operarios());
   },
   despues() { PR11.pintar(); },
@@ -59,25 +59,25 @@ const PR11 = {
   lista() {
     const f = PR11.f, q = f.q.trim().toLowerCase();
     const filas = M.recursos().filter(r => (!q || r.cod.toLowerCase().includes(q) || r.nom.toLowerCase().includes(q)) && (!f.tipo || r.tipo === f.tipo) && (!f.est || (f.est === 'Activo') === (r.activo !== false)))
-      .map(r => '<tr><td><b>' + r.cod + '</b></td><td>' + UI.esc(r.nom) + (r.resp ? '<br><span class="mini">' + UI.esc(r.resp) + '</span>' : '') + '</td><td class="mini">' + UI.esc(r.tipo) + '</td><td>' + UI.esc(r.u) + '</td>' +
-        '<td class="num">' + UI.n(r.costo, 2) + '</td><td>' + PR11.estado(r) + '</td><td><button class="btn btn-secondary btn-sm" onclick="App.go(\'pr11f\',{id:\'' + r.cod + '\'})">Editar</button></td></tr>');
-    return UI.tabla([['Código', '', '100px'], 'Nombre', 'Tipo', 'Unidad de consumo', ['Costo por unidad (S/.)', 'num'], 'Estado', ['Acciones', '', '80px']], filas, { vacio: 'No hay recursos con esos filtros' });
+      .map(r => '<tr><td><b>' + r.cod + '</b></td><td>' + UI.esc(r.nom) + '</td><td class="mini">' + UI.esc(r.tipo) + '</td><td>' + UI.esc(r.u) + '</td>' +
+        '<td class="num">' + UI.n(r.costo, 2) + '</td><td>' + UI.esc(r.cuenta) + '</td><td>' + PR11.estado(r) + '</td><td><button class="btn btn-secondary btn-sm" onclick="App.go(\'pr11f\',{id:\'' + r.cod + '\'})">Editar</button></td></tr>');
+    return UI.tabla([['Código', '', '100px'], 'Nombre', 'Tipo', 'Unidad de consumo', ['Costo estándar (S/.)', 'num'], 'Cuenta mayor', 'Estado', ['Acciones', '', '80px']], filas, { vacio: 'No hay recursos con esos filtros' });
   },
-  /* d: {nom, tipo, resp, activo, u, costo, cuenta}; sin cod crea el recurso con el siguiente código */
+  /* d: {nom, tipo, activo, u, costo, cuenta}; u del maestro de unidades, costo = costo estándar, cuenta = cuenta mayor (solo dígitos); sin cod crea el recurso */
   guardarRecurso(cod, d) {
     const lista = Store.d.recursos, R = cod ? lista.find(r => r.cod === cod) : null, nom = String(d.nom || '').trim(), costo = parseFloat(d.costo);
     if (cod && !R) throw new Error('No existe el recurso ' + cod);
     if (!nom) throw new Error('Indique el nombre del recurso');
     if (lista.some(r => r !== R && r.nom.trim().toLowerCase() === nom.toLowerCase())) throw new Error('Ya existe un recurso llamado ' + nom);
     if (!M.tipoRec(d.tipo)) throw new Error('Elija el tipo de recurso');
-    if (M.UNIDADES_RECURSO.indexOf(d.u) < 0) throw new Error('Elija la unidad de consumo');
-    if (d.costo === '' || d.costo == null || !(costo >= 0)) throw new Error('Indique el costo por unidad de consumo (0 o más)');
-    if (!M.cuenta(d.cuenta)) throw new Error('Elija la cuenta contable de costo');
+    if (!M.um(d.u)) throw new Error('Elija la unidad de consumo');
+    if (d.costo === '' || d.costo == null || !(costo >= 0)) throw new Error('Indique el costo estándar (0 o más)');
+    const cuenta = String(d.cuenta == null ? '' : d.cuenta).trim();
+    if (!/^\d+$/.test(cuenta)) throw new Error('Indique la cuenta mayor (solo números)');
     if (R) {
-      if (PR11.esHumano(R) && d.tipo !== R.tipo && Store.d.operarios.some(o => o.rec === R.cod)) throw new Error('Tiene operarios asignados: páselos a otro recurso antes de cambiar el tipo');
       if (d.u !== R.u && Store.d.ofs.some(o => o.recs.some(x => x.cod === R.cod))) throw new Error('Ya se usa en órdenes de fabricación con la unidad ' + R.u + ': no se puede cambiar');
     }
-    const datos = { nom, tipo: d.tipo, resp: String(d.resp || '').trim(), activo: d.activo !== false, u: d.u, costo: UI.r4(costo), cuenta: d.cuenta };
+    const datos = { nom, tipo: d.tipo, activo: d.activo !== false, u: d.u, costo: UI.r4(costo), cuenta };
     if (R) return Object.assign(R, datos);
     const nuevo = Object.assign({ cod: PR11.sigCod(lista, 'REC-', 4) }, datos);
     lista.push(nuevo);
@@ -87,49 +87,47 @@ const PR11 = {
   operarios() {
     const filas = Store.d.operarios.map((o, i) => {
       const R = M.rec(o.rec) || {};
-      return '<tr><td><b>' + o.cod + '</b></td><td>' + UI.esc(o.nom) + '</td><td class="mini">' + o.rec + ' · ' + UI.esc(R.nom || '') + '</td><td>' + UI.esc(o.sede) + '</td>' +
+      return '<tr><td><b>' + o.cod + '</b></td><td>' + UI.esc(o.nom) + '</td><td class="mini">' + o.rec + ' · ' + UI.esc(R.nom || '') + '</td>' +
         '<td class="num">' + UI.n(PR11.horasOpe(o.cod), 1) + '</td><td>' + UI.badge(o.activo ? 'Activo' : 'Inactivo', o.activo ? 'var(--confirmado)' : 'var(--borrador)') + '</td>' +
         '<td><button class="btn-link" onclick="PR11.editarOpe(' + i + ')">Editar</button> <button class="btn-link" onclick="PR11.alternar(' + i + ')">' + (o.activo ? 'Desactivar' : 'Activar') + '</button></td></tr>';
     });
-    return UI.tabla(['Código', 'Nombre', 'Recurso que ocupa', 'Sede', ['Horas registradas', 'num'], 'Estado', ''], filas) +
-      '<p class="hint">Cada operario ocupa un recurso de tipo RECURSO HUMANO: en la emisión se registra como detalle del recurso y sus horas se valorizan con el costo de ese recurso.</p>';
+    return UI.tabla(['Código', 'Nombre', 'Recurso que ocupa', ['Horas registradas', 'num'], 'Estado', ''], filas) +
+      '<p class="hint">Cada operario ocupa uno de los recursos creados, de cualquier tipo: en la emisión se registra como detalle de ese recurso y sus horas se valorizan con su costo estándar.</p>';
   },
   editarOpe(i) {
-    const o = i >= 0 ? Store.d.operarios[i] : { nom: '', rec: (M.recActivos(PR11.esHumano)[0] || {}).cod || '', sede: M.SEDES_OP[0] };
-    const recs = M.recursos().filter(r => PR11.esHumano(r) && (r.activo !== false || r.cod === o.rec));
-    if (!recs.length) { UI.toast('Primero cree un recurso de tipo RECURSO HUMANO'); return; }
+    const o = i >= 0 ? Store.d.operarios[i] : { nom: '', rec: '' };
+    const recs = M.recursos().filter(r => r.activo !== false || r.cod === o.rec);
+    if (!recs.length) { UI.toast('Primero cree un recurso'); return; }
     UI.modal({
       titulo: i >= 0 ? 'Editar ' + o.cod : 'Nuevo operario',
       cuerpo: '<div class="formgrid">' + UI.campo('Nombre', '<input id="op-nom" value="' + UI.esc(o.nom) + '">', { req: true, full: true }) +
-        UI.campo('Recurso que ocupa', '<select id="op-rec">' + UI.opts(recs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom })), o.rec) + '</select>', { req: true }) +
-        UI.campo('Sede', '<select id="op-sede">' + UI.opts(M.SEDES_OP, o.sede) + '</select>') + '</div>',
+        UI.campo('Recurso que ocupa', '<select id="op-rec">' + UI.opts(recs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom + ' (' + r.tipo + ')' })), o.rec, '— Seleccione —') + '</select>', { req: true, full: true }) + '</div>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PR11.guardarOpe(' + i + ')">Guardar</button>'
     });
   },
-  /* d: {nom, rec, sede}; i < 0 crea el operario */
+  /* d: {nom, rec}; i < 0 crea el operario */
   guardarOperario(i, d) {
     const nom = String(d.nom || '').trim(), lista = Store.d.operarios;
     if (!nom) throw new Error('Indique el nombre');
-    if (!PR11.esHumano(M.rec(d.rec))) throw new Error('El operario debe ocupar un recurso de tipo RECURSO HUMANO');
-    const datos = { nom, rec: d.rec, sede: d.sede };
+    if (!M.rec(d.rec)) throw new Error('Elija el recurso que ocupa');
+    const datos = { nom, rec: d.rec };
     if (i >= 0) return Object.assign(lista[i], datos);
     const o = Object.assign({ cod: PR11.sigCod(lista, 'OPE-', 3), activo: true }, datos);
     lista.push(o);
     return o;
   },
   guardarOpe(i) {
-    if (App.accion(() => PR11.guardarOperario(i, { nom: UI.v('op-nom'), rec: UI.v('op-rec'), sede: UI.v('op-sede') }), 'Operario guardado')) { UI.cerrar(); App.refrescar(); }
+    if (App.accion(() => PR11.guardarOperario(i, { nom: UI.v('op-nom'), rec: UI.v('op-rec') }), 'Operario guardado')) { UI.cerrar(); App.refrescar(); }
   },
   alternar(i) { const o = Store.d.operarios[i]; o.activo = !o.activo; Store.guardar(); App.refrescar(); }
 };
-M.SEDES_OP = [...new Set(M.ALMACENES.map(a => a.sede).filter(s => s !== 'Virtual'))];
 App.pantalla('pr11', { titulo: 'Recursos', render: PR11.render, despues: PR11.despues });
 
 /* ---------- Ficha del recurso ---------- */
 const PR11F = {
   render(p) {
     const nuevo = !p.id || p.id === 'nuevo';
-    const r = nuevo ? { cod: PR11.sigCod(M.recursos(), 'REC-', 4), nom: '', tipo: '', resp: '', activo: true, u: 'HORA', costo: '', cuenta: '' } : M.rec(p.id);
+    const r = nuevo ? { cod: PR11.sigCod(M.recursos(), 'REC-', 4), nom: '', tipo: '', activo: true, u: 'HORA', costo: '', cuenta: '' } : M.rec(p.id);
     if (!r) return UI.aviso('No existe el recurso ' + UI.esc(p.id), 'err');
     return '<div class="screen-head"><h1>' + (nuevo ? 'Nuevo recurso' : r.cod + ' · ' + UI.esc(r.nom)) + '</h1>' + (nuevo ? '' : PR11.estado(r)) + '<div class="spacer"></div>' +
       '<button class="btn btn-secondary" onclick="App.go(\'pr11\')">Volver</button><button class="btn btn-primary" onclick="PR11F.guardar(' + (nuevo ? 'null' : '\'' + r.cod + '\'') + ')">Guardar</button></div>' +
@@ -137,11 +135,10 @@ const PR11F = {
       UI.dato('Código', '<b>' + r.cod + '</b>' + (nuevo ? ' <span class="mini">se asigna al guardar</span>' : '')) +
       UI.campo('Nombre', '<input id="rf-nom" value="' + UI.esc(r.nom) + '">', { req: true, estilo: 'grid-column:span 2' }) +
       UI.campo('Tipo de recurso', '<select id="rf-tipo">' + UI.opts(M.tiposRecurso().map(t => t.nom), r.tipo, nuevo ? '— Seleccione —' : null) + '</select>', { req: true, hint: 'RECURSO HUMANO: se emite a mano y lleva operarios · SERVICIO DE TERCEROS: se compra al proveedor' }) +
-      UI.campo('Responsable / operador', '<input id="rf-resp" value="' + UI.esc(r.resp) + '" placeholder="Opcional">') +
       UI.campo('Estado', '<select id="rf-est">' + UI.opts(PR11.ESTADOS, r.activo !== false ? 'Activo' : 'Inactivo') + '</select>', { hint: 'Un recurso inactivo no se ofrece en órdenes nuevas' }) +
-      UI.campo('Unidad de consumo', '<select id="rf-u">' + UI.opts(M.UNIDADES_RECURSO, r.u) + '</select>', { req: true }) +
-      UI.campo('Costo por unidad de consumo (S/.)', '<input id="rf-costo" type="number" min="0" step="any" value="' + UI.esc(r.costo) + '">', { req: true }) +
-      UI.campo('Cuenta contable de costo', '<select id="rf-cta">' + UI.opts(M.CUENTAS_COSTO.map(c => ({ v: c.cod, t: c.cod + ' · ' + c.nom })), r.cuenta, '— Seleccione —') + '</select>', { req: true }) +
+      UI.campo('Unidad de consumo', '<select id="rf-u">' + UI.opts(M.UNIDADES.map(u => ({ v: u.cod, t: u.cod + ' · ' + u.nom })), r.u) + '</select>', { req: true, hint: 'Del maestro de Unidades de Medida (Inventarios)' }) +
+      UI.campo('Costo Estándar (S/.)', '<input id="rf-costo" type="number" min="0" step="any" value="' + UI.esc(r.costo) + '">', { req: true, hint: 'Por unidad de consumo' }) +
+      UI.campo('Cuenta Mayor', '<input id="rf-cta" type="number" min="0" step="1" inputmode="numeric" value="' + UI.esc(r.cuenta) + '" placeholder="Ej. 921101">', { req: true }) +
       '</div></div>' + (nuevo ? '' : PR11F.uso(r));
   },
   /* solo lectura: órdenes que llevan el recurso, con lo consumido y el costo que se les imputó */
@@ -158,12 +155,12 @@ const PR11F = {
       UI.kpis([{ l: 'Órdenes que lo usan', v: filas.length }, { l: 'Consumido', v: UI.q(tot.real, r.u), s: 'planificado ' + UI.q(tot.plan, r.u) }, { l: 'Costo imputado', v: UI.s(tot.costo), color: 'var(--prp)' }]) +
       UI.tabla(['Orden', Prod.nombreRef(), 'Produce', 'Estado', ['Planificado', 'num'], ['Consumido', 'num'], ['Costo imputado', 'num']], filas,
         { vacio: 'Ninguna orden de fabricación usa este recurso', foot: filas.length ? '<tr><td colspan="4" class="num"><b>Total</b></td><td class="num"><b>' + UI.q(tot.plan, r.u) + '</b></td><td class="num"><b>' + UI.q(tot.real, r.u) + '</b></td><td class="num"><b>' + UI.s(tot.costo) + '</b></td></tr>' : '' }) +
-      (ops.length ? '<div class="sec">Operarios que ocupan este recurso</div>' + UI.tabla(['Código', 'Nombre', 'Sede', ['Horas registradas', 'num'], 'Estado'], ops.map(o =>
-        '<tr><td>' + o.cod + '</td><td>' + UI.esc(o.nom) + '</td><td>' + UI.esc(o.sede) + '</td><td class="num">' + UI.n(PR11.horasOpe(o.cod), 1) + '</td><td>' + UI.badge(o.activo ? 'Activo' : 'Inactivo', o.activo ? 'var(--confirmado)' : 'var(--borrador)') + '</td></tr>')) : '') +
-      '<p class="hint">El costo imputado se valorizó con el costo por unidad vigente al emitir o recibir: cambiar el costo aquí no recalcula lo ya registrado.</p>';
+      (ops.length ? '<div class="sec">Operarios que ocupan este recurso</div>' + UI.tabla(['Código', 'Nombre', ['Horas registradas', 'num'], 'Estado'], ops.map(o =>
+        '<tr><td>' + o.cod + '</td><td>' + UI.esc(o.nom) + '</td><td class="num">' + UI.n(PR11.horasOpe(o.cod), 1) + '</td><td>' + UI.badge(o.activo ? 'Activo' : 'Inactivo', o.activo ? 'var(--confirmado)' : 'var(--borrador)') + '</td></tr>')) : '') +
+      '<p class="hint">El costo imputado se valorizó con el costo estándar vigente al emitir o recibir: cambiarlo aquí no recalcula lo ya registrado.</p>';
   },
   guardar(cod) {
-    const r = App.accion(() => PR11.guardarRecurso(cod, { nom: UI.v('rf-nom'), tipo: UI.v('rf-tipo'), resp: UI.v('rf-resp'), activo: UI.v('rf-est') !== 'Inactivo', u: UI.v('rf-u'), costo: UI.v('rf-costo'), cuenta: UI.v('rf-cta') }),
+    const r = App.accion(() => PR11.guardarRecurso(cod, { nom: UI.v('rf-nom'), tipo: UI.v('rf-tipo'), activo: UI.v('rf-est') !== 'Inactivo', u: UI.v('rf-u'), costo: UI.v('rf-costo'), cuenta: UI.v('rf-cta') }),
       x => 'Recurso ' + x.cod + ' guardado');
     if (r) App.go('pr11f', { id: r.cod });
   }
@@ -233,19 +230,3 @@ const PR12 = {
   }
 };
 App.pantalla('pr12', { titulo: 'Tipos de recurso', render: PR12.render });
-
-const PR13 = {
-  render() {
-    const cfg = Store.d.cfg;
-    return '<div class="screen-head"><h1>Configuración</h1><span class="code">PR-13</span></div>' +
-      '<div class="card"><div class="formgrid">' +
-      UI.campo('Nombre de la referencia', '<input id="cfg-ref" value="' + UI.esc(cfg.nombreRef) + '">', { hint: 'Cómo llaman al número que agrupa las órdenes: por ejemplo N° Referencia' }) +
-      UI.campo('Almacén donde entra lo producido (por defecto)', '<select id="cfg-alm">' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), cfg.almRecibo) + '</select>', { hint: 'Si la lista de materiales no indica otro' }) +
-      '</div><button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="PR13.guardar()">Guardar</button></div>';
-  },
-  guardar() {
-    const ref = UI.v('cfg-ref').trim();
-    if (App.accion(() => { if (!ref) throw new Error('Indique el nombre'); Object.assign(Store.d.cfg, { nombreRef: ref, almRecibo: UI.v('cfg-alm') }); }, 'Configuración guardada')) { App.nav(); App.refrescar(); }
-  }
-};
-App.pantalla('pr13', { titulo: 'Configuración', render: PR13.render });

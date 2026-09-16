@@ -1,4 +1,4 @@
-/* INVENTARIOS · pantallas del módulo (GI-xx, maestros y Solicitudes de Pedido GP-xx) */
+/* INVENTARIOS · pantallas del módulo (GI-xx, maestros y Solicitudes de Fabricación GI-21/22/23) */
 Object.assign(BC,{
  gi19:"Configuraciones / <b>Series de Documentos</b> · GI-19",
  gi00:"<b>Panel de Logística</b> · GI-00",
@@ -32,8 +32,8 @@ Object.assign(BC,{
  matr:"Configuraciones / <b>Atributos</b>",
  mbc:"Configuraciones / <b>Tipos de Código de Barra</b>",
  msede:"Configuraciones / <b>Sedes</b>",
- gp01:"Pedidos / <b>Solicitudes de Pedido</b> · GP-01",
- gp03:"Pedidos / Solicitudes / <b>Solicitud de Pedido</b> · GP-03"
+ gi21:"<b>Solicitudes de Fabricación</b> · GI-21",
+ gi23:"Solicitudes / <b>Solicitud de Fabricación</b> · GI-23"
 });
-Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi07",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",gp01:"gp01",gp03:"gp01"});
+Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi07",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",gi21:"gi21",gi23:"gi21"});
 Object.assign(MST_KEYS,{mtipos:"tipos",mcat:"cat",msub:"sub",mum:"um",mconv:"conv",matr:"atr",mbc:"bc",msede:"sede"});

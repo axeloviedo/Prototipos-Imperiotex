@@ -150,7 +150,7 @@ table.grid tr.clickable{cursor:pointer}
 .dropmenu .op small{display:block;color:var(--texto-sec);font-size:11px;margin-top:2px}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--texto);color:#fff;padding:11px 17px;border-radius:8px;font-size:13px;z-index:200;display:none;box-shadow:0 8px 22px rgba(0,0,0,.25)}
 .toast.show{display:block}
-/* --- Compras y Solicitudes de Pedido --- */
+/* --- Compras y Solicitudes de Fabricación --- */
 :root{
   --prp:#2563EB; --oc-recibir:#0E7490; --oc-pagar:#6D28D9; --impagado:#C2410C; --reclamo-reg:#64748B;
   --opt-compras:#0891B2;
@@ -164,6 +164,6 @@ table.grid tr.clickable{cursor:pointer}
 .tabbtn{background:none;border:none;border-bottom:3px solid transparent;padding:12px 14px;font-size:13px;color:var(--texto-sec);cursor:pointer;font-family:inherit}
 .tabbtn.active{color:var(--primario);border-bottom-color:var(--primario);font-weight:600}
 .tabbtn:hover{color:var(--primario)}
-/* Vista compartida: Comercial abre GP-01 y GI-13 con ?vista=comercial (sin menú ni barra propios) */
+/* Vista compartida: Comercial abre GI-21 y GI-13 con ?vista=comercial (sin menú ni barra propios) */
 body.vista-cm #sidebar,body.vista-cm #topbar,body.vista-cm #bellDrop{display:none!important}
 body.vista-cm #content{padding:4px 6px}

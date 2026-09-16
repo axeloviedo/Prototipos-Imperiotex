@@ -1,42 +1,42 @@
-/* INVENTARIOS · GP-01/02/03 Solicitudes de Pedido: bandeja, alta, revisión y buscador de artículos */
-/* ===== GP-02 · Alta de solicitud sobre artículos concretos ===== */
-let SP_SEQ=8, NSP=null, ART_CTX="rev";
+/* INVENTARIOS · GI-21/22/23 Solicitudes de Fabricación: bandeja, alta, revisión y buscador de artículos */
+/* ===== GI-22 · Alta de solicitud sobre artículos concretos ===== */
+let SP_SEQ=9, NSP=null, ART_CTX="rev";
 function nuevaSP(){
-  NSP={id:"SP-000"+SP_SEQ,lineas:[]};
+  NSP={id:"SF-"+String(SP_SEQ).padStart(6,"0"),lineas:[]};
   document.getElementById('n-sp-id').value=NSP.id;
   document.getElementById('n-sp-mes').value=""; document.getElementById('n-sp-obs').value="";
   document.getElementById('n-sp-almdest').innerHTML='<option value="">Seleccionar…</option>'+ALMACENES.map(a=>'<option value="'+a.cod+' · '+a.nom+'">'+a.cod+' · '+a.nom+'</option>').join('');
   document.getElementById('n-sp-solic').value=USUARIO_GP;
-  renderNSPitems(); go('gp02');
+  renderNSPitems(); go('gi22');
 }
 function ctxSP(){return ART_CTX==="nuevo"?NSP:SP}
 
-/* --- Buscador de artículos (GP-02b) --- */
+/* --- Buscador de artículos (GI-22b) --- */
 function abrirBuscadorArt(ctx){
   ART_CTX=ctx;
   if(ctx==="rev" && !(SP.est==="Borrador"||SP.est==="Pendiente Aprobar")){toast("El detalle solo se edita en Borrador o Pendiente Aprobar");return}
   const cats=[...new Set(artTerminados().map(a=>a.c).filter(Boolean))];
-  document.getElementById('gp02b-q').value="";
-  document.getElementById('gp02b-cat').innerHTML='<option value="">Todas</option>'+cats.map(c=>'<option>'+c+'</option>').join('');
+  document.getElementById('gi22b-q').value="";
+  document.getElementById('gi22b-cat').innerHTML='<option value="">Todas</option>'+cats.map(c=>'<option>'+c+'</option>').join('');
   const cols=catalogoValores("Color"), tallas=catalogoValores("Talla");
-  document.getElementById('gp02b-color').innerHTML='<option value="">Todos</option>'+cols.map(c=>'<option>'+c+'</option>').join('');
-  document.getElementById('gp02b-talla').innerHTML='<option value="">Todas</option>'+tallas.map(t=>'<option>'+t+'</option>').join('');
-  renderBuscadorArt(); openModal('m-gp02b');
+  document.getElementById('gi22b-color').innerHTML='<option value="">Todos</option>'+cols.map(c=>'<option>'+c+'</option>').join('');
+  document.getElementById('gi22b-talla').innerHTML='<option value="">Todas</option>'+tallas.map(t=>'<option>'+t+'</option>').join('');
+  renderBuscadorArt(); openModal('m-gi22b');
 }
 function renderBuscadorArt(){
-  const q=(document.getElementById('gp02b-q').value||"").toLowerCase();
-  const cat=document.getElementById('gp02b-cat').value;
-  const col=document.getElementById('gp02b-color').value;
-  const tal=document.getElementById('gp02b-talla').value;
+  const q=(document.getElementById('gi22b-q').value||"").toLowerCase();
+  const cat=document.getElementById('gi22b-cat').value;
+  const col=document.getElementById('gi22b-color').value;
+  const tal=document.getElementById('gi22b-talla').value;
   const d=ctxSP();
-  const tb=document.getElementById('gp02b-body'); tb.innerHTML="";
+  const tb=document.getElementById('gi22b-body'); tb.innerHTML="";
   artTerminados().forEach(a=>{
     if(cat && a.c!==cat)return;
     if(col && attrDe(a,"Color")!==col)return;
     if(tal && attrDe(a,"Talla")!==tal)return;
     if(q && !(a.id.toLowerCase().includes(q)||sinTildes(a.n).includes(sinTildes(q))))return;
     const ya=d.lineas.some(l=>l.art===a.id);
-    tb.innerHTML+='<tr><td style="text-align:center">'+(ya?'<span class="hint">✓</span>':'<input type="checkbox" class="gp02b-chk" value="'+a.id+'">')+'</td>'+
+    tb.innerHTML+='<tr><td style="text-align:center">'+(ya?'<span class="hint">✓</span>':'<input type="checkbox" class="gi22b-chk" value="'+a.id+'">')+'</td>'+
      '<td>'+a.id+'</td><td>'+a.n+(ya?' <span class="hint">(ya en el detalle)</span>':'')+'</td>'+
      '<td>'+(attrDe(a,"Color")||'<span class="hint">-</span>')+'</td><td>'+(attrDe(a,"Talla")||'<span class="hint">-</span>')+'</td><td>'+a.u+'</td></tr>';
   });
@@ -44,7 +44,7 @@ function renderBuscadorArt(){
 }
 function addArtsSeleccionados(){
   const d=ctxSP();
-  const sel=[...document.querySelectorAll('.gp02b-chk:checked')].map(x=>x.value);
+  const sel=[...document.querySelectorAll('.gi22b-chk:checked')].map(x=>x.value);
   if(!sel.length){toast("Marque al menos un artículo");return}
   sel.forEach(cod=>{
     const a=artDe(cod);
@@ -96,7 +96,7 @@ function guardarSP(enviar){
   toast(SPS[k].id+(enviar?" enviada a revisión: los paneles de stock y materia prima ya están calculados":" guardada como Borrador"));
 }
 
-/* ===== GP-01/GP-03 · Solicitudes de Pedido de Fabricación ===== */
+/* ===== GI-21/GI-23 · Solicitudes de Fabricación ===== */
 const SP_EST={"Borrador":"var(--borrador)","Pendiente Aprobar":"var(--pendiente)","Aprobada":"var(--confirmado)","Rechazada":"var(--rechazado-sol)","Convertida en Orden":"var(--completada)"};
 /* Los artículos son códigos concretos del maestro GI: talla y color son atributos suyos.
    No hay plantillas ni variantes: para crear uno parecido se usa Duplicar en GI-02. */
@@ -116,34 +116,41 @@ function spResumen(d){
   return d.lineas.length>1 ? (n0+" y "+(d.lineas.length-1)+" más") : n0;
 }
 function spCategorias(d){return [...new Set(d.lineas.map(l=>{const a=artDe(l.art);return a?a.c:""}).filter(Boolean))]}
+/* Datos de demo: son los mismos que usa Producción (PR-03) y Comercial. SF-000002 y SF-000003 ya tienen sus órdenes; SF-000008 está aprobada y sin órdenes. */
 const SPS={
- sp7:{id:"SP-0007",fecha:"12/06/2026",mes:"Ago 2026",  solic:"Comercial 01",est:"Pendiente Aprobar",vb:false,ger:false,obs:"Proyección acordada con Logística para la campaña de agosto.",
+ sp8:{id:"SF-000008",fecha:"08/07/2026",mes:"Set 2026",  solic:"Comercial 01",est:"Aprobada",almDestino:"SB-ALM-PT · Almacén Central Mercadería Gamarra",vb:true,ger:true,obs:"Campaña de setiembre: colores base.",
+  lineas:[{art:"PT-0001",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",color:"AZUL",talla:"28",qty:40},{art:"PT-0002",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",color:"AZUL",talla:"30",qty:30},{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:30}],
+  hist:[{a:"Envió la solicitud",d:"08/07/2026 11:20 · Comercial 01",e:"ok"},
+        {a:"V°B° Logística",d:"09/07/2026 10:05 · Judith",e:"ok"},
+        {a:"Aprobación Gerencia",d:"10/07/2026 09:40 · David",e:"ok"}]},
+ sp7:{id:"SF-000007",fecha:"12/06/2026",mes:"Ago 2026",  solic:"Comercial 01",est:"Pendiente Aprobar",vb:false,ger:false,obs:"Proyección acordada con Logística para la campaña de agosto.",
   lineas:[{art:"PT-0001",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",color:"AZUL",talla:"28",qty:90},{art:"PT-0002",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",color:"AZUL",talla:"30",qty:75},{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:80}],
   hist:[{a:"Envió la solicitud",d:"12/06/2026 10:24 · Comercial 01",e:"ok"},
         {a:"V°B° Logística",d:"Pendiente · Judith",e:"pend"},
         {a:"Aprobación Gerencia",d:"Pendiente · David",e:"pend"}]},
- sp3:{id:"SP-0003",fecha:"11/06/2026",mes:"Ago 2026",  solic:"Comercial 02",est:"Aprobada",vb:true,ger:true,obs:"Reposición de los tres colores base.",
+ sp3:{id:"SF-000003",fecha:"11/06/2026",mes:"Ago 2026",  solic:"Comercial 02",est:"Convertida en Orden",almDestino:"SB-ALM-PT · Almacén Central Mercadería Gamarra",vb:true,ger:true,obs:"Reposición de los tres colores base.",
   lineas:[{art:"PT-0001",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",color:"AZUL",talla:"28",qty:35},{art:"PT-0002",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",color:"AZUL",talla:"30",qty:33},{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:36}],
   hist:[{a:"Envió la solicitud",d:"11/06/2026 09:10 · Comercial 02",e:"ok"},
         {a:"V°B° Logística",d:"12/06/2026 11:05 · Judith",e:"ok"},
-        {a:"Aprobación Gerencia",d:"12/06/2026 15:40 · David",e:"ok"}]},
- sp6:{id:"SP-0006",fecha:"09/06/2026",mes:"Ago 2026",  solic:"Comercial 01",est:"Borrador",vb:false,ger:false,obs:"Pendiente de cerrar cantidades con Comercial.",
+        {a:"Aprobación Gerencia",d:"12/06/2026 15:40 · David",e:"ok"},
+        {a:"Órdenes de Fabricación creadas en Producción",d:"13/07/2026 09:15 · Producción (Solicitudes de Fabricación)",e:"ok"}]},
+ sp6:{id:"SF-000006",fecha:"09/06/2026",mes:"Ago 2026",  solic:"Comercial 01",est:"Borrador",vb:false,ger:false,obs:"Pendiente de cerrar cantidades con Comercial.",
   lineas:[{art:"PT-0001",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",color:"AZUL",talla:"28",qty:30},{art:"PT-0002",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",color:"AZUL",talla:"30",qty:25},{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:33}],
   hist:[{a:"Creada en borrador",d:"09/06/2026 16:02 · Comercial 01",e:"ok"},
         {a:"Envío a revisión",d:"Pendiente · Comercial 01",e:"pend"}]},
- sp2:{id:"SP-0002",fecha:"05/06/2026",mes:"Jul 2026",  solic:"Comercial 02",est:"Convertida en Orden",vb:true,ger:true,obs:"Campaña de julio: reposición de los colores base.",
+ sp2:{id:"SF-000002",fecha:"05/06/2026",mes:"Jul 2026",  solic:"Comercial 02",est:"Convertida en Orden",almDestino:"SB-ALM-PT · Almacén Central Mercadería Gamarra",vb:true,ger:true,obs:"Campaña de julio: reposición de los colores base.",
   lineas:[{art:"PT-0001",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",color:"AZUL",talla:"28",qty:60},{art:"PT-0002",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",color:"AZUL",talla:"30",qty:50},{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:70}],
   hist:[{a:"Envió la solicitud",d:"05/06/2026 09:30 · Comercial 02",e:"ok"},
         {a:"V°B° Logística",d:"05/06/2026 15:10 · Judith",e:"ok"},
         {a:"Aprobación Gerencia",d:"06/06/2026 09:05 · David",e:"ok"},
         {a:"Órdenes de Fabricación creadas en Producción",d:"06/06/2026 10:20 · Producción (Solicitudes de Fabricación)",e:"ok"}]},
- sp4:{id:"SP-0004",fecha:"10/06/2026",mes:"Jul 2026",  solic:"Comercial 01",est:"Rechazada",vb:true,ger:false,obs:"Pedido adicional fuera de la proyección acordada.",
+ sp4:{id:"SF-000004",fecha:"10/06/2026",mes:"Jul 2026",  solic:"Comercial 01",est:"Rechazada",vb:true,ger:false,obs:"Pedido adicional fuera de la proyección acordada.",
   lineas:[{art:"PT-0003",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",color:"NEGRO",talla:"28",qty:25}],
   hist:[{a:"Envió la solicitud",d:"10/06/2026 08:40 · Comercial 01",e:"ok"},
         {a:"V°B° Logística",d:"10/06/2026 12:15 · Judith",e:"ok"},
         {a:"Rechazo de Gerencia",d:"10/06/2026 17:30 · David — Motivo: fuera de la proyección acordada para julio; replantear en la proyección de agosto.",e:"no"}]}
 };
-const SPS_ORDEN=["sp6","sp7","sp3","sp2","sp4"];
+const SPS_ORDEN=["sp8","sp6","sp7","sp3","sp2","sp4"];
 let SP=null, SPkey="";
 function spTotal(d){return d.lineas.reduce((a,l)=>a+l.qty,0)}
 function spQtyInput(i,el){
@@ -174,7 +181,7 @@ function renderSP(){
      (editable?'<button class="btn-link" onclick="event.stopPropagation();loadSP(\''+k+'\')">Editar</button>':'<span class="hint">Editar</span>')+'</td>';
     tb.appendChild(tr);
   });
-  document.getElementById('sp-count').textContent=n+" solicitudes de pedido";
+  document.getElementById('sp-count').textContent=n+" solicitudes de fabricación";
 }
 function fillFiltroCatSP(){
   const sel=document.getElementById('f-sp-b'); if(!sel)return;
@@ -195,14 +202,14 @@ function loadSP(k){
   if(SP.almDestino && !ALMACENES.some(a=>(a.cod+' · '+a.nom)===SP.almDestino))ad.innerHTML+='<option value="'+SP.almDestino+'">'+SP.almDestino+'</option>';
   ad.value=SP.almDestino||"";
   ad.disabled=!(SP.est==="Borrador"||SP.est==="Pendiente Aprobar");
-  renderSPform(); go('gp03');
+  renderSPform(); go('gi23');
 }
 function renderSPform(){
   const e=SP.est;
   const b=document.getElementById('sp-badge'); b.textContent=e; b.style.background=SP_EST[e];
   const t=document.getElementById('sp-titulo');
-  t.textContent="Solicitud de Pedido · "+(e==="Pendiente Aprobar"?"Revisión":e);
-  document.getElementById('sp-code').textContent=(e==="Aprobada")?"GP-03-01":"GP-03";
+  t.textContent="Solicitud de Fabricación · "+(e==="Pendiente Aprobar"?"Revisión":e);
+  document.getElementById('sp-code').textContent=(e==="Aprobada")?"GI-23":"GI-23";
   const show=(id,v)=>document.getElementById(id).style.display=v?"inline-block":"none";
   const enRevision=(e==="Pendiente Aprobar");
   show('sp-b-mod',enRevision); show('sp-b-rech',enRevision);
@@ -271,7 +278,7 @@ function renderSPform(){
   renderValidaciones();
 }
 
-/* ===== GP-03 · Rotación del modelo ===== */
+/* ===== GI-23 · Rotación del modelo ===== */
 const ROT_GP={
  "PT-0003":[{alm:"SB-ALM-LIQ · Liquidación Central",stock:80,usal:"21/12/2025",dias:210},
             {alm:"SB-ALM-PT · Central Mercadería",stock:22,usal:"30/04/2026",dias:80}],

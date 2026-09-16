@@ -59,7 +59,7 @@ function renderSugerido(){
      '<td id="co15-prom-'+i+'" style="text-align:right;font-weight:600" title="Salidas del Kardex · '+sugDetalleMeses(r)+'">'+fmtQ(prom,r.u)+'</td>'+
      '<td style="text-align:right">'+(r.plan?fmtQ(r.plan,r.u)+(planaplica?' <span class="warn" title="El plan aprobado supera al histórico con holgura: manda el plan">⚠</span>':''):'-')+'</td>'+
      '<td><input value="'+r.hol+'" style="text-align:right" oninput="sugHolInput('+i+',this)"></td>'+
-     '<td id="co15-nec-'+i+'" style="text-align:right;font-weight:600;cursor:help" title="Mayor entre consumo × (1 + holgura) y el plan aprobado (GP)">'+fmtQ(sugNec(r),r.u)+'</td>'+
+     '<td id="co15-nec-'+i+'" style="text-align:right;font-weight:600;cursor:help" title="Mayor entre consumo × (1 + holgura) y el plan aprobado (Solicitudes de Fabricación)">'+fmtQ(sugNec(r),r.u)+'</td>'+
      '<td style="text-align:right">'+fmtQ(r.disp,r.u)+'</td>'+
      '<td style="text-align:right"'+(r.cam?' title="'+r.camDoc+'"':'')+'>'+(r.cam?fmtQ(r.cam,r.u):'-')+'</td>'+
      '<td id="co15-sug-'+i+'" style="text-align:right">'+sugCellHTML(r)+'</td>'+
@@ -72,7 +72,7 @@ function sugFormulaTxt(r){
   const prom=sugProm(r), hol=r.hol||0, conHol=Math.round(prom*(1+hol/100)*100)/100;
   const nec=sugNec(r), v=sugVal(r), w=sugVentana();
   let f="Consumo prom. ("+w+" meses) "+fmtQ(prom,r.u)+" × "+(1+hol/100).toFixed(2)+" (holgura "+hol+"%) = "+fmtQ(conHol,r.u);
-  if((r.plan||0)>conHol)f+=" · pero el plan aprobado (GP) pide "+fmtQ(r.plan,r.u)+", que es mayor: manda el plan → Necesidad "+fmtQ(nec,r.u);
+  if((r.plan||0)>conHol)f+=" · pero el plan aprobado (Solicitudes de Fabricación) pide "+fmtQ(r.plan,r.u)+", que es mayor: manda el plan → Necesidad "+fmtQ(nec,r.u);
   else f+=" → Necesidad "+fmtQ(nec,r.u);
   f+=" − Disponible "+fmtQ(r.disp,r.u)+" − En camino "+fmtQ(r.cam,r.u)+" = "+fmtQ(v,r.u);
   if(v<=0)f+=" → cubierto: No comprar";

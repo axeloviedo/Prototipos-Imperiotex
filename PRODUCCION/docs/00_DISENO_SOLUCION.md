@@ -37,7 +37,11 @@ No se recibe más de lo pendiente. Al cerrar: se libera lo comprometido, lo emit
    - Estados: Pendiente → En proceso (hay líneas en compra) → Atendida | Anulada.
 4. Producción hace otra emisión o registra el recibo.
 
-> La misma regla rige la Solicitud de Materiales de Inventarios (GI-13) en GI, CO y GP: sin propósito al crear; Logística lo define por línea al aprobar y crea la OC y/o las transferencias. No existe el tipo Ajuste (regularización = ingreso o salida con motivo, sin V°B°). CO-13 Producción Tercerizada y GP-04/06/08 fueron retirados: GP (Solicitud de Pedido) y Producción son el mismo módulo, separado en dos archivos por orden de código.
+**Quién hace qué en PR-05 (revisión 2026-09-16).**
+- **Producción crea** solicitudes de materiales: a mano con **+ Nueva solicitud** (PR-05a: orden opcional, almacén destino, motivo y líneas de artículo o servicio con cantidad) o desde la orden cuando falta stock. También puede **anular** una Pendiente y consulta el avance.
+- **Logística atiende** en **su** pantalla (Inventarios · GI-13). En el prototipo, PR-05 muestra botones rayados **⚙ Simular Logística** (atender, recibir compra, conformidad) solo para avanzar la demo sin cambiar de módulo. **No forman parte de la pantalla de Producción y no se desarrollan en ella**: no existe un botón «Atender» en la vista real de Producción.
+
+> La misma regla rige la Solicitud de Materiales de Inventarios (GI-13) en GI, CO y GP: sin propósito al crear; Logística lo define por línea al aprobar y crea la OC y/o las transferencias. No existe el tipo Ajuste (regularización = ingreso o salida con motivo, sin V°B°). CO-13 Producción Tercerizada y GP-04/06/08 fueron retirados: Las Solicitudes de Fabricación (antes Solicitudes de Pedido de GP) viven en Inventarios (GI-21/22/23) y Producción solo lee las aprobadas en PR-03.
 
 ## 4. Servicios de terceros y fase tercerizada
 
@@ -64,16 +68,27 @@ Agrupado por **N° Referencia**, en orden de **Fase**, con 👁 Ver y 📎 adjun
 
 ## 8. Unidades
 
-Artículos solo en **UND, MT, KG**. Recursos en HORA, UND, DÍA, METRO o KG (unidad de consumo del recurso).
+Artículos solo en **UND, MT, KG**. La unidad de consumo del recurso se elige del **maestro de Unidades de Medida** de Inventarios (incluye HORA y DÍA).
 
 ## 8.1 Recursos (PR-11) y tipos de recurso (PR-12)
 
 El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en la demo.
-- **Recurso:** código (REC-nnnn, correlativo), nombre, **tipo de recurso**, responsable/operador (opcional), estado, **unidad de consumo**, **costo por unidad de consumo** y **cuenta contable de costo**. La ficha muestra en solo lectura su **uso en producción** (órdenes, consumido y costo imputado) y sus operarios.
+- **Recurso:** código (REC-nnnn, correlativo), nombre, **tipo de recurso**, estado, **unidad de consumo** (del maestro de unidades), **Costo Estándar** (por unidad de consumo) y **Cuenta Mayor** (campo numérico). Se quitó *Responsable / operador* (2026-09-16). La ficha muestra en solo lectura su **uso en producción** (órdenes, consumido y costo imputado) y sus operarios.
 - **Ya no existen** grupo de recurso, tipo de costo, capacidad, eficiencia, centro de costo, almacén vinculado ni "interviene en el recosteo". Ningún cálculo los usaba: el costo de la orden sale de lo consumido × costo del recurso, y PR-09 lo resume **por recurso** y **por tipo de recurso**.
 - **Tipo de recurso** (TRC-nnnn): catálogo simple. No se elimina si lo usa un recurso. **RECURSO HUMANO** (método Manual, operarios, reproceso) y **SERVICIO DE TERCEROS** (compra del servicio y contraste con OC/factura) no se renombran ni eliminan.
-- **Operarios:** pestaña de PR-11; cada uno ocupa un recurso de tipo RECURSO HUMANO.
+- **Operarios:** pestaña de PR-11: código, nombre y **recurso que ocupa**, que puede ser **cualquiera de los recursos creados** (no solo RECURSO HUMANO). No tienen sede: no hay relación con sedes.
 - Un recurso inactivo no se ofrece al agregar líneas, tercerizar ni crear reprocesos; las órdenes que ya lo usan no cambian.
+
+## 8.2 Sin pantalla de configuración (revisión 2026-09-16)
+
+- Se retiró **PR-13 Configuración**. El «almacén donde entra lo producido por defecto» no es una configuración: sale del **almacén del artículo** (GI-02) o, si no tiene, del de su lista de materiales.
+- El **nombre de la referencia** (N° Referencia, Lote, Campaña…) sí es editable, pero es **solo una etiqueta de texto por empresa**: se cambia con **✎ Nombre del campo** en PR-04 Referencias. En el desarrollo basta un parámetro de texto; no requiere un módulo ni una pantalla de configuración.
+
+## 8.3 Solicitudes de Fabricación compartidas
+
+- Se crean, editan y aprueban en **Inventarios** (GI-21 bandeja, GI-22 nueva, GI-23 revisión), la misma pantalla que usa Comercial. Se numeran **SF-000001**.
+- **PR-03** muestra solo las **aprobadas** y crea sus órdenes. Cuando Producción crea las órdenes, la solicitud pasa a «Convertida en Orden» en Inventarios y Comercial.
+- Los datos de demo son los mismos en los tres módulos (SF-000002 fabricada, SF-000003 en fabricación, SF-000008 aprobada sin órdenes). **Reiniciar** desde cualquier módulo reinicia todo el prototipo.
 
 ## 9. Demo
 

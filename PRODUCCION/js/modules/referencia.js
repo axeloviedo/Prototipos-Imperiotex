@@ -9,7 +9,7 @@ const PR04 = {
   render(p) { return p.id ? PR04.detalle(p.id) : PR04.lista(); },
   lista() {
     const R = Prod.nombreRef();
-    return '<div class="screen-head"><h1>Referencias</h1><span class="code">PR-04</span></div>' +
+    return '<div class="screen-head"><h1>Referencias</h1><span class="code">PR-04</span><div class="spacer"></div><button class="btn btn-secondary" onclick="PR04.renombrar()" title="Cómo se llama este campo en la empresa">✎ Nombre del campo: ' + UI.esc(R) + '</button></div>' +
       UI.tabla([R, 'Origen', 'Produce al final', ['Órdenes', 'num'], ['Adjuntos', 'num'], 'Estado', ['Acciones', '', '80px']], Explosion.refs().map(ref => {
         const ofs = Store.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado'), est = PR04.estado(ref), sf = ofs.find(o => o.sf);
         if (!ofs.length) return '';
@@ -20,6 +20,15 @@ const PR04 = {
           '<td><button class="btn btn-secondary btn-sm" onclick="App.go(\'pr04\',{id:\'' + ref + '\'})">👁 Ver</button></td></tr>';
       }).filter(Boolean));
   },
+  /* el nombre del campo es un solo texto por empresa (N° Referencia, Lote, Campaña…): no necesita pantalla de configuración */
+  renombrar() {
+    UI.modal({
+      titulo: 'Nombre del campo de referencia',
+      cuerpo: UI.campo('Nombre', '<input id="ref-nom" value="' + UI.esc(Prod.nombreRef()) + '">', { req: true, hint: 'Solo cambia la etiqueta que se muestra en órdenes, referencias y reportes. En el sistema real es un parámetro de texto de la empresa, sin pantalla propia.' }),
+      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PR04.guardarNombre()">Guardar</button>'
+    });
+  },
+  guardarNombre() { if (App.accion(() => Prod.renombrarRef(UI.v('ref-nom')), 'Nombre guardado')) { UI.cerrar(); App.refrescar(); } },
   detalle(ref) {
     const R = Prod.nombreRef();
     const ofs = Store.d.ofs.filter(o => o.ref === ref);

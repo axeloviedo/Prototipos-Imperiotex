@@ -1,11 +1,11 @@
-/* INVENTARIOS · GP-01/02/03 Solicitudes de Pedido: bandeja, alta, revisión y buscador de artículos — HTML */
+/* INVENTARIOS · GI-21/22/23 Solicitudes de Fabricación: bandeja, alta, revisión y buscador de artículos — HTML */
 Vistas.pantallas(String.raw`
-  <!-- ==================================================== GP-01 · Solicitudes de Pedido (Bandeja) -->
-  <section class="screen" id="scr-gp01">
+  <!-- ==================================================== GI-21 · Solicitudes de Fabricación (Bandeja) -->
+  <section class="screen" id="scr-gi21">
     <div class="screen-head">
-      <h1>Solicitudes de Pedido</h1><span class="code">GP-01</span>
+      <h1>Solicitudes de Fabricación</h1><span class="code">GI-21</span>
       <div class="spacer"></div>
-      <button class="btn btn-primary" onclick="nuevaSP()">+ Nueva Solicitud de Pedido</button>
+      <button class="btn btn-primary" onclick="nuevaSP()">+ Nueva Solicitud de Fabricación</button>
     </div>
     <div class="card">
       <div class="filters">
@@ -25,13 +25,13 @@ Vistas.pantallas(String.raw`
     <p class="hint">Pantalla <b>compartida por Logística y Comercial</b>: ambos crean, editan, envían y aprueban las mismas solicitudes. Editar está disponible en Borrador, Pendiente Aprobar y Rechazada; las Aprobadas son de solo lectura. <b>Producción</b> solo ve las aprobadas, en Solicitudes de Fabricación (PR-03).</p>
   </section>
 
-  <!-- ==================================================== GP-02 · Nueva Solicitud de Pedido -->
-  <section class="screen" id="scr-gp02">
+  <!-- ==================================================== GI-22 · Nueva Solicitud de Fabricación -->
+  <section class="screen" id="scr-gi22">
     <div class="screen-head">
-      <h1>Nueva Solicitud de Pedido de Fabricación</h1><span class="code">GP-02</span>
+      <h1>Nueva Solicitud de Fabricación</h1><span class="code">GI-22</span>
       <span class="badge" style="background:var(--borrador)">Borrador</span>
       <div class="spacer"></div>
-      <button class="btn btn-secondary" onclick="go('gp01')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="go('gi21')">Cancelar</button>
       <button class="btn btn-secondary" onclick="guardarSP(false)">Guardar borrador</button>
       <button class="btn btn-primary" onclick="guardarSP(true)">Enviar a revisión</button>
     </div>
@@ -64,21 +64,21 @@ Vistas.pantallas(String.raw`
     </div>
   </section>
 
-  <!-- ==================================================== GP-03 · Solicitud de Pedido · Revisión -->
-  <section class="screen" id="scr-gp03">
+  <!-- ==================================================== GI-23 · Solicitud de Fabricación · Revisión -->
+  <section class="screen" id="scr-gi23">
     <div class="screen-head">
-      <h1 id="sp-titulo">Solicitud de Pedido · Revisión</h1><span class="code" id="sp-code">GP-03</span>
+      <h1 id="sp-titulo">Solicitud de Fabricación · Revisión</h1><span class="code" id="sp-code">GI-23</span>
       <span class="badge" id="sp-badge" style="background:var(--pendiente)">Pendiente Aprobar</span>
       <div class="spacer"></div>
       <button class="btn btn-primary" id="sp-b-enviar" style="display:none" onclick="enviarSPrev()">Enviar a revisión</button>
       <button class="btn btn-secondary" id="sp-b-reabrir" style="display:none" onclick="reabrirSP()">Corregir y reenviar</button>
-      <button class="btn btn-secondary" id="sp-b-mod" onclick="openModal('m-gp03d')">Solicitar modificación</button>
-      <button class="btn btn-danger" id="sp-b-rech" onclick="openModal('m-gp03c')">Rechazar</button>
+      <button class="btn btn-secondary" id="sp-b-mod" onclick="openModal('m-gi23d')">Solicitar modificación</button>
+      <button class="btn btn-danger" id="sp-b-rech" onclick="openModal('m-gi23c')">Rechazar</button>
       <button class="btn btn-secondary" id="sp-b-verif" onclick="verificarStock()">Verificar stock</button>
       <button class="btn btn-secondary" id="sp-b-vb" onclick="preVB()">Dar V°B° (Logística)</button>
-      <button class="btn btn-primary" id="sp-b-ap" onclick="openModal('m-gp03b')">Aprobar (Gerencia)</button>
+      <button class="btn btn-primary" id="sp-b-ap" onclick="openModal('m-gi23b')">Aprobar (Gerencia)</button>
       <button class="btn btn-primary" id="sp-b-prod" style="display:none" onclick="irProduccion('pr03')">Ver en Producción</button>
-      <button class="btn btn-secondary" id="sp-b-volver" onclick="go('gp01')">Volver</button>
+      <button class="btn btn-secondary" id="sp-b-volver" onclick="go('gi21')">Volver</button>
     </div>
 
     <div id="sp-aviso" class="card" style="display:none;border-left:4px solid var(--pendiente);background:#FFFBEB"></div>
@@ -174,29 +174,29 @@ Vistas.pantallas(String.raw`
 `);
 
 Vistas.modales(String.raw`
-<!-- GP-02b Buscador de artículos para el detalle -->
-<div class="overlay" id="m-gp02b">
+<!-- GI-22b Buscador de artículos para el detalle -->
+<div class="overlay" id="m-gi22b">
   <div class="modal lg">
-    <div class="modal-h"><b>Agregar artículos al detalle</b><span class="code" style="font-size:11px;color:var(--texto-sec)">GP-02b</span><span class="x" onclick="closeModal('m-gp02b')">✕</span></div>
+    <div class="modal-h"><b>Agregar artículos al detalle</b><span class="code" style="font-size:11px;color:var(--texto-sec)">GI-22b</span><span class="x" onclick="closeModal('m-gi22b')">✕</span></div>
     <div class="modal-b">
       <div class="filters" style="margin-bottom:10px">
-        <div class="field"><label>Buscar</label><input id="gp02b-q" placeholder="Código o nombre…" oninput="renderBuscadorArt()"></div>
-        <div class="field"><label>Categoría</label><select id="gp02b-cat" onchange="renderBuscadorArt()"></select></div>
-        <div class="field"><label>Color</label><select id="gp02b-color" onchange="renderBuscadorArt()"></select></div>
-        <div class="field"><label>Talla</label><select id="gp02b-talla" onchange="renderBuscadorArt()"></select></div>
+        <div class="field"><label>Buscar</label><input id="gi22b-q" placeholder="Código o nombre…" oninput="renderBuscadorArt()"></div>
+        <div class="field"><label>Categoría</label><select id="gi22b-cat" onchange="renderBuscadorArt()"></select></div>
+        <div class="field"><label>Color</label><select id="gi22b-color" onchange="renderBuscadorArt()"></select></div>
+        <div class="field"><label>Talla</label><select id="gi22b-talla" onchange="renderBuscadorArt()"></select></div>
       </div>
       <table class="grid subtable">
         <thead><tr><th style="width:36px"></th><th style="width:110px">Código</th><th>Artículo</th><th style="width:90px">Color</th><th style="width:70px">Talla</th><th style="width:80px">Unidad</th></tr></thead>
-        <tbody id="gp02b-body"></tbody>
+        <tbody id="gi22b-body"></tbody>
       </table>
       <p class="hint" style="margin-top:10px">Solo artículos terminados activos de la empresa activa. Talla y color son atributos del artículo, no de un producto padre: marque varios y agréguelos de una vez.</p>
 
       <div style="margin-top:14px;border-top:1px solid var(--borde);padding-top:12px">
-        <p class="hint">El artículo debe <b>existir en el sistema</b> para agregarlo al detalle. Si la combinación (color/talla) todavía no existe, créela primero en el <button class="btn-link" onclick="closeModal('m-gp02b');go('gi01')">maestro de artículos</button> (con <b>Duplicar</b>) y vuelva a buscarla aquí.</p>
+        <p class="hint">El artículo debe <b>existir en el sistema</b> para agregarlo al detalle. Si la combinación (color/talla) todavía no existe, créela primero en el <button class="btn-link" onclick="closeModal('m-gi22b');go('gi01')">maestro de artículos</button> (con <b>Duplicar</b>) y vuelva a buscarla aquí.</p>
       </div>
     </div>
     <div class="modal-f">
-      <button class="btn btn-secondary" onclick="closeModal('m-gp02b')">Cerrar</button>
+      <button class="btn btn-secondary" onclick="closeModal('m-gi22b')">Cerrar</button>
       <button class="btn btn-primary" onclick="addArtsSeleccionados()">Agregar seleccionados</button>
     </div>
   </div>

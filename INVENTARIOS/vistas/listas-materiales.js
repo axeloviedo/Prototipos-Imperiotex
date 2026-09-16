@@ -14,7 +14,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="ldm-count"></span></div>
     </div>
-    <p class="hint">Un artículo puede tener varias listas (p. ej. el mismo pantalón con dos telas, según stock o disponibilidad de compra): una sola es la Predeterminada, que GP-03 usa por defecto y permite cambiar por una alternativa. El producto final debe ser un artículo apto para producción.</p>
+    <p class="hint">Un artículo puede tener varias listas (p. ej. el mismo pantalón con dos telas, según stock o disponibilidad de compra): una sola es la Predeterminada, que GI-23 usa por defecto y permite cambiar por una alternativa. El producto final debe ser un artículo apto para producción.</p>
   </section>
 
   <!-- GI-17f · Lista de Materiales (formulario) -->

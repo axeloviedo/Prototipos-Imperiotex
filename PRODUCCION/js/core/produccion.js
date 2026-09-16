@@ -11,7 +11,10 @@
 const Prod = {
   _hist(of, a, d) { of.hist.push({ f: UI.ahora(), a, d: d || '', u: Store.d.usuario }); },
   nombreRef() { return Store.d.cfg.nombreRef || 'N° Referencia'; },
-  almRecibo(art) { const a = M.art(art); return (a && a.alm) || Explosion.almDe(art) || Store.d.cfg.almRecibo || (M.ALMACENES[0] || {}).cod; },
+  /* almacén donde entra lo producido: el del artículo o, si no tiene, el de su lista de materiales */
+  almRecibo(art) { const a = M.art(art); return (a && a.alm) || Explosion.almDe(art) || (M.ALMACENES[0] || {}).cod; },
+  /* el nombre de la referencia es solo la etiqueta del campo (un texto por empresa): se edita desde PR-04 */
+  renombrarRef(nom) { nom = String(nom || '').trim(); if (!nom) throw new Error('Indique el nombre'); Store.d.cfg.nombreRef = nom; return nom; },
   nuevaRef() { return Store.sig('ref', '', 4); },
   operario(cod) { return Store.d.operarios.find(o => o.cod === cod); },
   abierta(of) { return of.estado === 'Planificado' || of.estado === 'Liberado'; },
@@ -73,7 +76,7 @@ const Prod = {
     return [Prod.crearOF(Object.assign({}, base, { art: o.art, ldm: o.ldm, cant: o.cant, alm: o.alm }))].concat(o.ldm ? Prod._crearSugeridas(o.sugeridas, nec, base) : []);
   },
 
-  /* ---------- Solicitud de Fabricación (aprobada en GP): sus órdenes nacen Liberadas ---------- */
+  /* ---------- Solicitud de Fabricación (aprobada en Inventarios GI-21): sus órdenes nacen Liberadas ---------- */
   aprobarSF(sf) {
     sf.comprometido = Explosion.bruto(sf.lineas.map(l => ({ art: l.art, cant: l.cant, ldm: l.ldm })));
     sf.comprometido.forEach(r => Stock.comprometer(r.alm, r.art, r.cant));
@@ -228,6 +231,21 @@ const Prod = {
       Prod._hist(of, 'Solicitud de materiales ' + sol.id, (g.destino ? 'hacia ' + g.destino + ' · ' : '') + g.lineas.map(l => Prod.nomItem(l.art) + ' ' + UI.n(l.cant)).join(', '));
       return sol;
     });
+  },
+  /* Producción crea una solicitud a mano en PR-05: d = {of (opcional), destino, motivo, lineas: [{art, cant}]} */
+  crearSolicitud(d) {
+    const of = d.of ? Store.of(d.of) : null;
+    if (d.of && !of) throw new Error('No existe la orden ' + d.of);
+    if (!d.destino || !M.alm(d.destino)) throw new Error('Elija el almacén destino');
+    const items = (d.lineas || []).filter(l => l.art);
+    if (!items.length) throw new Error('Agregue al menos un artículo');
+    items.forEach(l => { if (!(parseFloat(l.cant) > 0)) throw new Error('Cantidad no válida en ' + Prod.nomItem(l.art)); });
+    const motivo = String(d.motivo || '').trim() || 'Solicitud de Producción';
+    if (of) return Prod.solicitarFaltantes(of, items.map(l => ({ art: l.art, cant: parseFloat(l.cant), destino: d.destino })), motivo)[0];
+    const sol = { id: Store.sig('sol', 'SOL-', 6), fecha: UI.ahora(), of: '', ref: '', destino: d.destino, motivo, estado: 'Pendiente', ing: '', fAt: '', solicita: Store.d.usuario,
+      lineas: items.map(l => ({ art: l.art, cant: UI.r4(parseFloat(l.cant)), prop: '', origen: '', doc: '', estado: 'Pendiente' })) };
+    Store.d.sols.unshift(sol);
+    return sol;
   },
   /* Logística decide cada línea: d = {lineas: [{prop: 'Transferencia' | 'Compra', origen}], oc}; d.prop / d.origen aplican a todas */
   atenderSolicitud(id, d) {

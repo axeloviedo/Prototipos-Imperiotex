@@ -58,7 +58,8 @@ const SUBCATS=[
 const UNIDADES=[
  {cod:"UND",nom:"Unidad"},{cod:"MT",nom:"Metro"},{cod:"CM",nom:"Centímetro"},
  {cod:"KG",nom:"Kilogramo"},{cod:"GR",nom:"Gramo"},{cod:"DOC",nom:"Docena"},
- {cod:"CONO",nom:"Cono"},{cod:"ROLLO",nom:"Rollo"},{cod:"CJ",nom:"Caja"},{cod:"BOL",nom:"Bolsa"},{cod:"PAR",nom:"Par"}
+ {cod:"CONO",nom:"Cono"},{cod:"ROLLO",nom:"Rollo"},{cod:"CJ",nom:"Caja"},{cod:"BOL",nom:"Bolsa"},{cod:"PAR",nom:"Par"},
+ {cod:"HORA",nom:"Hora"},{cod:"DÍA",nom:"Día"}
 ];
 const CONVERSIONES=[
  {de:"DOC",a:"UND",factor:12},{de:"MT",a:"CM",factor:100},{de:"KG",a:"GR",factor:1000},

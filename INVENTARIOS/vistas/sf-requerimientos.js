@@ -1,9 +1,9 @@
-/* INVENTARIOS · GP-03 Alertas de stock y requerimientos de materia prima por línea — HTML */
+/* INVENTARIOS · GI-23 Alertas de stock y requerimientos de materia prima por línea — HTML */
 Vistas.modales(String.raw`
-<!-- GP-03 · Buscador de material para agregar manualmente (Especial) -->
+<!-- GI-23e · Buscador de material para agregar manualmente (Especial) -->
 <div class="overlay" id="m-spmpreq">
   <div class="modal lg">
-    <div class="modal-h"><b>Agregar material (manual · Especial)</b><span class="code" style="font-size:11px;color:var(--texto-sec)">GP-03b</span><span class="x" onclick="closeModal('m-spmpreq')">✕</span></div>
+    <div class="modal-h"><b>Agregar material (manual · Especial)</b><span class="code" style="font-size:11px;color:var(--texto-sec)">GI-23e</span><span class="x" onclick="closeModal('m-spmpreq')">✕</span></div>
     <div class="modal-b">
       <div class="filters" style="margin-bottom:10px">
         <div class="field"><label>Código / nombre</label><input id="spmpreq-q" placeholder="Buscar material…" oninput="renderBuscarMPreq()"></div>

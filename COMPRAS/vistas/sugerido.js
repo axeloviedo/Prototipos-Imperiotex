@@ -20,7 +20,7 @@ Vistas.pantallas(String.raw`
         <thead><tr>
           <th style="width:36px">#</th><th>Código</th><th>Artículo</th><th>Unidad</th>
           <th style="text-align:right">Consumo prom. mensual</th>
-          <th style="text-align:right">Plan (GP)</th>
+          <th style="text-align:right">Plan (SF)</th>
           <th style="width:90px;text-align:right">Holgura %</th>
           <th style="text-align:right">Necesidad</th>
           <th style="text-align:right">Disponible</th>
