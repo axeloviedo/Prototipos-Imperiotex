@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Inventarios (GI) · IMPERIOTEX</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="../COMPARTIDO/css/base.css">
 </head>
 <body>
@@ -39,9 +40,10 @@
       <div class="nav-item" data-go="matr">Atributos</div>
       <div class="nav-item" data-go="mbc">Tipos de Código de Barra</div>
       <div class="nav-item" data-go="msede">Sedes</div>
+      <div class="nav-item" data-go="mtmov">Tipos de Movimiento</div>
     </div>
   </nav>
-  <div class="foot">Prototipo funcional · Módulo GI<br>Base: 02_BPD_GESTION_DE_INVENTARIO + 01_BPD_GESTION_PEDIDO<br><a href="#" style="color:#fff" onclick="gpReiniciarCompartido();return false">↺ Reiniciar todo el prototipo</a></div>
+  <div class="foot">Prototipo funcional · Módulo GI<br>Base: 02_BPD_GESTION_DE_INVENTARIO + 01_BPD_GESTION_PEDIDO<br>Datos: base compartida del prototipo (selector «Datos» arriba)</div>
 </aside>
 
 <!-- ============ MAIN ============ -->
@@ -49,6 +51,7 @@
   <div id="topbar">
     <div id="breadcrumb">Inicio</div>
     <div class="spacer"></div>
+    <div id="bd-selector"></div>
     <a class="homebtn" href="../index.html" title="Volver a la portada de módulos">⌂ Inicio</a>
     <div class="company-sel"><label>Módulo:</label>
       <select id="selModulo" onchange="irModulo(this.value)"><option value="" selected>Inventarios (GI)</option><option value="../COMPRAS/index.html">Compras (CO)</option><option value="../PRODUCCION/index.html">Producción (PRODUCCION)</option><option value="../COMERCIAL/index.html">Comercial (CM)</option></select>
@@ -60,15 +63,12 @@
       </select>
     </div>
     <div class="bell" onclick="toggleBell(event)">🔔<span class="dot"></span></div>
-    <div class="userchip"><div class="avatar">U0</div><span>USER00 · Logística</span></div>
+    <div class="userchip"><div class="avatar">U0</div><span id="usuario-chip">USER00 · Logística</span></div>
   </div>
 
   <!-- CT-07 campana -->
   <div id="bellDrop">
-    <div class="h">Notificaciones</div>
-    <div class="it" onclick="go('gi05');toggleBell(event)"><span class="dot" style="background:var(--stock-cero);margin-top:4px"></span><div>Stock agotado: HILO POLIESTER NEGRO - ALM MP Avíos<br><small>Hoy 09:12 · Alerta de mínimos</small></div></div>
-    <div class="it" onclick="go('gi05');toggleBell(event)"><span class="dot" style="background:var(--stock-bajo);margin-top:4px"></span><div>Por agotarse: TELA DENIM 12 OZ AZUL - ALM MP Telas<br><small>Hoy 08:40 · Disponible ≤ mínimo</small></div></div>
-    <div class="it" onclick="go('gi07');toggleBell(event)"><span class="dot" style="background:var(--aprobada);margin-top:4px"></span><div>Transferencia TRF-000214 pendiente de confirmar en destino<br><small>Ayer 17:05 · Tienda Gamarra 1</small></div></div>
+    <div class="h">Notificaciones</div><div id="bell-items"></div>
   </div>
 
   <div id="content"></div>
@@ -77,6 +77,17 @@
 <div id="modales"></div>
 <div class="toast" id="toast"></div>
 
+<!-- base de datos compartida (docs/16_BASE_DATOS_COMPARTIDA.md) -->
+<script src="../COMPARTIDO/bd/datos/maestros-plantillas.js"></script>
+<script src="../COMPARTIDO/bd/datos/maestros-complementos.js"></script>
+<script src="../COMPARTIDO/bd/datos/maestros-logistica.js"></script>
+<script src="../COMPARTIDO/bd/datos/maestros-comercial.js"></script>
+<script src="../COMPARTIDO/bd/datos/escenario-operacion.js"></script>
+<script src="../COMPARTIDO/bd/bd.js"></script>
+<script src="../COMPARTIDO/bd/stock.js"></script>
+<script src="../COMPARTIDO/bd/explosion.js"></script>
+<script src="../COMPARTIDO/bd/documentos.js"></script>
+<script src="../COMPARTIDO/bd/selector.js"></script>
 <!-- núcleo compartido -->
 <script src="../COMPARTIDO/js/vistas.js"></script>
 <!-- HTML de pantallas y modales (Inventarios y Compras: cada módulo abre las pantallas del otro que su flujo necesita) -->
@@ -112,10 +123,9 @@
 <script src="../COMPARTIDO/js/nucleo.js"></script>
 <script src="js/rutas.js"></script>
 <script src="../COMPRAS/js/rutas.js"></script>
-<!-- datos y lógica (el orden importa) -->
-<script src="js/datos/maestros.js"></script>
-<script src="js/datos/articulos.js"></script>
+<!-- lógica (el orden importa); los datos salen de la base compartida -->
 <script src="js/modulos/maestros.js"></script>
+<script src="js/modulos/buscador-articulos.js"></script>
 <script src="js/modulos/configuracion-general.js"></script>
 <script src="js/modulos/articulos.js"></script>
 <script src="js/modulos/listas-materiales.js"></script>
@@ -128,8 +138,8 @@
 <script src="js/modulos/movimientos.js"></script>
 <script src="js/modulos/salidas.js"></script>
 <script src="js/modulos/existencias.js"></script>
+<script src="js/modulos/kardex.js"></script>
 <script src="js/modulos/transferencias.js"></script>
-<script src="js/modulos/buscador-articulos.js"></script>
 <script src="js/modulos/solicitudes-materiales.js"></script>
 <script src="js/modulos/gre.js"></script>
 <script src="../COMPRAS/js/modulos/panel.js"></script>
@@ -143,7 +153,6 @@
 <script src="js/modulos/solicitudes-fabricacion.js"></script>
 <script src="js/modulos/sf-requerimientos.js"></script>
 <script src="js/modulos/sf-aprobacion.js"></script>
-<script src="js/modulos/solicitudes-compartidas.js"></script>
 <script src="../COMPARTIDO/js/arranque.js"></script>
 <script>arrancar('gi00');</script>
 </body>

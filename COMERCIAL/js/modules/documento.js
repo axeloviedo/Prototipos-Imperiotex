@@ -31,7 +31,7 @@ const DOCUI = {
       const um = ed && a.uVenta.length > 1 ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'um\',this.value)">' + UI.opts(a.uVenta, l.um) + '</select>'
         : l.um + (l.factor > 1 ? '<br><span class="mini">= ' + l.factor + ' ' + a.u + '</span>' : '');
       const alm = !a.inv ? '<span class="mini">Servicio</span>' : ed ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'alm\',this.value)">' +
-        UI.opts(M.ALMACENES.filter(x => x.cod !== Store.d.cfg.almMalEstado).map(x => ({ v: x.cod, t: x.cod })), l.alm) + '</select>' : '<span class="mini">' + l.alm + '</span>';
+        UI.opts(M.ALMACENES.filter(x => x.cod !== Store.cfg().almMalEstado).map(x => ({ v: x.cod, t: x.cod })), l.alm) + '</select>' : '<span class="mini">' + l.alm + '</span>';
       const disp = ro ? (l.comp > 0 ? '<span class="warn-t">comprometido ' + UI.q(l.comp, a.u) + '</span>' : '') + (l.costo != null && Store.puede('configurar_comercial') ? (l.comp > 0 ? '<br>' : '') + '<span class="mini">costo ' + UI.n(l.costo) + '</span>' : '') : a.inv ? UI.n(Stock.disp(l.alm, l.art), 0) + ' <span class="mini">' + a.u + '</span>' : '—';
       const desc = !a.inv ? (ed ? '<input class="celda" style="width:100%;margin-top:4px" placeholder="Descripción personalizada para el cliente" value="' + UI.esc(l.desc) + '" onchange="' + ctx + '.cambiar(' + i + ',\'desc\',this.value)">'
         : (l.desc ? '<br><span class="mini">“' + UI.esc(l.desc) + '”</span>' : '')) : '';
@@ -54,7 +54,7 @@ const DOCUI = {
     const tr = (t, v, b) => '<tr><td>' + t + '</td><td class="num">' + (b ? '<b>' + v + '</b>' : v) + '</td></tr>';
     return '<div style="display:flex;justify-content:flex-end"><table class="grid totales">' +
       tr('Op. gravada', UI.m(d.gravada, d.mon)) + (d.exonerada ? tr('Op. exonerada / inafecta', UI.m(d.exonerada, d.mon)) : '') +
-      tr('IGV (' + (d.igvTasa != null ? d.igvTasa : Store.d.cfg.igv) + '%)', UI.m(d.igv, d.mon)) + tr('Total', UI.m(d.total, d.mon), true) + '</table></div>';
+      tr('IGV (' + (d.igvTasa != null ? d.igvTasa : Store.cfg().igv) + '%)', UI.m(d.igv, d.mon)) + tr('Total', UI.m(d.total, d.mon), true) + '</table></div>';
   },
 
   historial(doc) {

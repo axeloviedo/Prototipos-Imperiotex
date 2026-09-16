@@ -25,13 +25,13 @@ const Precios = {
       if (x) return { precio: x.precio, origen: 'Lista · ' + n.t, fila: x.id };
     }
     const a = Store.art(art);
-    if (a && mon === 'PEN' && a.precio > 0) return { precio: UI.r2(a.precio * Precios.factor(art, um)), origen: 'Precio sugerido del artículo', fila: null };
+    if (a && mon === 'PEN' && a.precioVenta > 0) return { precio: UI.r2(a.precioVenta * Precios.factor(art, um)), origen: 'Precio sugerido del artículo', fila: null };
     return null;
   },
 
   tasa(art) {
     const a = Store.art(art);
-    return a && a.igv === 'Gravado' ? (Store.d.cfg.igv || 0) / 100 : 0;
+    return a && a.igv === 'Gravado' ? (Store.cfg().igv || 0) / 100 : 0;
   },
 
   /* completa los importes de una línea {art, cant, precio, dcto, obsequio}; dcto es monto por unidad */
@@ -56,14 +56,14 @@ const Precios = {
     });
     d.gravada = UI.r2(sub); d.exonerada = UI.r2(exo); d.igv = UI.r2(igv); d.total = UI.r2(tot);
     d.subtotal = UI.r2(sub + exo);
-    d.igvTasa = Store.d.cfg.igv;
+    d.igvTasa = Store.cfg().igv;
     return d;
   },
 
   /* precio neto por UM de inventario llevado a soles, para comparar con el precio mínimo */
   netoEnSoles(l, mon) {
     const f = Precios.factor(l.art, l.um) || 1;
-    const tc = mon === 'USD' ? (Store.d.cfg.tc || 1) : 1;
+    const tc = mon === 'USD' ? (Store.cfg().tc || 1) : 1;
     return UI.r4((l.neto || 0) * tc / f);
   }
 };

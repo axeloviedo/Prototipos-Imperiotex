@@ -4,17 +4,13 @@
 const PRUI = {
   inp(id, ph, on) { return '<input type="number" min="0" step="any" id="' + id + '" placeholder="' + (ph || '') + '" oninput="' + (on || '') + '" style="width:100px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px">'; },
   chips(ids) { return ids.length ? '<div class="chips" style="margin-top:4px">' + ids.map(id => '<span class="chip" style="cursor:pointer" onclick="PRUI.doc(\'' + id + '\')">' + id + '</span>').join('') + '</div>' : ''; },
-  doc(id) { UI.cerrar(); if (id.indexOf('SOL-') === 0) App.go('pr05', { id }); else PR08.verMov(id); },
+  doc(id) { UI.cerrar(); if (id.indexOf('SOL-') === 0) App.go('pr05', { id }); else if (id.indexOf('OC-') === 0) PRCOS.verOC(id); else if (id.indexOf('T001-') === 0) PRENV.verGre(id); else if (id.indexOf('ST-') === 0) PRENV.verST(id); else PR08.verMov(id); },
   nomOpe(cod) { return (Prod.operario(cod) || {}).nom || cod; },
   nomRec(cod) { return (M.rec(cod) || {}).nom || cod; },
-  origenSel(id, art, destino) {
-    const ors = Prod.origenes(art, destino);
-    return '<select id="' + id + '" style="border:1px solid var(--borde);border-radius:5px;padding:4px">' + UI.opts(ors.map(a => ({ v: a.cod, t: a.cod + ' (hay ' + UI.n(a.act) + ')' })), ors.length ? ors[0].cod : '', ors.length ? null : 'sin stock en otro almacén') + '</select>';
-  },
   barra(of) {
     if (of.estado !== 'Liberado') return '';
-    const pend = Prod.solicitudesDe(of).filter(s => s.estado === 'Pendiente' || s.estado === 'En proceso').length;
-    return '<div class="filters" style="margin-bottom:10px">' + (Prod.lineasTercero(of).length ? '<button class="btn btn-secondary" onclick="PRENV.abrir()">+ Envío al proveedor</button>' : '') +
+    const pend = Prod.solicitudesDe(of).filter(s => Prod.ABIERTAS_SOL.includes(s.estado)).length;
+    return '<div class="filters" style="margin-bottom:10px">' + (Prod.lineasTercero(of).length ? '<button class="btn btn-secondary" onclick="PRENV.abrir()">Enviar al proveedor</button>' : '') +
       '<button class="btn btn-secondary" onclick="PREM.abrir()">+ Emisión (salida)</button><button class="btn btn-primary" onclick="PRRE.abrir()">+ Recibo (ingreso)</button>' +
       '<span class="mini">Recibido ' + UI.n(of.prod, 0) + ' de ' + UI.n(of.cant, 0) + ' · en proceso ' + UI.s(Prod.enProceso(of)) +
       (pend ? ' · <button class="btn-link" style="padding:0" onclick="App.go(\'pr05\')">' + pend + ' solicitud(es) de materiales abierta(s)</button>' : '') + '</span></div>';
@@ -53,7 +49,7 @@ const PREM = {
         (notif ? '' : '<tr id="em-f' + i + '" style="display:none"><td colspan="6" style="padding-left:30px;background:#FFFBEB"><span class="warn-t" id="em-ft' + i + '"></span> · la diferencia se pide a Logística con una Solicitud de materiales</td></tr>');
     });
     const filasR = of.recs.map((r, i) => {
-      const notif = r.metodo === 'Notificación', ops = Store.d.operarios.filter(o => o.rec === r.cod && o.activo);
+      const notif = r.metodo === 'Notificación', ops = M.operarios().filter(o => o.rec === r.cod && o.activo);
       return '<tr' + (notif ? gris : '') + '><td>' + UI.esc(PRUI.nomRec(r.cod)) + '<br><span class="mini">' + r.cod + ' · ' + ((M.rec(r.cod) || {}).tipo || '') + '</span></td><td class="mini">' + r.metodo + '</td>' +
         '<td class="num">' + UI.n(r.plan) + ' ' + r.u + '</td><td class="num">' + UI.n(r.real) + ' ' + r.u + '</td>' +
         '<td class="num">' + (notif ? '<span class="mini">se registra al recibir</span>' : PRUI.inp('em-r' + i, UI.n(Math.max(0, r.plan - r.real)), 'PREM.check()') + ' ' + r.u) + '</td></tr>' +
@@ -77,7 +73,7 @@ const PREM = {
     div.className = 'em-op'; div.dataset.rec = String(i);
     div.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:4px';
     div.innerHTML = '<span class="mini">└ Operario</span><select class="em-ope" onchange="PREM.check()" style="border:1px solid var(--borde);border-radius:5px;padding:4px;min-width:240px">' +
-      UI.opts(Store.d.operarios.filter(o => o.rec === r.cod && o.activo).map(o => ({ v: o.cod, t: o.nom })), '', '—') + '</select>' +
+      UI.opts(M.operarios().filter(o => o.rec === r.cod && o.activo).map(o => ({ v: o.cod, t: o.nom })), '', '—') + '</select>' +
       '<input class="em-hor" type="number" min="0" step="any" placeholder="horas" oninput="PREM.check()" style="width:80px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:4px"><span class="mini">h</span>' +
       '<button class="btn-link" onclick="this.parentNode.remove();PREM.check()">✕</button>';
     box.appendChild(div);
@@ -131,14 +127,45 @@ PR02.registrarTab({ id: 'emi', orden: 2, titulo: of => 'Emisiones (' + of.emisio
 
 /* ---------- Envíos al proveedor (fase tercerizada) ---------- */
 const PRENV = {
+  /* compra del servicio: solicitudes de materiales con el servicio y sus OC (estado real en la base compartida) */
+  compra(of) {
+    const sols = Prod.serviciosDe(of).flatMap(cod => Prod.solicitudesServicio(of, cod));
+    if (!sols.length) return '<span class="warn-t">Servicio aún no pedido</span>' + (Prod.abierta(of) ? ' · <button class="btn-link" style="padding:0" onclick="PR02.pedirServicio()">Pedir servicio</button>' : '');
+    return sols.map(s => {
+      const ocs = [...new Set(s.lineas.map(l => l.doc).filter(d => /^OC-/.test(d || '')))].map(id => BD.oc(id)).filter(Boolean);
+      return '<span class="chip" style="cursor:pointer" onclick="PRUI.doc(\'' + s.id + '\')">' + s.id + ' · ' + UI.esc(s.estado) + '</span>' +
+        (ocs.length ? ocs.map(o => ' <span class="chip" style="cursor:pointer" onclick="PRUI.doc(\'' + o.id + '\')">' + o.id + ' · ' + UI.esc(o.est) + '</span>').join('') : ' <span class="mini">Logística aún no crea la OC (GI-13)</span>');
+    }).join(' ');
+  },
   tabla(of) {
     if (!Prod.lineasTercero(of).length && !(of.envios || []).length) return '';
-    const serv = of.recs.find(r => Prod.esServicio(r.cod)), P = M.prov(of.tercero ? of.tercero.prov : ((M.rec(serv ? serv.cod : '') || {}).prov));
-    return '<div class="card" style="padding:10px 14px"><b style="font-size:13px">Fase tercerizada</b> <span class="mini">' + UI.esc(P ? P.nom : 'proveedor') +
-      ' · los materiales se envían al almacén del proveedor y lo producido vuelve a ' + of.alm + ' con el recibo</span>' +
-      UI.tabla(['Envío', 'Fecha', ['Cantidad', 'num'], 'Guía', 'Transferencias'], (of.envios || []).map(e =>
-        '<tr><td><b>' + e.n + '</b></td><td class="mini">' + e.f + '</td><td class="num">' + UI.q(e.cant, M.u(of.art)) + '</td><td class="mini">' + e.guia + '</td><td>' + PRUI.chips(e.movs) + '</td></tr>'),
+    const prov = Prod.provServicio(of);
+    return '<div class="card" style="padding:10px 14px"><b style="font-size:13px">Fase tercerizada</b> <span class="mini">' + UI.esc(prov ? M.provNom(prov) + ' (' + prov + ')' : 'proveedor') +
+      ' · los materiales se envían a ' + UI.esc(Prod.almTercero(of)) + ' con guía de remisión y lo producido vuelve a ' + of.alm + ' con el recibo</span>' +
+      '<div style="margin-top:6px"><span class="mini">Compra del servicio:</span> ' + PRENV.compra(of) + '</div>' +
+      UI.tabla(['Envío', 'Fecha', ['Cantidad', 'num'], 'Solicitud de transferencia', 'Guía de remisión', 'Movimiento'], (of.envios || []).map(e =>
+        '<tr><td><b>' + e.n + '</b></td><td class="mini">' + e.f + '</td><td class="num">' + UI.q(e.cant, M.u(of.art)) + '</td><td>' + PRUI.chips(e.sts || []) + '</td><td>' + PRUI.chips(e.guias || []) + '</td><td>' + PRUI.chips(e.movs) + '</td></tr>'),
         { vacio: 'Sin envíos', estilo: 'margin:8px 0 0' }) + '</div>';
+  },
+  verST(id) {
+    const t = BD.trf(id); if (!t) { UI.toast('Solicitud de transferencia no encontrada'); return; }
+    UI.modal({
+      titulo: 'Solicitud de transferencia ' + t.id, lg: true,
+      cuerpo: '<div class="formgrid c3">' + UI.dato('Estado', UI.esc(t.estado)) + UI.dato('Tipo de movimiento', UI.esc(t.tipoMov + ' · ' + ((BD.tipoMov(t.tipoMov) || {}).nom || ''))) + UI.dato('Fecha', t.fecha) +
+        UI.dato('Origen → destino', UI.esc(t.origen + ' → ' + t.destino)) + UI.dato('Orden', UI.esc(t.of || '—')) + UI.dato('Movimientos', UI.esc(t.movs.join(', ') || '—')) + UI.dato('Observación', UI.esc(t.obs), { full: true }) + '</div>' +
+        '<div class="sec" style="margin-top:12px">Líneas</div>' + UI.tabla(['Código', 'Artículo', ['Cantidad', 'num'], ['Recibido', 'num']], t.lineas.map(l => '<tr><td>' + l.art + '</td><td>' + UI.esc(M.nomArt(l.art)) + '</td><td class="num">' + UI.q(l.cant, M.u(l.art)) + '</td><td class="num">' + UI.n(l.recibido || 0) + '</td></tr>')) +
+        '<p class="hint">Transferencia en dos pasos (Inventarios GI-11): aprobar compromete el origen y suma Pedido en el destino; recibir mueve el stock. El envío al proveedor la registra directa porque el almacén de tránsito es virtual.</p>'
+    });
+  },
+  verGre(id) {
+    const g = BD.d.gres.find(x => x.id === id); if (!g) { UI.toast('Guía no encontrada'); return; }
+    UI.modal({
+      titulo: 'Guía de remisión ' + g.id, lg: true,
+      cuerpo: '<div class="formgrid c3">' + UI.dato('Motivo', UI.esc(g.motivo), { estilo: 'grid-column:span 2' }) + UI.dato('Estado', UI.esc(g.estado)) + UI.dato('Fecha', g.fecha) +
+        UI.dato('Origen → destino', UI.esc(g.origen + ' → ' + g.destino)) + UI.dato('Proveedor', UI.esc(g.prov ? M.provNom(g.prov) : '—')) + UI.dato('Movimiento', UI.esc(g.mov)) + UI.dato('Orden', UI.esc(g.of)) + UI.dato('Observación', UI.esc(g.obs)) + '</div>' +
+        '<div class="sec" style="margin-top:12px">Bienes trasladados</div>' + UI.tabla(['Código', 'Artículo', ['Cantidad', 'num']], g.lineas.map(l => '<tr><td>' + l.art + '</td><td>' + UI.esc(M.nomArt(l.art)) + '</td><td class="num">' + UI.q(l.cant, M.u(l.art)) + '</td></tr>')) +
+        '<p class="hint">Se consulta también en Inventarios (GI-14).</p>'
+    });
   },
   abrir() {
     const of = PR02.of(); if (!of || of.estado !== 'Liberado') return;
@@ -148,7 +175,8 @@ const PRENV = {
       cuerpo: '<div class="formgrid c3">' + UI.dato('Enviado', UI.n(enviado, 0) + ' de ' + UI.n(of.cant, 0) + ' ' + M.u(of.art)) +
         UI.campo('Cantidad a producir que se envía', '<input id="env-cant" type="number" min="0" step="any" value="' + Math.max(0, UI.r4(of.cant - enviado)) + '" oninput="PRENV.resumen()">', { req: true }) +
         UI.campo('Fecha', '<input id="env-fecha" type="datetime-local" value="' + UI.dtLocal() + '">') + '</div>' +
-        '<div id="env-res" style="margin-top:10px"></div><p class="hint">Transferencia con guía de remisión "Traslado de bienes para transformación" (GI-11 / GI-14).</p>',
+        UI.dato('Proveedor', UI.esc(M.provNom(Prod.provServicio(of)) || '—') + '<br><span class="mini">compra del servicio: ' + PRENV.compra(of) + '</span>', { estilo: 'margin-top:8px' }) +
+        '<div id="env-res" style="margin-top:10px"></div><p class="hint">Solicitud de transferencia directa (tipo TRF-FABRIC: se crea, aprueba y recibe en el acto porque el tránsito es virtual) con guía de remisión «Traslado de bienes para transformación»; se ve en Inventarios (GI-11 / GI-07 / GI-14).</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PRENV.guardar()">Registrar envío</button>'
     });
     PRENV.resumen();
@@ -163,7 +191,7 @@ const PRENV = {
   },
   guardar() {
     const of = PR02.of();
-    const r = App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha: UI.dtTexto(UI.v('env-fecha')) }), x => 'Envío ' + x.n + ': ' + x.movs.join(', '));
+    const r = App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha: UI.dtTexto(UI.v('env-fecha')) }), x => 'Envío ' + x.n + ': ' + x.sts.join(', ') + ' · ' + x.movs.join(', ') + ' · GRE ' + x.guia);
     if (r) { UI.cerrar(); PR02.tab = 'emi'; App.refrescar(); }
   }
 };
@@ -252,12 +280,14 @@ const PRCOS = {
       '<div style="margin-bottom:10px"><button class="btn btn-secondary btn-sm" onclick="PRCOS.detalle()">Ver detalle por material y recurso</button></div>' +
       UI.tabla(['Recibo', ['Cantidad', 'num'], ['Costo', 'num'], ['Unitario', 'num']], of.recibos.map(r =>
         '<tr><td>' + r.n + ' · ' + r.f + '</td><td class="num">' + UI.n(r.cant, 0) + '</td><td class="num">' + UI.s(r.costo) + '</td><td class="num"><b>' + UI.s(r.cu) + '</b></td></tr>'), { vacio: 'Sin recibos' }) +
-      (sv.length ? '<div class="sec">Servicios de terceros: costo estándar vs compra<div style="flex:1"></div><button class="btn btn-secondary btn-sm" onclick="PRCOS.compra()">+ OC / factura / nota de crédito</button></div>' +
-        UI.tabla(['Servicio', ['Cantidad', 'num'], ['Costo estándar', 'num'], 'OC / factura', ['Costo de compra', 'num'], ['Diferencia', 'num']], sv.map(x =>
-          '<tr><td>' + UI.esc(PRUI.nomRec(x.cod)) + '<br><span class="mini">' + UI.esc((M.prov((M.rec(x.cod) || {}).prov) || {}).nom || '') + '</span></td><td class="num">' + UI.n(x.cant) + '</td><td class="num">' + UI.s(x.estandar) + '</td>' +
-          '<td class="mini">' + (x.docs.map(c => c.tipo + ' ' + UI.esc(c.doc) + ' · ' + (c.tipo === 'Nota de crédito' ? '− ' : '') + UI.s(c.importe)).join('<br>') || 'pendiente') + '</td>' +
-          '<td class="num">' + (x.docs.length ? UI.s(x.real) : '—') + '</td><td class="num">' + (x.dif == null ? '—' : '<span class="' + (x.dif > 0 ? 'err-t' : x.dif < 0 ? 'ok-t' : '') + '">' + UI.s(x.dif) + '</span>') + '</td></tr>')) +
-        '<p class="hint">El servicio entra a la orden como recurso con su costo estándar. La OC, la factura y la nota de crédito o devolución de compra se registran en Compras (CO); aquí se vinculan para contrastar la diferencia.</p>' : '');
+      (sv.length ? '<div class="sec">Servicios de terceros: costo estándar vs OC vs factura<div style="flex:1"></div><button class="btn btn-secondary btn-sm" onclick="PRCOS.notaCredito()">+ Nota de crédito</button></div>' +
+        '<div style="margin-bottom:8px"><span class="mini">Compra del servicio:</span> ' + PRENV.compra(of) + '</div>' +
+        UI.tabla(['Servicio', ['Cantidad', 'num'], ['Estándar', 'num'], ['OC', 'num'], ['Factura', 'num'], ['Nota de crédito', 'num'], ['Costo de compra', 'num'], ['Diferencia', 'num'], 'Documentos'], sv.map(x =>
+          '<tr><td>' + UI.esc(PRUI.nomRec(x.cod)) + '<br><span class="mini">' + UI.esc(M.provNom(Prod.provServicio(of))) + '</span></td><td class="num">' + UI.n(x.cant) + ' / ' + UI.n(x.plan) + '</td><td class="num">' + UI.s(x.estandar) + '</td>' +
+          '<td class="num">' + (x.hayOC ? UI.s(x.oc) : '—') + '</td><td class="num">' + (x.hayFac ? UI.s(x.factura) : '—') + '</td><td class="num">' + (x.nc ? '− ' + UI.s(x.nc) : '—') + '</td>' +
+          '<td class="num">' + (x.hayOC || x.hayFac ? UI.s(x.real) : '—') + '</td><td class="num">' + (x.dif == null ? '—' : '<span class="' + (x.dif > 0 ? 'err-t' : x.dif < 0 ? 'ok-t' : '') + '">' + UI.s(x.dif) + '</span>') + '</td>' +
+          '<td class="mini">' + (x.docs.map(c => c.tipo + ' ' + (c.tipo === 'OC' ? '<button class="btn-link" style="padding:0" onclick="PRCOS.verOC(\'' + c.doc + '\')">' + UI.esc(c.doc) + '</button>' : UI.esc(c.doc)) + ' · ' + c.f.slice(0, 10) + ' · ' + UI.s(c.importe)).join('<br>') || 'sin OC ni factura') + '</td></tr>')) +
+        '<p class="hint">El servicio entra a la orden como recurso con su costo estándar (al recibir). La OC la crea Logística desde la solicitud (GI-13) y aparece aquí cuando Compras la aprueba; la factura, cuando Compras la registra (CO-10). Costo de compra = factura (o la OC si aún no hay factura) − notas de crédito. Solo la nota de crédito o devolución de compra se vincula a mano.</p>' : '');
   },
   detalle() {
     const of = PR02.of(), d = Prod.costoDetalle(of);
@@ -273,22 +303,34 @@ const PRCOS = {
         '<p><b>Costo total ' + UI.s(tot(d.mats) + tot(d.recs)) + '</b> · recibido ' + UI.s(of.absorbido) + ' · unitario ' + UI.s(Prod.costoUnit(of)) + '</p>'
     });
   },
-  compra() {
-    const of = PR02.of(), sv = Prod.contrasteServicios(of);
+  verOC(id) {
+    const o = BD.oc(id); if (!o) { UI.toast('OC no encontrada'); return; }
+    const t = Docs.oc.totales(o), av = Docs.oc.avance(o);
     UI.modal({
-      titulo: 'Vincular documento de compra del servicio · ' + of.id,
-      cuerpo: '<div class="formgrid">' +
-        UI.campo('Servicio', '<select id="cp-rec">' + UI.opts(sv.map(x => ({ v: x.cod, t: x.cod + ' · ' + PRUI.nomRec(x.cod) })), sv.length ? sv[0].cod : '') + '</select>', { req: true, full: true }) +
-        UI.campo('Documento', '<select id="cp-tipo">' + UI.opts(Prod.TIPOS_COMPRA, 'Factura') + '</select>') +
-        UI.campo('Número', '<input id="cp-doc" placeholder="F001-000123">', { req: true }) +
-        UI.campo('Cantidad', '<input id="cp-cant" type="number" min="0" step="any" value="' + (sv.length ? sv[0].cant : 0) + '">') +
-        UI.campo('Importe sin IGV', '<input id="cp-imp" type="number" min="0" step="any">', { req: true }) + '</div>',
-      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PRCOS.guardarCompra()">Vincular</button>'
+      titulo: 'Orden de compra ' + o.id + ' · ' + o.tipo, lg: true,
+      cuerpo: '<div class="formgrid c3">' + UI.dato('Estado', UI.esc(o.est)) + UI.dato('Proveedor', UI.esc(M.provNom(o.prov)) + ' <span class="mini">' + o.prov + '</span>') + UI.dato('Fecha', o.fecha) +
+        UI.dato('Solicitud', UI.esc(o.sol || '—')) + UI.dato('Orden', UI.esc(o.of || '—')) + UI.dato('Avance', 'Recibido ' + av.rec + ' % · facturado ' + av.fac + ' %') + '</div>' +
+        '<div class="sec" style="margin-top:12px">Líneas</div>' + UI.tabla(['Código', 'Descripción', ['Cantidad', 'num'], ['Precio', 'num'], ['Recibido / conforme', 'num'], ['Facturado', 'num']], o.items.map(i =>
+          '<tr><td>' + i.art + '</td><td>' + UI.esc(M.nomArt(i.art)) + '</td><td class="num">' + UI.n(i.cant) + '</td><td class="num">' + UI.n(i.pu, 2) + '</td><td class="num">' + UI.n(i.recq) + '</td><td class="num">' + UI.n(i.facq) + '</td></tr>'),
+          { foot: '<tr><td colspan="5" class="num">Subtotal ' + UI.s(t.sub) + ' · IGV ' + UI.s(t.igv) + '</td><td class="num"><b>' + UI.s(t.total) + '</b></td></tr>' }) +
+        '<p class="hint">La OC se gestiona en Compras (CO-07): aprobación, conformidad del servicio y factura.</p>'
     });
   },
-  guardarCompra() {
+  notaCredito() {
+    const of = PR02.of(), sv = Prod.contrasteServicios(of);
+    UI.modal({
+      titulo: 'Vincular nota de crédito del servicio · ' + of.id,
+      cuerpo: '<div class="formgrid">' +
+        UI.campo('Servicio', '<select id="cp-rec">' + UI.opts(sv.map(x => ({ v: x.cod, t: x.cod + ' · ' + PRUI.nomRec(x.cod) })), sv.length ? sv[0].cod : '') + '</select>', { req: true, full: true }) +
+        UI.campo('Número', '<input id="cp-doc" placeholder="NC01-000123">', { req: true }) +
+        UI.campo('Cantidad', '<input id="cp-cant" type="number" min="0" step="any" value="' + (sv.length ? sv[0].cant : 0) + '">') +
+        UI.campo('Importe sin IGV', '<input id="cp-imp" type="number" min="0" step="any">', { req: true }) + '</div>',
+      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PRCOS.guardarNota()">Vincular</button>'
+    });
+  },
+  guardarNota() {
     const of = PR02.of();
-    if (App.accion(() => Prod.registrarCompra(of, { rec: UI.v('cp-rec'), tipo: UI.v('cp-tipo'), doc: UI.v('cp-doc'), cant: UI.f('cp-cant'), importe: UI.f('cp-imp') }), 'Documento vinculado')) { UI.cerrar(); App.refrescar(); }
+    if (App.accion(() => Prod.registrarNotaCredito(of, { rec: UI.v('cp-rec'), doc: UI.v('cp-doc'), cant: UI.f('cp-cant'), importe: UI.f('cp-imp') }), 'Nota de crédito vinculada')) { UI.cerrar(); App.refrescar(); }
   }
 };
 PR02.registrarTab({ id: 'cost', orden: 4, titulo: 'Costo', render: PRCOS.render });

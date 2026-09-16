@@ -92,7 +92,7 @@ const CM01F = {
       '<div class="card"><div class="formgrid c4">' +
       UI.dato('Tienda', UI.esc(Store.sede(c.sede).nom)) +
       UI.dato('Fecha de creación', nueva ? UI.hoy() : c.fecha + '<br><span class="mini">' + UI.esc(c.usuario) + '</span>') +
-      (ed ? UI.campo('Válida hasta', '<input type="date" value="' + UI.dIso(c.validez) + '" min="' + UI.dIso(UI.hoy()) + '" onchange="CM01F.cab(\'validez\',UI.dTxt(this.value))">', { req: true, hint: 'Por defecto ' + Store.d.cfg.diasValidez + ' días (CL-45)' }) : UI.dato('Válida hasta', c.validez)) +
+      (ed ? UI.campo('Válida hasta', '<input type="date" value="' + UI.dIso(c.validez) + '" min="' + UI.dIso(UI.hoy()) + '" onchange="CM01F.cab(\'validez\',UI.dTxt(this.value))">', { req: true, hint: 'Por defecto ' + Store.cfg().diasValidez + ' días (CL-45)' }) : UI.dato('Válida hasta', c.validez)) +
       (ed ? UI.campo('Moneda', sel('mon', M.MONEDAS.map(m => ({ v: m.cod, t: m.cod + ' · ' + m.nom })), c.mon), { req: true }) : UI.dato('Moneda', c.mon)) +
       (ed ? UI.campo('Condición de pago', sel('cond', M.CONDICIONES.map(x => ({ v: x.cod, t: x.nom })), c.cond), { req: true }) : UI.dato('Condición de pago', M.cond(c.cond).nom)) +
       (ed && Store.puede('asignar_vendedor') ? UI.campo('Vendedor', sel('asesor', DOCUI.vendedores(), c.asesor)) : UI.dato('Vendedor', UI.esc(DOCUI.vendedor(c.asesor)))) +

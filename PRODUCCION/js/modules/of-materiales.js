@@ -13,7 +13,7 @@ const PRMAT = {
       const lo = m.fab ? Prod.ordenesDe(m.cod, of.ref)[0] : null;
       filas.push('<tr><td>' + (++n) + '</td><td>Artículo</td><td>' + m.cod + '</td>' +
         '<td>' + UI.esc(M.nomArt(m.cod)) + (lo ? '<br><span class="mini">lo produce <button class="btn-link" style="padding:0" onclick="App.go(\'pr02\',{id:\'' + lo.id + '\'})">' + lo.id + '</button></span>' : '') +
-        (ped ? '<br><span class="mini">transferencia solicitada: ' + UI.n(ped) + ' ' + m.u + '</span>' : '') + '</td>' +
+        (ped ? '<br><span class="mini">solicitado a Logística: ' + UI.n(ped) + ' ' + m.u + '</span>' : '') + '</td>' +
         '<td class="num">' + (ed ? inp(m.cons, 'PRMAT.cambiar(\'Artículo\',' + i + ',\'cons\',this.value)') : PRMAT.num(m.cons)) + '</td><td>' + m.u + '</td>' +
         '<td>' + (ed ? sel('Artículo', i, 'alm', M.ALMACENES.map(a => a.cod), m.alm) : '<span class="mini">' + m.alm + '</span>') + '</td>' +
         '<td>' + (ed ? sel('Artículo', i, 'metodo', ['Notificación', 'Manual'], m.metodo) : '<span class="mini">' + m.metodo + '</span>') + '</td>' +

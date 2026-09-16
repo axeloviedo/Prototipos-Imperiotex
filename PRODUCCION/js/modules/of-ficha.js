@@ -3,19 +3,21 @@ const PR02 = {
   tab: 'mat',
   TABS: [],
   registrarTab(t) { PR02.TABS.push(t); PR02.TABS.sort((a, b) => a.orden - b.orden); },
-  of() { return Store.of(App.params.id); },
+  of() { return BD.of(App.params.id); },
   ir(tab) { PR02.tab = tab; App.refrescar(); },
   sel(html) { return html.replace(/<(select|input)/, '<$1 style="border:1px solid var(--borde);border-radius:6px;padding:7px 10px;width:100%"'); },
 
   render(p) {
-    const of = Store.of(p.id);
+    const of = BD.of(p.id);
     if (!of) return UI.aviso('No existe la orden ' + UI.esc(p.id), 'err');
     if (p.tab) { PR02.tab = p.tab; delete p.tab; }
     const L = M.ldm(of.ldm), R = Prod.nombreRef(), plan = of.estado === 'Planificado', ed = Prod.editable(of);
     const b = [];
     if (plan) b.push('<button class="btn btn-primary" onclick="PR02.liberar()">Liberar</button>');
     if (of.estado === 'Liberado') b.push('<button class="btn btn-secondary" onclick="PR02.tab=\'emi\';App.refrescar();PREM.abrir()">+ Emisión</button>', '<button class="btn btn-primary" onclick="PR02.tab=\'rec\';App.refrescar();PRRE.abrir()">+ Recibo</button>', '<button class="btn btn-secondary" onclick="PR02.cerrar()">Cerrar orden</button>');
-    if (Prod.abierta(of) && !of.tercero && !Prod.tieneMovimientos(of)) b.push('<button class="btn btn-secondary" onclick="PR02.tercerizar()">Tercerizar</button>');
+    const servs = Prod.serviciosDe(of);
+    if (Prod.abierta(of) && servs.some(cod => !Prod.solicitudesServicio(of, cod).length)) b.push('<button class="btn btn-primary" onclick="PR02.pedirServicio()" title="Solicitud de materiales con el servicio para que Logística cree la OC">Pedir servicio</button>');
+    if (Prod.abierta(of) && !Prod.tieneMovimientos(of) && !(of.envios || []).length) b.push('<button class="btn btn-secondary" onclick="PR02.tercerizar()">' + (servs.length ? 'Cambiar servicio' : 'Tercerizar') + '</button>');
     if (Prod.abierta(of) && !Prod.tieneMovimientos(of)) b.push('<button class="btn btn-danger" onclick="PR02.cancelar()">Cancelar</button>');
     b.push('<button class="btn btn-secondary" onclick="App.go(\'pr01\')">Volver</button>');
 
@@ -37,7 +39,7 @@ const PR02 = {
       UI.dato('Origen', of.sf ? 'Solicitud <button class="btn-link" onclick="App.go(\'pr03d\',{id:\'' + of.sf + '\'})">' + of.sf + '</button>' : 'Creada en Producción') +
       UI.dato('Fechas', 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
       UI.dato('Observación', UI.esc(of.obs)) +
-      (of.tercero ? UI.dato('Tercerizada', UI.esc((M.prov(of.tercero.prov) || {}).nom || '') + '<br><span class="mini">' + UI.esc((M.rec(of.tercero.rec) || {}).nom || '') + ' · ' + of.tercero.alm + '</span>') : '') +
+      (servs.length ? UI.dato('Servicio de terceros', UI.esc(M.provNom(Prod.provServicio(of))) + '<br><span class="mini">' + servs.map(c => UI.esc(Prod.nomItem(c))).join(', ') + ' · ' + UI.esc(Prod.almTercero(of)) + '</span>') : '') +
       '</div></div>' +
       PR02.deLaRef(of) +
       '<div class="tabs">' + tabs.map(t => '<div class="tab' + (t.id === PR02.tab ? ' active' : '') + '" onclick="PR02.ir(\'' + t.id + '\')">' + (typeof t.titulo === 'function' ? t.titulo(of) : t.titulo) + '</div>').join('') + '</div>' +
@@ -45,7 +47,7 @@ const PR02 = {
   },
 
   deLaRef(of) {
-    const todas = Store.d.ofs.filter(o => o.ref === of.ref && o.estado !== 'Cancelado');
+    const todas = BD.d.ofs.filter(o => o.ref === of.ref && o.estado !== 'Cancelado');
     if (todas.length < 2) return '';
     const sec = Explosion.secuencia(todas);
     return '<div class="card" style="padding:10px 14px"><div class="chips" style="align-items:center">' +
@@ -63,15 +65,18 @@ const PR02 = {
       () => { if (App.accion(() => Prod.cerrar(of), of.id + ' cerrada')) App.refrescar(); }, 'Cerrar');
   },
   tercerizar() {
-    const of = PR02.of(), servs = M.recActivos(r => r.tipo === 'SERVICIO DE TERCEROS');
+    const of = PR02.of(), servs = M.recActivos(r => r.tipo === 'SERVICIO DE TERCEROS'), actual = Prod.serviciosDe(of);
+    const recSel = actual[0] || (servs[0] || {}).cod || '', provSel = Prod.provServicio(of) || (M.rec(recSel) || {}).prov || '';
+    const provs = M.PROVEEDORES.filter(p => p.servicio || p.grupo === 'SRV' || p.cod === provSel);
     UI.modal({
-      titulo: 'Tercerizar fase · ' + of.id,
+      titulo: (actual.length ? 'Cambiar servicio · ' : 'Tercerizar fase · ') + of.id,
       cuerpo: '<div class="formgrid">' +
-        UI.campo('Servicio', '<select id="te-rec" onchange="PR02.tercProv()">' + UI.opts(servs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom + ' · ' + UI.s(r.costo) + ' / ' + r.u })), servs.length ? servs[0].cod : '') + '</select>', { req: true, full: true }) +
-        UI.campo('Proveedor', '<select id="te-prov">' + UI.opts(M.PROVEEDORES.map(p => ({ v: p.cod, t: p.nom })), servs.length ? servs[0].prov : '') + '</select>', { req: true }) +
-        UI.campo('Almacén del proveedor', '<select id="te-alm">' + UI.opts(M.ALMACENES.filter(a => a.transito).map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), '') + '</select>', { req: true }) +
-        '<div class="field full"><label class="check"><input type="checkbox" id="te-sol" checked> Enviar a Logística la Solicitud de materiales para comprar el servicio</label></div></div>' +
-        '<p class="hint">Los materiales de la orden pasan al almacén del proveedor (se mandan con "+ Envío al proveedor"), se quitan los recursos propios y se agrega el servicio. Lo producido vuelve a ' + of.alm + ' con el recibo. La orden pasa a Especial.</p>',
+        UI.campo('Servicio', '<select id="te-rec" onchange="PR02.tercProv()">' + UI.opts(servs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom + ' · ' + UI.s(r.costo) + ' / ' + r.u })), recSel) + '</select>', { req: true, full: true }) +
+        UI.campo('Proveedor', '<select id="te-prov">' + UI.opts(provs.map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), provSel) + '</select>', { req: true, hint: 'El habitual del servicio; Logística lo confirma al crear la OC' }) +
+        UI.campo('Almacén de tránsito', '<select id="te-alm">' + UI.opts(M.transitos().map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), Prod.almTercero(of)) + '</select>', { req: true }) +
+        '<div class="field full"><label class="check"><input type="checkbox" id="te-sol" checked> Pedir el servicio a Logística (Solicitud de materiales)</label></div></div>' +
+        '<p class="hint">' + (actual.length ? 'La orden ya lleva el servicio de su lista de materiales: se reemplaza el servicio o el proveedor (si la solicitud del servicio aún está pendiente, se anula).' :
+          'Los materiales de la orden pasan al almacén de tránsito (se mandan con «Enviar al proveedor»), se quitan los recursos propios y se agrega el servicio.') + ' Lo producido vuelve a ' + of.alm + ' con el recibo. La orden pasa a Especial.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PR02.guardarTerc()">Tercerizar</button>'
     });
   },
@@ -79,8 +84,14 @@ const PR02 = {
   guardarTerc() {
     const of = PR02.of();
     const r = App.accion(() => Prod.tercerizar(of, { rec: UI.v('te-rec'), prov: UI.v('te-prov'), alm: UI.v('te-alm'), solicitar: UI.chk('te-sol') }),
-      x => of.id + ' tercerizada' + (x.sols.length ? ' · ' + x.sols[0].id + ' enviada a Logística' : ''));
+      x => of.id + ' tercerizada' + (x.sol ? ' · ' + x.sol.id + ' enviada a Logística' : ''));
     if (r) { UI.cerrar(); App.refrescar(); }
+  },
+  pedirServicio() {
+    const of = PR02.of();
+    UI.confirmar('Pedir servicio · ' + of.id, '<p>Se envía a Logística una <b>Solicitud de materiales</b> con ' + Prod.serviciosDe(of).map(c => UI.esc(Prod.nomItem(c))).join(', ') +
+      ' por ' + UI.q(of.cant, M.u(of.art)) + ', destino ' + UI.esc(Prod.almTercero(of)) + '. Logística la aprueba como Compra y crea la OC de servicio (' + UI.esc(M.provNom(Prod.provServicio(of))) + '); al aprobarla Compras, aparece en la pestaña Costo.</p>',
+      () => { const r = App.accion(() => Prod.pedirServicio(of), x => x.id + ' enviada a Logística'); if (r) App.refrescar(); }, 'Enviar a Logística');
   },
   cancelar() { const of = PR02.of(); UI.confirmar('Cancelar ' + of.id, '<p>La orden no tiene emisiones ni recibos.</p>', () => { if (App.accion(() => Prod.cancelar(of), of.id + ' cancelada')) App.refrescar(); }, 'Cancelar orden'); },
   ldm(v) {

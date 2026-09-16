@@ -1,135 +1,156 @@
-/* PRODUCCION · Producción — escenario de demo (datos de IMPERIOTEX).
-   Se arma ejecutando los mismos servicios que usan las pantallas, así el stock y los costos cuadran. */
+/* PRODUCCION · Historia de demo sobre la BASE COMPARTIDA (familia ZULEIKA).
+   Demo.historia() parte del escenario «Solo maestros» y registra una operación realista usando SOLO servicios
+   (Docs.*, Stock.*, Prod.*), así el stock, los compromisos y los costos cuadran en los cuatro módulos.
+   No toca el DOM: la usa el generador de COMPARTIDO/bd/datos/escenario-operacion.js (node). Fechas de julio 2026 con BD.reloj.
+   1) Compra de materia prima (OC de bienes por proveedor: crear → enviar → V°B° → aprobar → ingreso en SB-CENTRAL-MP → factura)
+      y abastecimiento a SB-ZARATE-MP en dos pasos (Solicitud de Transferencia: crear → aprobar → recibir al día siguiente) con guía.
+   2) SF azul (PT-0001/0002) aprobada y FABRICADA completa: piezas → crudo → lavado tercerizado
+      (SOL del servicio → OC de servicio → envío con GRE → retorno → conformidad → factura) → producto final.
+   3) SF negro (PT-0003/0004) en curso: crudo T30 a medias, lavado T28 enviado a la lavandería, lavado T30 con el servicio pedido.
+   4) SF de los cuatro PT aprobada sin órdenes (su materia prima queda comprometida). */
 const Demo = {
-  VERSION: 12,
-  AVIOS: ['MP-0044', 'MP-0055', 'MP-0063', 'MP-0061', 'MP-0064'],
-  _t(txt) { UI.reloj = txt; },
+  USUARIOS: { comercial: 'Comercial 01', logistica: 'USER02 · Logística', compras: 'USER03 · Compras', gerencia: 'Gerencia General', produccion: 'USER05 · Producción' },
+  _en(fecha, quien) { BD.reloj = fecha; BD.usuario = Demo.USUARIOS[quien] || quien; },
+  _sumar(fecha, dias, hora) { return UI.sumarDias(fecha, dias, hora); },
+
   /* recursos Manual de una emisión: las horas se reparten entre (hasta) dos operarios del recurso */
   _recursos(of, cant) {
     const recs = {};
     of.recs.forEach((r, i) => {
       if (r.metodo === 'Notificación') return;
-      const horas = UI.r4(r.cons * cant), ops = Store.d.operarios.filter(o => o.rec === r.cod && o.activo).slice(0, 2);
+      const horas = UI.r4(r.cons * cant), ops = M.operarios().filter(o => o.rec === r.cod && o.activo !== false).slice(0, 2);
       if (!ops.length) { recs[i] = { cant: horas }; return; }
       const parte = UI.r2(horas / ops.length);
       recs[i] = { operarios: ops.map((o, k) => ({ ope: o.cod, horas: k < ops.length - 1 ? parte : UI.r4(horas - parte * (ops.length - 1)) })) };
     });
     return recs;
   },
-  /* libera, emite (líneas Manual con operarios) y recibe (consume lo Notificación); o = {emitir:[], recibir:[], reales, tercero, cerrar} */
+  /* emite (líneas Manual con operarios) y recibe (consume lo Notificación) por días; o = {emitir:[], recibir:[], reales:{m0: cant}, cerrar} */
   _producir(of, fecha, o) {
     o = o || {};
-    Demo._t(fecha);
+    Demo._en(fecha, 'produccion');
     if (of.estado === 'Planificado') Prod.liberar(of);
     const em = o.emitir || [of.cant], rc = o.recibir || em, n = Math.max(em.length, rc.length);
     for (let k = 0; k < n; k++) {
-      const dia = k === 0 ? fecha : UI.sumarDias(fecha, k, '08:00');
+      const dia = k === 0 ? fecha : Demo._sumar(fecha, k, '08:00');
       if (em[k]) {
-        Demo._t(dia);
-        if (o.tercero) Prod.enviarProveedor(of, { cant: em[k] });
+        Demo._en(dia, 'produccion');
         const mats = {};
         of.mats.forEach((m, i) => { if (m.metodo !== 'Notificación') mats[i] = k === 0 && o.reales && o.reales['m' + i] != null ? o.reales['m' + i] : UI.r4(m.cons * em[k]); });
-        Prod.emitir(of, { mats, recs: Demo._recursos(of, em[k]) });
+        const r = Prod.emitir(of, { mats, recs: Demo._recursos(of, em[k]) });
+        if (r.sols.length) throw new Error('Demo: faltó stock al emitir ' + of.id);
       }
-      if (rc[k]) { Demo._t(UI.sumarDias(dia, 0, '17:30')); Prod.recibir(of, { cant: rc[k] }); }
+      if (rc[k]) { Demo._en(Demo._sumar(dia, 0, '17:30'), 'produccion'); Prod.recibir(of, { cant: rc[k] }); }
     }
-    if (o.cerrar) { Demo._t(UI.sumarDias(fecha, n - 1, '18:00')); Prod.cerrar(of); }
+    if (o.cerrar) { Demo._en(Demo._sumar(fecha, n - 1, '18:00'), 'produccion'); Prod.cerrar(of); }
+    BD.guardar();
+  },
+  /* Producción pide el servicio; Logística lo aprueba como Compra y crea la OC de servicio; Compras la envía y se aprueba */
+  _comprarServicio(of, fPedido, fOC, fAprob) {
+    Demo._en(fPedido, 'produccion');
+    const sol = Prod.pedirServicio(of); BD.guardar();
+    if (!fOC) return { sol };
+    Demo._en(fOC, 'logistica');
+    Docs.sol.aprobar(sol.id, sol.lineas.map(() => ({ prop: 'Compra' })));
+    const oc = Docs.sol.crearOC(sol.id, { prov: Prod.provServicio(of) });
+    if (!fAprob) return { sol, oc };
+    Demo._en(fAprob, 'compras'); Docs.oc.enviar(oc.id);
+    Demo._en(Demo._sumar(fAprob, 0, fAprob.slice(11, 13) + ':20'), 'logistica'); Docs.oc.validar(oc.id);
+    Demo._en(Demo._sumar(fAprob, 0, fAprob.slice(11, 13) + ':45'), 'gerencia'); Docs.oc.aprobar(oc.id);
+    return { sol, oc };
+  },
+  /* solicitud de fabricación creada por Comercial, V°B° de Logística y aprobación de Gerencia */
+  _sf(fecha, fVB, fAprob, d) {
+    Demo._en(fecha, 'comercial');
+    const sf = Docs.sf.crear(Object.assign({ solic: Demo.USUARIOS.comercial }, d));
+    Docs.sf.enviar(sf.id);
+    Demo._en(fVB, 'logistica'); Docs.sf.darVB(sf.id);
+    Demo._en(fAprob, 'gerencia'); Docs.sf.aprobar(sf.id);
+    return sf;
   },
 
-  crear() {
-    Store.d = {
-      version: Demo.VERSION, usuario: 'USER05 · Producción', empresa: 'IMPERIOTEX',
-      seq: { of: 121, ref: 156, ing: 521, sal: 401, trf: 221, gre: 88, sol: 31, fall: 1, inc: 1 },
-      cfg: { nombreRef: 'N° Referencia' },
-      stock: [], movs: [], ofs: [], sfs: [], sols: [],
-      operarios: JSON.parse(JSON.stringify(M.OPERARIOS)),
-      recursos: JSON.parse(JSON.stringify(M.RECURSOS)),
-      tiposRecurso: JSON.parse(JSON.stringify(M.TIPOS_RECURSO))
-    };
-    [['SB-ALM-MPT', 'MP-0012', 640, 19.10], ['SB-ALM-MPA', 'MP-0031', 300000, 0.0017], ['SB-ALM-MPA', 'MP-0046', 900, 0.85],
-     ['SB-ALM-MPA', 'MP-0071', 500, 0.05], ['SB-ALM-MPA', 'MP-0072', 400, 0.05], ['SB-ALM-MPA', 'MP-0044', 1200, 0.35],
-     ['SB-ALM-MPA', 'MP-0055', 900, 0.60], ['SB-ALM-MPA', 'MP-0061', 1000, 0.25], ['SB-ALM-MPA', 'MP-0063', 1000, 0.18],
-     ['SB-ALM-MPA', 'MP-0064', 1500, 0.12], ['SB-ALM-FAB', 'MP-0044', 120, 0.35], ['SB-ALM-FAB', 'MP-0055', 120, 0.60],
-     ['SB-ALM-FAB', 'MP-0061', 120, 0.25], ['SB-ALM-FAB', 'MP-0063', 120, 0.18], ['SB-ALM-FAB', 'MP-0064', 120, 0.12],
-     ['SB-ALM-PT', 'PT-0001', 40, 52.30], ['SB-ALM-PT', 'PT-0002', 12, 53.10]
-    ].forEach(x => { const f = Stock.fila(x[0], x[1]); f.act = x[2]; f.costo = x[3]; });
+  historia() {
+    if (!BD.d) BD.d = BD.base('maestros');
+    if (BD.d.movs.length || BD.d.ofs.length || BD.d.sfs.length || BD.d.ocs.length) throw new Error('Demo.historia() parte del escenario «Solo maestros» (base sin movimientos ni documentos)');
+    const usuarioAntes = BD.usuario;
+    const L = (art, cant) => ({ art, cant, ldm: (BD.ldmPred(art) || {}).id });
+    const AZUL = [L('PT-0001', 40), L('PT-0002', 30)];
+    const NEGRO = [L('PT-0003', 30), L('PT-0004', 24)];
+    const TODOS = [L('PT-0001', 20), L('PT-0002', 20), L('PT-0003', 20), L('PT-0004', 20)];
 
-    const L = (a, c, l) => ({ art: a, cant: c, tipofab: 'Estándar', ldm: l });
-    Store.d.sfs = [
-      { id: 'SF-000008', fecha: '08/07/2026', mes: 'Set 2026', solic: 'Comercial 01', almDestino: 'SB-ALM-PT', fechaReq: '30/08/2026', est: 'Aprobada', firmas: 'V°B° Logística 09/07/2026 · Gerencia 10/07/2026', obs: 'Campaña de setiembre: colores base.', lineas: [L('PT-0001', 40, 'LDM-0001'), L('PT-0002', 30, 'LDM-0002'), L('PT-0003', 30, 'LDM-0005')], ofs: [], ref: '' },
-      { id: 'SF-000003', fecha: '11/06/2026', mes: 'Ago 2026', solic: 'Comercial 02', almDestino: 'SB-ALM-PT', fechaReq: '05/08/2026', est: 'Aprobada', firmas: 'V°B° Logística 12/06/2026 · Gerencia 12/06/2026', obs: '', lineas: [L('PT-0001', 35, 'LDM-0001'), L('PT-0002', 33, 'LDM-0002'), L('PT-0003', 36, 'LDM-0005')], ofs: [], ref: '' },
-      { id: 'SF-000002', fecha: '05/06/2026', mes: 'Jul 2026', solic: 'Comercial 02', almDestino: 'SB-ALM-PT', fechaReq: '05/07/2026', est: 'Aprobada', firmas: 'V°B° Logística 05/06/2026 · Gerencia 06/06/2026', obs: '', lineas: [L('PT-0001', 60, 'LDM-0001'), L('PT-0002', 50, 'LDM-0002'), L('PT-0003', 70, 'LDM-0005')], ofs: [], ref: '' }
-    ];
-    Store.d.sfs.forEach(sf => { Demo._t(sf.fecha + ' 16:00'); Prod.aprobarSF(sf); });
-    const f = (lst, art) => lst.find(o => o.art === art);
+    /* ---------- 1) compra de la materia prima de la campaña (+5 %) ---------- */
+    const req = {};
+    Explosion.bruto(AZUL.concat(NEGRO, TODOS)).forEach(r => { req[r.art] = UI.r4((req[r.art] || 0) + r.cant); });
+    const porProv = {};
+    Object.keys(req).sort().forEach(art => {
+      const a = BD.art(art);
+      (porProv[a.provDef] = porProv[a.provDef] || []).push({ art, cant: Math.ceil(req[art] * 1.05), pu: a.precioCompra || a.costo });
+    });
+    const ocsMP = Object.keys(porProv).sort().map((prov, k) => {
+      Demo._en('01/07/2026 09:' + String(10 + k * 15), 'compras');
+      const oc = Docs.oc.crear({ prov, almDestino: 'SB-CENTRAL-MP', obs: 'Materia prima campaña julio · Zuleika', items: porProv[prov] });
+      Docs.oc.enviar(oc.id);
+      Demo._en('01/07/2026 11:' + String(10 + k * 15), 'logistica'); Docs.oc.validar(oc.id);
+      Demo._en('01/07/2026 15:' + String(10 + k * 15), 'gerencia'); Docs.oc.aprobar(oc.id);
+      return oc;
+    });
+    ocsMP.forEach((oc, k) => {
+      Demo._en('03/07/2026 10:' + String(10 + k * 20), 'logistica'); Docs.oc.recibir(oc.id, { alm: 'SB-CENTRAL-MP', obs: 'Guía del proveedor 001-00' + (4510 + k) });
+      Demo._en('03/07/2026 16:' + String(10 + k * 20), 'compras'); Docs.fac.crear({ oc: oc.id, ndoc: 'F001-000' + (812 + k) });
+    });
+    const lineasMP = Object.keys(porProv).sort().flatMap(p => porProv[p]).map(x => ({ art: x.art, cant: x.cant }));
+    Demo._en('04/07/2026 08:30', 'logistica');
+    const st = Docs.trf.crear({ origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', tipoMov: 'TRF-INTERNO', obs: 'Abastecimiento a planta Zárate: materia prima de la campaña de julio (' + ocsMP.map(o => o.id).join(', ') + ')', lineas: lineasMP });
+    Demo._en('04/07/2026 09:15', 'gerencia'); Docs.trf.aprobar(st.id);
+    Demo._en('05/07/2026 10:00', 'logistica');
+    const movST = Docs.trf.recibir(st.id);
+    Docs.gre.crear({ motivo: 'Traslado entre establecimientos de la misma empresa', origen: 'SB-CENTRAL-MP', destino: 'SB-ZARATE-MP', mov: movST.id, lineas: lineasMP, obs: 'Abastecimiento a planta Zárate · ' + st.id });
 
-    /* 1) SF-000002 · referencia 0156: todo terminado; los avíos de planta se reponen con una solicitud de materiales (Logística transfiere) */
-    Demo._t('06/06/2026 10:20');
-    const c1 = Prod.generarDesdeSF('SF-000002');
-    Demo._producir(f(c1, 'PPT-0026'), '08/06/2026 08:00', { reales: { m0: 186 }, cerrar: true });
-    Demo._producir(f(c1, 'PPT-0027'), '08/06/2026 13:00', { cerrar: true });
-    Demo._producir(f(c1, 'PPT-0022'), '09/06/2026 08:00', { emitir: [70, 60], cerrar: true });
-    Demo._producir(f(c1, 'PPT-0025'), '09/06/2026 08:00', { cerrar: true });
-    Demo._producir(f(c1, 'PPT-0021'), '12/06/2026 09:00', { tercero: true, cerrar: true });
-    Demo._producir(f(c1, 'PPT-0023'), '12/06/2026 09:00', { tercero: true, cerrar: true });
-    Demo._producir(f(c1, 'PPT-0024'), '12/06/2026 09:00', { tercero: true, cerrar: true });
-    Demo._t('28/06/2026 11:00');
-    Prod.registrarCompra(f(c1, 'PPT-0021'), { tipo: 'Factura', doc: 'F001-000812', rec: 'REC-0011', cant: 60, importe: 216 });
-    Prod.registrarCompra(f(c1, 'PPT-0023'), { tipo: 'OC', doc: 'OC-000246', rec: 'REC-0011', cant: 70, importe: 245 });
-    Demo._producir(f(c1, 'PT-0001'), '29/06/2026 08:00', { cerrar: true });
-    Demo._producir(f(c1, 'PT-0002'), '30/06/2026 08:00', { cerrar: true });
-    const pt3 = f(c1, 'PT-0003');
-    Demo._t('01/07/2026 08:00');
-    const s1 = Prod.solicitarFaltantes(pt3, Demo.AVIOS.map(art => ({ art, cant: 70, destino: 'SB-ALM-FAB' })), 'Reposición de avíos en planta')[0];
-    Demo._t('01/07/2026 10:30'); Prod.atenderSolicitud(s1.id, { prop: 'Transferencia', origen: 'SB-ALM-MPA' });
-    Demo._producir(pt3, '01/07/2026 11:00', { cerrar: true });
+    /* ---------- 2) SF azul: fabricada completa con lavado tercerizado ---------- */
+    const sf1 = Demo._sf('02/07/2026 10:00', '02/07/2026 15:30', '03/07/2026 09:00',
+      { mes: 'Jul 2026', almDestino: 'SB-CENTRAL', fechaReq: '25/07/2026', obs: 'Campaña de julio: Zuleika azul', lineas: AZUL });
+    Demo._en('06/07/2026 09:30', 'produccion');
+    const c1 = Prod.generarDesdeSF(sf1.id); BD.guardar();
+    const f1 = art => c1.find(o => o.art === art);
+    Demo._producir(f1('PPT-0001'), '07/07/2026 08:00', { reales: { m0: 57 }, cerrar: true });
+    Prod.adjuntar(f1('PPT-0001'), 'tizado_zuleika_azul_T28.pdf', 'Tizado para 40 unidades');
+    Demo._producir(f1('PPT-0002'), '07/07/2026 13:00', { cerrar: true });
+    Demo._producir(f1('PPT-0005'), '08/07/2026 08:00', { emitir: [25, 15], cerrar: true });
+    Demo._producir(f1('PPT-0006'), '08/07/2026 09:00', { cerrar: true });
+    [['PPT-0009', 'F002-000345', null], ['PPT-0010', 'F002-000346', 3.6]].forEach(([art, ndoc, pu], k) => {
+      const of = f1(art);
+      const { oc } = Demo._comprarServicio(of, '10/07/2026 09:' + (10 + k * 5), '10/07/2026 15:' + (10 + k * 5), '10/07/2026 17:0' + k);
+      Demo._en('11/07/2026 08:' + (10 + k * 10), 'produccion'); Prod.enviarProveedor(of, { cant: of.cant }); BD.guardar();
+      Demo._producir(of, '16/07/2026 09:' + (10 + k * 10), { cerrar: true });
+      Demo._en('16/07/2026 11:' + (10 + k * 10), 'compras'); Docs.oc.conformidad(oc.id, { obs: 'Lavado conforme' });
+      Demo._en('18/07/2026 10:' + (10 + k * 10), 'compras');
+      Docs.fac.crear({ oc: oc.id, ndoc, lineas: pu ? [{ art: 'SRV-0001', cant: of.cant, pu }] : null });
+    });
+    Demo._producir(f1('PT-0001'), '20/07/2026 08:00', { cerrar: true });
+    Demo._producir(f1('PT-0002'), '20/07/2026 13:00', { cerrar: true });
 
-    /* 2) SF-000003 · referencia 0157: en curso */
-    Demo._t('13/07/2026 09:15');
-    const c2 = Prod.generarDesdeSF('SF-000003');
-    Demo._producir(f(c2, 'PPT-0026'), '14/07/2026 08:00', { reales: { m0: 101 }, cerrar: true });
-    Prod.adjuntar(f(c2, 'PPT-0026'), 'tizado_zuleika_T28.pdf', 'Tizado para 71 unidades');
-    Demo._producir(f(c2, 'PPT-0027'), '14/07/2026 13:30', { cerrar: true });
-    Demo._producir(f(c2, 'PPT-0025'), '15/07/2026 08:00', { cerrar: true });
-    Demo._producir(f(c2, 'PPT-0022'), '16/07/2026 08:00', { emitir: [60], recibir: [40] });
-    Demo._producir(f(c2, 'PPT-0024'), '17/07/2026 09:00', { tercero: true, emitir: [20] });
+    /* ---------- 3) SF negro: en curso ---------- */
+    const sf2 = Demo._sf('08/07/2026 11:00', '09/07/2026 10:00', '09/07/2026 12:00',
+      { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '05/08/2026', obs: 'Reposición Zuleika negro', lineas: NEGRO });
+    Demo._en('13/07/2026 09:15', 'produccion');
+    const c2 = Prod.generarDesdeSF(sf2.id); BD.guardar();
+    const f2 = art => c2.find(o => o.art === art);
+    Demo._producir(f2('PPT-0003'), '14/07/2026 08:00', { cerrar: true });
+    Demo._producir(f2('PPT-0004'), '14/07/2026 13:30', { cerrar: true });
+    Demo._producir(f2('PPT-0007'), '15/07/2026 08:00', { cerrar: true });
+    Demo._producir(f2('PPT-0008'), '16/07/2026 08:00', { emitir: [24], recibir: [16] });
+    const lav28 = f2('PPT-0011');
+    Demo._comprarServicio(lav28, '17/07/2026 09:00', '17/07/2026 15:00', '18/07/2026 10:00');
+    Demo._en('20/07/2026 08:30', 'produccion'); Prod.enviarProveedor(lav28, { cant: lav28.cant }); BD.guardar();
+    Demo._comprarServicio(f2('PPT-0012'), '17/07/2026 09:05');
 
-    /* 3) Orden Especial sin lista (materiales indicados a mano) · referencia 0158 */
-    Demo._t('18/07/2026 09:00');
-    const esp = Prod.crearManual({ art: 'PT-0002', cant: 3, alm: 'SB-ALM-PT', obs: 'Reacondicionar 3 pantalones: cambio de botón' })[0];
-    Prod.agregarLinea(esp, { tipo: 'Artículo', cod: 'PPT-0024' });
-    Prod.agregarLinea(esp, { tipo: 'Artículo', cod: 'MP-0044' });
-    Prod.agregarLinea(esp, { tipo: 'Recurso', cod: 'REC-0008' }); Prod.cambiarLinea(esp, 'Recurso', 0, 'cons', 0.5);
-    Prod.agregarLinea(esp, { tipo: 'Texto' }); Prod.cambiarLinea(esp, 'Texto', 0, 'txt', 'Cambiar botón y planchar');
+    /* ---------- 4) SF de los cuatro terminados: aprobada, sin órdenes ---------- */
+    Demo._sf('20/07/2026 10:00', '22/07/2026 09:00', '22/07/2026 11:30',
+      { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '20/08/2026', obs: 'Campaña de agosto: surtido Zuleika', lineas: TODOS });
 
-    /* 4) Muestra: no es una orden de fabricación, es un ingreso con el costo indicado */
-    Demo._t('20/07/2026 10:00');
-    Stock.ingreso({ det: 'Ingreso - Muestra', alm: 'SB-ALM-REM', origen: 'Desarrollo de producto', ndoc: 'MUESTRA-THAIR', lineas: [{ art: 'PT-0010', cant: 2, costo: 48.5 }], obs: 'Muestra con costo indicado (sin orden de fabricación)' });
-
-    /* 5) defecto de lavandería: 2 lavados T30 vuelven mal → artículo fallado (salida + ingreso); Compras gestiona la nota de crédito */
-    const lav2 = f(c2, 'PPT-0024');
-    Demo._t('20/07/2026 15:00');
-    Prod.registrarCompra(lav2, { tipo: 'OC', doc: 'OC-000251', rec: 'REC-0011', cant: 20, importe: 70 });
-    Prod.reclasificarFallado({ alm: 'SB-ALM-PPT', art: 'PPT-0024', fallado: 'PPT-0024F', cant: 2, motivo: 'Defecto de lavandería (servicio de terceros)', obs: 'Manchas en 2 unidades del lote' });
-    Prod.registrarCompra(lav2, { tipo: 'Nota de crédito', doc: 'NC-C-000014', rec: 'REC-0011', cant: 2, importe: 7 });
-
-    /* 6) defecto de confección: 4 crudos T28 fallados → artículo fallado y orden de reproceso (solo mano de obra) en la misma referencia */
-    Demo._t('21/07/2026 09:00');
-    Prod.reclasificarFallado({ alm: 'SB-ALM-PPT', art: 'PPT-0022', fallado: 'PPT-0022F', cant: 4, motivo: 'Defecto de confección', obs: 'Costura de entrepierna abierta' });
-    const rep = Prod.crearReproceso({ art: 'PPT-0022', fallado: 'PPT-0022F', cant: 4, alm: 'SB-ALM-PPT', ref: '0157', rec: 'REC-0002', horas: 0.25 });
-    Demo._producir(rep, '21/07/2026 10:00', { cerrar: true });
-
-    /* 7) fase tercerizada con las órdenes ya creadas: el acabado T28 negro lo hará un taller; se pide la compra del servicio a Logística */
-    Demo._t('21/07/2026 11:30');
-    Prod.tercerizar(f(c2, 'PT-0003'), { prov: 'PRV-0006', alm: 'SB-ALM-TRN', rec: 'REC-0012' });
-
-    /* 8) referencia 0157: terminado T30 emitido; al recibir faltan avíos en planta → solicitud de materiales pendiente para Logística */
-    const pt2 = f(c2, 'PT-0002');
-    Demo._producir(pt2, '22/07/2026 08:00', { emitir: [18], recibir: [] });
-    Demo._t('22/07/2026 17:40');
-    Prod.solicitarFaltantes(pt2, Prod.faltantesNotificacion(pt2, 18).map(x => ({ art: x.cod, cant: x.falta, destino: x.alm })), 'Falta stock para recibir');
-
-    UI.reloj = null;
-    return Store.d;
+    BD.reloj = null;
+    BD.usuario = usuarioAntes;
+    BD.guardar();
+    return BD.d;
   }
 };

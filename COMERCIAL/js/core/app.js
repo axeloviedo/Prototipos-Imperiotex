@@ -1,4 +1,4 @@
-/* COMERCIAL V9 — registro de pantallas, navegación, usuario activo y ejecución segura de acciones */
+/* COMERCIAL — registro de pantallas, navegación, usuario activo y ejecución segura de acciones */
 const App = {
   P: {}, actual: null, params: null,
   /* cada ítem: [id, icono, título, permiso que lo muestra] · códigos visibles CL-xx en docs/15-codigos-pantallas.md */
@@ -69,7 +69,7 @@ const App = {
   },
 
   cambiarUsuario(cod) {
-    Store.d.usuario = cod; Store.guardar();
+    Store.fijarUsuario(cod);
     App.nav();
     const def = App.P[App.actual];
     if (def && def.permiso && !Store.puede(def.permiso)) App.go(App.primera()); else App.refrescar();
@@ -78,6 +78,9 @@ const App = {
 
   iniciar() {
     Store.iniciar();
+    BDSelector.montar(document.getElementById('bd-sel'));
+    /* otra pestaña (Inventarios, Compras, Producción u otro Comercial) guardó en la base: se refresca la pantalla actual */
+    BD.alCambiar(() => { Store.completarBase(); App.nav(); App.refrescar(); });
     App.nav();
     const h = (location.hash || '').slice(1).split('/');
     if (h[0] && App.P[h[0]]) App.go(h[0], h[1] ? { id: decodeURIComponent(h[1]) } : {});

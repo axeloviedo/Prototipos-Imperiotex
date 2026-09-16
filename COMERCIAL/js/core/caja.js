@@ -14,7 +14,7 @@ const Caja = {
     if (Caja.abierta(c.sede, c.mon)) throw new Error(c.nom + ' ya está abierta');
     const m = Number(inicial);
     if (inicial === '' || inicial == null || isNaN(m) || m < 0) throw new Error('El monto inicial debe ser cero o mayor');
-    const s = { id: Store.sig('caj', 'CAJ-', 6), caja: c.cod, nom: c.nom, sede: c.sede, mon: c.mon, inicial: UI.r2(m), estado: 'Abierta', abre: { f: UI.ahora(), u: u.nom }, obs: obs || '', cierre: null };
+    const s = { id: Store.sig('caja', 'CAJ-', 6), caja: c.cod, nom: c.nom, sede: c.sede, mon: c.mon, inicial: UI.r2(m), estado: 'Abierta', abre: { f: UI.ahora(), u: u.nom }, obs: obs || '', cierre: null };
     Store.d.sesiones.unshift(s);
     return s;
   },
@@ -57,7 +57,7 @@ const Caja = {
   },
   _datosMov(s, x, id) {
     if (['Ingreso', 'Egreso'].indexOf(x.tipo) < 0) throw new Error('Tipo de movimiento no válido');
-    const cats = x.tipo === 'Ingreso' ? Store.d.cfg.catIngreso : Store.d.cfg.catEgreso;
+    const cats = x.tipo === 'Ingreso' ? Store.cfg().catIngreso : Store.cfg().catEgreso;
     if (cats.indexOf(x.cat) < 0) throw new Error('Elija la categoría del ' + x.tipo.toLowerCase());
     if (String(x.desc || '').trim().length < 5) throw new Error('La descripción debe tener al menos 5 caracteres');
     const m = Number(x.monto);
@@ -72,7 +72,7 @@ const Caja = {
   movimiento(s, x) {
     Store.exigir('crear_caja', 'registrar ingresos o egresos');
     Caja._abierta(s); Caja._deSuTienda(s);
-    const mv = Object.assign({ id: Store.sig('mc', 'MC-', 6), sesion: s.id, tipo: x.tipo, met: 'EFE', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado' }, Caja._datosMov(s, x));
+    const mv = Object.assign({ id: Store.sig('cmov', 'MC-', 6), sesion: s.id, tipo: x.tipo, met: 'EFE', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado' }, Caja._datosMov(s, x));
     Store.d.cmovs.unshift(mv);
     return mv;
   },
@@ -127,7 +127,7 @@ const Caja = {
     if (!m.efectivo && !String(x.nop || '').trim()) throw new Error('Ingrese el N° de operación');
     if (m.efectivo && re.monto > Caja.resumen(s).esperado + 0.001) throw new Error('No hay efectivo suficiente en caja para devolver ' + UI.m(re.monto, s.mon));
     const anul = re.origen === 'Anulación';
-    const mv = { id: Store.sig('mc', 'MC-', 6), sesion: s.id, tipo: 'Devolución', cat: anul ? 'Anulación de venta' : 'Devolución de venta', desc: (anul ? 'Anulación de ' + v.id : re.origen + ' de ' + v.id) + ' · ' + v.cliente.nom, monto: re.monto, met: x.met, banco: x.banco || '', nop: x.nop || '', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado', venta: v.id, ree: re.id };
+    const mv = { id: Store.sig('cmov', 'MC-', 6), sesion: s.id, tipo: 'Devolución', cat: anul ? 'Anulación de venta' : 'Devolución de venta', desc: (anul ? 'Anulación de ' + v.id : re.origen + ' de ' + v.id) + ' · ' + v.cliente.nom, monto: re.monto, met: x.met, banco: x.banco || '', nop: x.nop || '', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado', venta: v.id, ree: re.id };
     Store.d.cmovs.unshift(mv);
     Object.assign(re, { estado: 'Procesado', mov: mv.id, caja: s.id });
     Store.hist(v, 'Dinero devuelto al cliente', UI.m(re.monto, v.mon) + ' · ' + m.nom + ' · ' + mv.id);

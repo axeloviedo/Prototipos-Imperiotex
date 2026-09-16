@@ -3,7 +3,7 @@ Vistas.pantallas(String.raw`
   <!-- ==================================================== CO-14 · Costos de Destino (Bandeja) -->
   <section class="screen" id="scr-co14">
     <div class="screen-head">
-      <h1>Comprobantes de Costos de Destino Estimados</h1><span class="code">CO-14</span>
+      <h1>Comprobantes de Costos de Destino Estimados</h1><span class="code">CO-14</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="nuevoCCD()">+ Nuevo Comprobante</button>
     </div>
@@ -20,7 +20,7 @@ Vistas.pantallas(String.raw`
   <!-- CO-14f · Comprobante (Formulario) -->
   <section class="screen" id="scr-co14f">
     <div class="screen-head">
-      <h1 id="ccd-titulo">COMPROBANTE DE COSTOS DE DESTINO</h1><span class="code">CO-14</span>
+      <h1 id="ccd-titulo">COMPROBANTE DE COSTOS DE DESTINO</h1><span class="code">CO-14</span><span class="badge" style="background:var(--pendiente)" title="Pantalla fuera del alcance de la base compartida (docs/16 §5): usa datos propios de ejemplo">Datos de ejemplo · no conectado a la base</span>
       <span class="badge" id="ccd-badge" style="background:var(--borrador)">Borrador</span>
       <div class="spacer"></div>
       <button class="btn btn-secondary" onclick="go('co14')">Volver</button>

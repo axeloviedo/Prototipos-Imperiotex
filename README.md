@@ -17,10 +17,13 @@ Sirve esta carpeta con un servidor local y entra a `http://localhost:8000`:
 python -m http.server 8000
 ```
 
-## Datos compartidos y reinicio
+## Base de datos compartida
 
-- Las **Solicitudes de Fabricación** (GI-21/22/23, documentos SF-000001) y las **Solicitudes de Materiales** (GI-13) son las mismas en Inventarios, Compras y Comercial; Producción ve las aprobadas en PR-03. Viven en `localStorage` (`imperiotex.v9.solicitudes` y `imperiotex.v9.sf-produccion`).
-- **↺ Reiniciar todo el prototipo** (en cualquier módulo) borra todas las claves `imperiotex.` y todos los módulos vuelven a los datos de demo.
+- Los cuatro módulos leen y escriben **una sola base** en `localStorage` (clave `imperiotex.bd`, objeto `BD.d`): maestros, stock, movimientos, SF, SOL, transferencias (ST), OC, facturas, GRE y órdenes de fabricación. Contrato completo en `docs/16_BASE_DATOS_COMPARTIDA.md`.
+- Núcleo en `COMPARTIDO/bd/`: `BD` (carga, guardado, lecturas), `Stock` (stock y movimientos), `Explosion` (listas de materiales), `Docs` (documentos) y `BDSelector`. Solo `Stock`/`Docs` modifican stock y documentos.
+- Selector **Datos** de la barra superior: **Solo maestros** (empezar de cero) o **Con operación**; **↺ Reiniciar** deja TODOS los módulos en el escenario elegido.
+- Otra pestaña que guarda dispara `BD.alCambiar`: la pantalla actual se repinta (salvo formularios con cambios sin guardar).
+- Detalle de lo conectado en Inventarios: `INVENTARIOS/docs/00_INVENTARIOS_BASE_COMPARTIDA.md`.
 
 ## Estructura de Inventarios y Compras
 
@@ -28,12 +31,12 @@ python -m http.server 8000
 COMPARTIDO/
   css/base.css         estilos comunes
   js/vistas.js         inserta el HTML de cada archivo de vistas/
-  js/nucleo.js         modales, avisos, empresa, menú y go(pantalla)
-  js/arranque.js       pinta las listas iniciales y abre la pantalla de inicio o la del #hash
+  js/nucleo.js         abre la base (BD.iniciar), modales, avisos, formato (Fmt), empresa, menú y go(pantalla) con RENDER[pantalla]
+  js/arranque.js       selector de datos, listas iniciales de Compras, campana, BD.alCambiar y #hash (p. ej. #gi23=SF-000001, #co07=OC-000001)
+  bd/                  base compartida (ver arriba); bd/datos/maestros-logistica.js = datos propios de Inventarios y Compras
 INVENTARIOS/
   index.html           menú del módulo y orden de carga de los scripts
   js/rutas.js          miga de pan (BC) y menú resaltado (NAVMAP) de cada pantalla
-  js/datos/            datos de ejemplo
   js/modulos/<tema>.js lógica de la pantalla
   vistas/<tema>.js     HTML de la pantalla y sus modales
 COMPRAS/               misma estructura
@@ -46,9 +49,16 @@ Inventarios y Compras cargan **los mismos archivos**. Cada `index.html` solo cam
 ### Agregar una pantalla
 
 1. Crea el HTML en `vistas/<tema>.js` con `Vistas.pantallas(String.raw\`<section class="screen" id="scr-xx01">…</section>\`)`. Los modales van en `Vistas.modales(...)`. No uses comillas invertidas (`` ` ``) ni `${` dentro del HTML.
-2. Pon la lógica en `js/modulos/<tema>.js` con funciones globales, igual que las demás.
+2. Pon la lógica en `js/modulos/<tema>.js` con funciones globales, leyendo y escribiendo solo `BD`/`Stock`/`Docs` (sin arrays propios). Registra `RENDER.<pantalla>=función` para que se pinte al entrar y al cambiar la base.
 3. Registra la miga y el ítem del menú en `js/rutas.js`.
 4. Agrega los dos `<script>` en el `index.html` de **Inventarios y Compras**, en el mismo orden en ambos. Los datos van antes que los módulos que los usan.
 5. Si la pantalla va en el menú: `<div class="nav-item" data-go="xx01">…</div>`.
 
 Producción y Comercial tienen su propia estructura (`js/core`, `js/data`, `js/modules`) y no comparten código con Inventarios y Compras.
+
+## Documentación de la base compartida
+
+- `docs/16_BASE_DATOS_COMPARTIDA.md`: contrato de la base (maestros, stock, documentos, quién hace qué).
+- `docs/17_GUIA_PRODUCCION_MASIVA.md`: guía paso a paso para probar la producción masiva con los dos escenarios de datos.
+- `docs/00_DECISIONES_CERRADAS.md` sección K y los documentos de cada módulo: `INVENTARIOS/docs`, `COMPRAS/docs`, `PRODUCCION/docs`, `COMERCIAL/docs`.
+- Herramientas: `COMPARTIDO/herramientas/importar_plantillas.py` (maestros desde los Excel), `actualizar_estructura_word.py` (Word actualizado desde los Excel) y `generar-escenario.js` (escenario «Con operación»).

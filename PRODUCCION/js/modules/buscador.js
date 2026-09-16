@@ -3,7 +3,7 @@ const BUS = {
   _cb: null, _filtro: null,
   articulo(titulo, filtro, cb) {
     BUS._cb = cb; BUS._filtro = filtro || (() => true);
-    const grupos = [...new Set(M.ARTICULOS.filter(BUS._filtro).map(a => a.grupo))];
+    const grupos = [...new Set(M.ARTICULOS.filter(BUS._filtro).map(a => a.grupo))].map(g => ({ v: g, t: M.grupoNom(g) }));
     UI.modal({
       lg: true, titulo,
       cuerpo: '<div class="filters" style="margin-bottom:10px">' +
@@ -17,10 +17,10 @@ const BUS = {
     const q = UI.v('bus-q').toLowerCase(), g = UI.v('bus-g');
     const lista = M.ARTICULOS.filter(BUS._filtro).filter(a => (!g || a.grupo === g) && (!q || a.cod.toLowerCase().includes(q) || a.nom.toLowerCase().includes(q)));
     document.getElementById('bus-body').innerHTML = UI.tabla(['Código', 'Artículo', 'Unidad', 'Grupo', ['Stock Disponible', 'num'], ['', '', '100px']], lista.map(a => {
-      const disp = Store.d.stock.filter(s => s.art === a.cod).reduce((t, s) => t + s.act - s.comp, 0);
+      const disp = Stock.totalDisp(a.cod);
       const attrs = Object.keys(a.attrs || {}).map(k => k + ': ' + a.attrs[k]).join(' · ');
-      return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td>' + a.u + '</td><td class="mini">' + a.grupo + '</td>' +
-        '<td class="num">' + (a.inv ? UI.n(disp) : '—') + '</td><td><button class="btn btn-primary btn-sm" onclick="BUS.elegir(\'' + a.cod + '\')">Seleccionar</button></td></tr>';
+      return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td>' + a.u + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + '</td>' +
+        '<td class="num">' + (a.inv !== false ? UI.n(disp) : '—') + '</td><td><button class="btn btn-primary btn-sm" onclick="BUS.elegir(\'' + a.cod + '\')">Seleccionar</button></td></tr>';
     }), { vacio: 'Sin resultados' });
   },
   recurso(titulo, cb) {

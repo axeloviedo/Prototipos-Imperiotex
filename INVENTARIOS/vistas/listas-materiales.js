@@ -7,14 +7,20 @@ Vistas.pantallas(String.raw`
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="nuevaLDM()">+ Nueva Lista de Materiales</button>
     </div>
+    <div class="card">
+      <div class="filters">
+        <div class="field"><label>Buscar</label><input id="f-ldm-q" placeholder="LDM, artículo o nombre…" oninput="renderLDM()"></div>
+        <div class="field"><label>Grupo del producto</label><select id="f-ldm-g" onchange="renderLDM()"></select></div>
+      </div>
+    </div>
     <div class="tbl-wrap">
       <table class="grid">
-        <thead><tr><th>Código</th><th>Producto final (nombre de la lista)</th><th>Descripción</th><th style="width:130px">Predeterminada</th><th style="text-align:right">Cantidad que produce</th><th style="text-align:right">Líneas</th><th style="width:70px"></th></tr></thead>
+        <thead><tr><th>Código</th><th>Producto</th><th>Nombre / descripción</th><th style="width:130px">Predeterminada</th><th style="text-align:right">Cantidad base</th><th style="text-align:right">Líneas</th><th style="text-align:right">Fase</th><th style="width:70px"></th></tr></thead>
         <tbody id="ldm-body"></tbody>
       </table>
       <div class="pager"><span id="ldm-count"></span></div>
     </div>
-    <p class="hint">Un artículo puede tener varias listas (p. ej. el mismo pantalón con dos telas, según stock o disponibilidad de compra): una sola es la Predeterminada, que GI-23 usa por defecto y permite cambiar por una alternativa. El producto final debe ser un artículo apto para producción.</p>
+    <p class="hint">Un artículo puede tener varias listas (p. ej. LDM-0017, alternativa de PT-0001 sin parche): una sola es la Predeterminada, que usan GI-23 y Producción por defecto. Si un componente también tiene lista es <b>fabricable</b> y tiene su propia orden; la <b>fase</b> sale de esa cadena (piezas cortadas 1 → crudo 2 → lavado 3 → producto final 4). Producción (PR-10) lee estas mismas listas.</p>
   </section>
 
   <!-- GI-17f · Lista de Materiales (formulario) -->
@@ -29,13 +35,14 @@ Vistas.pantallas(String.raw`
       <p class="leyenda-req"><i></i> Los campos resaltados son obligatorios.</p>
       <div class="formgrid">
         <div class="field"><label>Código (auto)</label><input id="ldm-id" readonly></div>
-        <div class="field req"><label>Producto final <span class="hint">(el nombre de la lista es el de este artículo)</span></label>
+        <div class="field req"><label>Producto</label>
           <select id="ldm-prod" onchange="ldmProdChange()"><option value="">Seleccionar…</option></select></div>
-        <div class="field full"><label>Descripción (opcional)</label><input id="ldm-desc" placeholder="Ej. versión con tela azul / acabado lavado"></div>
-        <div class="field"><label>Cantidad que produce esta lista</label><input id="ldm-cant" value="1" style="text-align:right"></div>
+        <div class="field"><label>Nombre de la lista</label><input id="ldm-nom" placeholder="Ej. Zuleika terminado azul talla 28"></div>
+        <div class="field full"><label>Descripción (opcional)</label><input id="ldm-desc" placeholder="Ej. versión sin parche"></div>
+        <div class="field"><label>Cantidad base <span class="hint">(las cantidades de las líneas son para esta cantidad)</span></label><input id="ldm-cant" value="1" style="text-align:right"></div>
         <div class="field"><div class="check" style="margin-top:24px"><input type="checkbox" id="ldm-pred"> Predeterminada del artículo <span class="warn" title="Solo una LDM por artículo puede ser la predeterminada: al marcarla, la anterior pasa a alternativa">⚠</span></div></div>
       </div>
-      <p class="hint" style="margin-top:8px">El producto final es cualquier artículo apto para producción. Un artículo puede tener una lista predeterminada y otras alternativas; una sola por artículo es la predeterminada.</p>
+      <p class="hint" style="margin-top:8px" id="ldm-otras"></p>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;gap:10px">
@@ -51,7 +58,7 @@ Vistas.pantallas(String.raw`
         <tbody id="ldm-items"></tbody>
       </table>
       </div>
-      <p class="hint" style="margin-top:8px">El detalle usa el mismo indicador <b>Tipo</b> que la Orden de Fabricación: <b>Artículo</b> (materia prima o producto intermedio), <b>Recurso</b> (mano de obra / máquina) o <b>Texto</b> (instrucción, sin consumo de stock). <b>Almacén</b> = de dónde se toma el componente. <b>Método de emisión</b>: <b>Notificación</b> (se descuenta automáticamente al notificar la producción · backflush) o <b>Manual</b> (se registra la salida a mano). Cantidad necesaria para producir la cantidad indicada de la lista.</p>
+      <p class="hint" style="margin-top:8px">El detalle usa el mismo indicador <b>Tipo</b> que la Orden de Fabricación: <b>Artículo</b> (materia prima o producto intermedio), <b>Recurso</b> (mano de obra / máquina) o <b>Texto</b> (instrucción, sin consumo de stock). <b>Almacén</b> = de dónde se toma el componente (p. ej. la tela desde SB-ZARATE-MP, el crudo para lavar desde SB-TRANSITO). <b>Método de emisión</b>: <b>Notificación</b> (se descuenta al registrar el recibo · backflush) o <b>Manual</b> (Producción registra la emisión). Un recurso que es servicio de terceros (SRV-xxxx) usa el mismo código que el artículo de servicio que se compra.</p>
     </div>
   </section>
 `);
@@ -87,10 +94,10 @@ Vistas.modales(String.raw`
         <div class="field"><label>Código / nombre</label><input id="ldmrec-q" placeholder="Buscar recurso…" oninput="renderBuscarRec()"></div>
       </div>
       <table class="grid subtable">
-        <thead><tr><th>Código</th><th>Recurso</th><th>Unidad</th><th style="width:90px"></th></tr></thead>
+        <thead><tr><th>Código</th><th>Recurso</th><th>Unidad</th><th style="text-align:right">Costo estándar</th><th style="width:90px"></th></tr></thead>
         <tbody id="ldmrec-body"></tbody>
       </table>
-      <p class="hint" style="margin-top:10px">Mano de obra, máquina o servicio consumido por la lista.</p>
+      <p class="hint" style="margin-top:10px">Maestro de Recursos de Producción (PR-11): mano de obra, máquinas y servicios de terceros.</p>
     </div>
     <div class="modal-f"><button class="btn btn-secondary" onclick="closeModal('m-ldm-rec')">Cerrar</button></div>
   </div>

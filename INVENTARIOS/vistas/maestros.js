@@ -4,19 +4,19 @@ Vistas.pantallas(String.raw`
   <section class="screen" id="scr-mtipos">
     <div class="screen-head"><h1>Grupos de Artículo</h1><span class="code">MST</span><div class="spacer"></div><button class="btn btn-primary" onclick="grupoOpen(-1)">+ Crear</button></div>
     <div class="tbl-wrap"><table class="grid"><thead id="mst-tipos-h"></thead><tbody id="mst-tipos-b"></tbody></table></div>
-    <p class="hint">El prefijo se usa para armar el código del artículo. La asignación define cómo se numera: <b>Interna</b> (el sistema autogenera) o <b>Externa</b> (el usuario ingresa un código único). <b>Las cuentas contables se configuran en la pestaña Finanzas de cada grupo</b> (28 conceptos contables, cada uno vinculado a una cuenta): todos los artículos del grupo comparten esas cuentas y el artículo no las lleva. El grupo <b>OFERTAS</b> queda planteado como ejemplo <span class="warn" title="Concepto anotado en la reunión del 11-ago pero todavía sin definir: confirmar si una oferta es un grupo de artículo, un combo de varios artículos o un precio promocional">⚠</span>. Los códigos mostrados son solo para diferenciar, no son los definitivos.</p>
+    <p class="hint">El prefijo arma el código del artículo (p. ej. <b>MP-</b> → MP-0108). La asignación define cómo se numera: <b>Interna</b> (el sistema autogenera) o <b>Externa</b> (el usuario ingresa un código único). <b>Inventariable</b> indica si los artículos del grupo manejan stock (SRV no). Las cuentas contables se configuran en la pestaña <b>Finanzas</b> de cada grupo (28 conceptos): todos los artículos del grupo comparten esas cuentas. Los datos se guardan en la base compartida del prototipo.</p>
   </section>
 
   <section class="screen" id="scr-mcat">
     <div class="screen-head"><h1>Categorías</h1><span class="code">MST</span><div class="spacer"></div><button class="btn btn-primary" onclick="mstAdd('cat')">+ Crear</button></div>
     <div class="tbl-wrap"><table class="grid"><thead id="mst-cat-h"></thead><tbody id="mst-cat-b"></tbody></table></div>
-    <p class="hint">El código de la categoría (<b>CAT-####</b>) es propio de este maestro y no tiene relación con el código del artículo: son numeraciones independientes. Cada categoría cuelga de un grupo de artículo. Es opcional en el artículo.</p>
+    <p class="hint">El código de la categoría (p. ej. <b>TEL</b>, <b>PAN</b>) es propio de este maestro y no tiene relación con el código del artículo. Cada categoría cuelga de un grupo de artículo y lleva su clase de valoración (CV-01 … CV-09). Es opcional en el artículo. «En uso» cuenta artículos y sub categorías que la usan: no se elimina si está en uso.</p>
   </section>
 
   <section class="screen" id="scr-msub">
     <div class="screen-head"><h1>Sub categorías</h1><span class="code">MST</span><div class="spacer"></div><button class="btn btn-primary" onclick="mstAdd('sub')">+ Crear</button></div>
     <div class="tbl-wrap"><table class="grid"><thead id="mst-sub-h"></thead><tbody id="mst-sub-b"></tbody></table></div>
-    <p class="hint">El código de la sub categoría (<b>SUB-####</b>) es propio de este maestro y no choca con el del artículo ni con el de la categoría. Cada sub categoría cuelga de una categoría. Es opcional en el artículo.</p>
+    <p class="hint">Cada sub categoría cuelga de una categoría (p. ej. TELAS → CONFORT, PANTALON → WIDE LEG). Es opcional en el artículo.</p>
   </section>
 
   <section class="screen" id="scr-mum">
@@ -41,6 +41,12 @@ Vistas.pantallas(String.raw`
     <div class="screen-head"><h1>Tipos de Código de Barra</h1><span class="code">MST</span><div class="spacer"></div><button class="btn btn-primary" onclick="mstAdd('bc')">+ Crear</button></div>
     <div class="tbl-wrap"><table class="grid"><thead id="mst-bc-h"></thead><tbody id="mst-bc-b"></tbody></table></div>
     <p class="hint">Catálogo configurable de tipos de código de barra que se pueden asignar a un artículo (GTIN, código interno, proveedor, cliente, legado…).</p>
+  </section>
+
+  <section class="screen" id="scr-mtmov">
+    <div class="screen-head"><h1>Tipos de Movimiento</h1><span class="code">MST</span><div class="spacer"></div><span class="hint">Solo lectura · estructura organizativa</span></div>
+    <div class="tbl-wrap"><table class="grid"><thead><tr><th style="width:90px">Grupo</th><th style="width:160px">Código</th><th>Tipo de movimiento</th><th>Flujo</th><th style="text-align:right;width:120px">Movimientos</th></tr></thead><tbody id="mst-tmov-b"></tbody></table></div>
+    <p class="hint">Grupos <b>ING</b> (suma stock), <b>SAL</b> (resta) y <b>TRF</b> (mueve entre almacenes). No hay tipo Ajuste: la regularización de inventario es un ingreso (ING-REGULARIZ) o una salida (SAL-REGULARIZ) con observación. Cada movimiento de la base lleva su tipo: GI-09 usa los ING, GI-10 los SAL y GI-11 los TRF. Producción, Compras y Comercial fijan el suyo automáticamente (p. ej. ING-COMPRA al recibir una OC, SAL-USOPROD en la emisión, TRF-FABRIC al enviar al servicio de terceros).</p>
   </section>
 
   <section class="screen" id="scr-msede">

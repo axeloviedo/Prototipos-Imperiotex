@@ -1,6 +1,6 @@
 /* PRODUCCION · Producción — utilidades de interfaz (sin dependencias) */
 const UI = {
-  /* Fecha fija "dd/mm/aaaa hh:mm" que usa la demo al armar su historia; en uso normal es null (hora local) */
+  /* Fecha fija "dd/mm/aaaa hh:mm" opcional; la historia de la demo usa BD.reloj (base compartida). En uso normal ambas son null (hora local) */
   reloj: null,
 
   esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
@@ -14,6 +14,7 @@ const UI = {
 
   ahora() {
     if (UI.reloj) return UI.reloj;
+    if (typeof BD !== 'undefined' && BD.reloj) return BD.reloj;
     const d = new Date();
     return UI.pad(d.getDate()) + '/' + UI.pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + UI.pad(d.getHours()) + ':' + UI.pad(d.getMinutes());
   },

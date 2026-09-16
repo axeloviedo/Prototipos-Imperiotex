@@ -72,7 +72,7 @@ const Doc = {
   },
   nuevaLinea(d, cod) {
     const a = Store.art(cod);
-    if (!a || !a.activo) throw new Error('El artículo ' + cod + ' no existe o está inactivo');
+    if (!Store.activo(a)) throw new Error('El artículo ' + cod + ' no existe o está inactivo');
     if (!a.venta) throw new Error(a.nom + ' no está marcado como artículo de venta (GI-02)');
     const um = (a.uVenta && a.uVenta[0]) || a.u;
     const l = { art: a.cod, nom: a.nom, desc: '', um, factor: Precios.factor(a.cod, um), alm: a.inv ? Doc.sedeAlm(d) : '', cant: 1, precio: 0, origen: '', dcto: 0, obsequio: false };
@@ -148,7 +148,7 @@ const Doc = {
     if (!l.obsequio && l.precio > 0) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');
-      if (a.precioMin > 0 && (Store.d.cfg.verificarPrecioMin || a.verifMin)) {
+      if (a.precioMin > 0 && (Store.cfg().verificarPrecioMin || a.verifMin)) {
         const neto = Precios.netoEnSoles(l, d.mon);
         if (neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
       }
@@ -182,7 +182,7 @@ const Doc = {
 const Cot = {
   borrador(sede) {
     const u = Store.usuario();
-    return { sede: sede || u.sede, cli: '', asesor: u.cod, mon: 'PEN', cond: 'CONTADO', obs: '', lineas: [], validez: UI.sumarDias(UI.ahora(), Store.d.cfg.diasValidez).slice(0, 10) };
+    return { sede: sede || u.sede, cli: '', asesor: u.cod, mon: 'PEN', cond: 'CONTADO', obs: '', lineas: [], validez: UI.sumarDias(UI.ahora(), Store.cfg().diasValidez).slice(0, 10) };
   },
   revisar(d) {
     const e = [], c = Store.cli(d.cli);
@@ -361,15 +361,15 @@ const Ventas = {
     const v = Doc.snapCliente(JSON.parse(JSON.stringify(d)));
     const serie = M.SERIES[d.sede][d.comp];
     Object.assign(v, {
-      id: Store.sig('ven', 'VEN-' + Store.anio() + '-', 6), compNum: Store.sig('c_' + serie, serie + '-', 6),
+      id: Store.sig('ven', 'VEN-' + Store.anio() + '-', 6), compNum: Store.sig('comp_' + serie, serie + '-', 6),
       fecha: UI.ahora(), sedeNom: sede.nom, usuario: u.nom, estado: 'Registrada', salida: null, movs: [], reembolsos: [], hist: []
     });
-    v.plazoAnular = UI.sumarDias(v.fecha, Store.d.cfg.diasAnulacion).slice(0, 10);
+    v.plazoAnular = UI.sumarDias(v.fecha, Store.cfg().diasAnulacion).slice(0, 10);
     if (Doc.soloServicios(v)) v.entrega = null;
     Precios.doc(v);
     /* compromiso por línea inventariable, en UM de inventario */
     v.lineas.forEach(l => { l.comp = (Store.art(l.art) || {}).inv ? UI.r4(l.cant * l.factor) : 0; });
-    Stock.comprometer(v.lineas.filter(l => l.comp > 0).map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), 1);
+    Stock.comprometerLineas(v.lineas.filter(l => l.comp > 0).map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), 1);
     v.pagos = (d.pagos || []).map(p => ({ id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: p.met, banco: p.banco || '', nop: p.nop || '', voucher: p.voucher || '', monto: UI.r2(p.monto), estado: 'Por validar', caja: ses.id, usuario: u.nom }));
     if (d.cot) { const c = Store.cot(d.cot); c.estado = 'Convertida'; c.venta = v.id; Store.hist(c, 'Convertida en venta', v.id); }
     const nComp = v.lineas.filter(l => l.comp > 0).length;
@@ -392,18 +392,33 @@ const Ventas = {
   comprometidoVentas(alm, art) {
     return UI.r4(Store.d.ventas.filter(v => v.estado === 'Registrada' && !v.salida).reduce((t, v) => t + v.lineas.filter(l => l.alm === alm && l.art === art).reduce((s, l) => s + (l.comp || 0), 0), 0));
   },
-  /* REGLA: cuando lo confirmado (pagos validados) cubre el total sale el stock: una Salida GI-10 por almacén que baja el Actual y libera lo comprometido */
+  _porAlmacen(v) {
+    const porAlm = {};
+    v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
+    return porAlm;
+  },
+  _lineasSalida(lin) { return lin.map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), bloquear: false, liberar: l.comp || 0 })); },
+  /* ¿la salida de la venta se puede registrar? (el Stock compartido no deja el Actual en negativo) → '' o el motivo */
+  faltaParaSalir(v) {
+    const porAlm = Ventas._porAlmacen(v);
+    const txt = Object.keys(porAlm).map(alm => { const f = Stock.faltantes(alm, Ventas._lineasSalida(porAlm[alm]), false); return f.length ? Stock.textoFaltantes(alm, f) : ''; }).filter(Boolean);
+    return txt.join(' · ');
+  },
+  /* REGLA: cuando lo confirmado (pagos validados) cubre el total sale el stock: una Salida GI-10 por almacén que baja el Actual y libera lo comprometido.
+     Usa el Stock compartido (modulo 'Comercial'): la salida aparece en el Kardex y los movimientos de Inventarios. */
   _salidaSiPagada(v, pagoId) {
     if (!v || v.estado !== 'Registrada' || v.salida) return null;
     if (Ventas.confirmado(v) + 0.01 < v.total) return null;
     const u = Store.usuario(), comp = M.comp(v.comp);
     const det = (v.cliente && v.cliente.tipo) === 'MAYORISTA' ? 'Salida - Venta al por mayor' : 'Salida - Venta al por menor';
-    const porAlm = {};
-    v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
-    const movs = [];
+    const falta = Ventas.faltaParaSalir(v);
+    if (falta) throw new Error('No se puede registrar la salida de ' + v.id + ': ' + falta);
+    const porAlm = Ventas._porAlmacen(v), movs = [];
     Object.keys(porAlm).forEach(alm => {
       const lin = porAlm[alm];
-      const mov = Stock.salida({ det, alm, destino: 'Cliente · ' + v.cliente.nom, ndoc: v.id, obs: comp.nom + ' ' + v.compNum + ' · pago confirmado', lineas: lin.map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), bloquear: false, liberar: l.comp || 0 })) });
+      const r = Stock.salida({ tipoMov: 'SAL-VENTA', det, alm, destino: 'Cliente · ' + v.cliente.nom, ndoc: v.id, doc: 'Venta', modulo: 'Comercial', obs: comp.nom + ' ' + v.compNum + ' · pago confirmado', lineas: Ventas._lineasSalida(lin) });
+      if (!r.ok) throw new Error(r.error);
+      const mov = r.mov;
       lin.forEach(l => { const ml = mov.lineas.find(x => x.art === l.art); l.costo = UI.r4((ml ? ml.costo : 0) * l.factor); l.comp = 0; });
       v.movs.push(mov.id); movs.push(mov.id);
     });
@@ -460,6 +475,11 @@ const Ventas = {
   },
   validarPago(v, id) {
     const p = Ventas._pagoEnCaja(v, id);
+    /* si este pago completa el total, la salida debe poder registrarse ANTES de marcarlo validado (no quedan cambios a medias) */
+    if (!v.salida && Ventas.confirmado(v) + p.monto + 0.01 >= v.total) {
+      const falta = Ventas.faltaParaSalir(v);
+      if (falta) throw new Error('El pago completa el total y debe salir el stock, pero no alcanza: ' + falta);
+    }
     p.estado = 'Validado';
     p.validado = { f: UI.ahora(), u: Store.usuario().nom };
     Store.hist(v, 'Pago validado en caja', p.id + ' · ' + UI.m(p.monto, v.mon) + ' · confirmado ' + UI.m(Ventas.confirmado(v), v.mon) + ' de ' + UI.m(v.total, v.mon));
@@ -485,14 +505,14 @@ const Ventas = {
     if (v.salida && UI.aFecha(UI.hoy()) > UI.aFecha(v.plazoAnular)) throw new Error('El plazo para anular venció el ' + v.plazoAnular + ': registre una devolución');
     if (!v.salida) {
       const lib = v.lineas.filter(l => l.comp > 0);
-      Stock.comprometer(lib.map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), -1);
+      Stock.comprometerLineas(lib.map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), -1);
       lib.forEach(l => { l.comp = 0; });
     } else {
-      const porAlm = {};
-      v.lineas.forEach(l => { if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
+      const porAlm = Ventas._porAlmacen(v);
       Object.keys(porAlm).forEach(alm => {
-        const mov = Stock.ingreso({ det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + v.cliente.nom, ndoc: v.id, obs: 'Anulación de ' + v.id + ': ' + motivo, lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
-        v.movs.push(mov.id);
+        const r = Stock.ingreso({ tipoMov: 'ING-DEVCLI', det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + v.cliente.nom, ndoc: v.id, doc: 'Venta', modulo: 'Comercial', obs: 'Anulación de ' + v.id + ': ' + motivo, lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
+        if (!r.ok) throw new Error(r.error);
+        v.movs.push(r.mov.id);
       });
     }
     v.pagos.filter(p => p.estado === 'Por validar').forEach(p => { p.estado = 'Anulado'; p.motivo = 'Venta anulada'; });
@@ -567,11 +587,33 @@ const Dev = {
     if (!v.salida) throw new Error('La venta ' + v.id + ' no tiene salida de stock: solo se devuelve lo que ya salió');
     Dev._armar(v, { lineas: d.lineas.map(l => ({ n: l.n, cant: l.cant, tipo: l.tipo })), sustTipo: d.sustTipo, sustNum: d.sustNum, dcto: d.dcto }, d.id);
     const netoAntes = Ventas.neto(v), pagado = Ventas.pagado(v), pendiente = Ventas.porDevolver(v);
-    const porAlm = {};
-    d.lineas.forEach(l => { const alm = l.tipo === 'Mal estado' ? Store.d.cfg.almMalEstado : l.alm; (porAlm[alm] = porAlm[alm] || []).push(l); });
+    /* todo vuelve con un Ingreso ING-DEVCLI al almacén de la venta; lo que llega en mal estado sigue con un traslado TRF-LIQUID al almacén de liquidación.
+       DECISIÓN: ese traslado es una Solicitud de Transferencia DIRECTA (Docs.trf.directa: crea, aprueba y recibe en el acto), la única excepción
+       a la transferencia en dos pasos (T2/T7): es automático al finalizar la devolución y no hay nadie que confirme la recepción en ese momento. */
+    const almMal = Store.cfg().almMalEstado, porAlm = {}, malPorAlm = {};
+    const linStock = l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) });
+    d.lineas.forEach(l => {
+      (porAlm[l.alm] = porAlm[l.alm] || []).push(l);
+      if (l.tipo === 'Mal estado' && almMal && almMal !== l.alm) (malPorAlm[l.alm] = malPorAlm[l.alm] || []).push(l);
+    });
+    /* antes de mover nada: lo que se traslada a liquidación debe quedar disponible en la tienda tras el ingreso */
+    Object.keys(malPorAlm).forEach(alm => {
+      const req = {};
+      malPorAlm[alm].forEach(l => { req[l.art] = UI.r4((req[l.art] || 0) + l.cant * l.factor); });
+      Object.keys(req).forEach(art => {
+        const entra = porAlm[alm].filter(l => l.art === art).reduce((t, l) => t + l.cant * l.factor, 0);
+        if (Stock.disp(alm, art) + entra + 0.00005 < req[art]) throw new Error('No se puede trasladar a liquidación ' + BD.nomArt(art) + ': en ' + alm + ' lo disponible está comprometido');
+      });
+    });
     Object.keys(porAlm).forEach(alm => {
-      const mov = Stock.ingreso({ det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + d.cliente.nom, ndoc: d.id, obs: d.sustTipo + ' ' + d.sustNum + ' · venta ' + v.id, lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
-      d.movs.push(mov.id);
+      const r = Stock.ingreso({ tipoMov: 'ING-DEVCLI', det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + d.cliente.nom, ndoc: d.id, doc: 'Devolución', modulo: 'Comercial', obs: d.sustTipo + ' ' + d.sustNum + ' · venta ' + v.id, lineas: porAlm[alm].map(linStock) });
+      if (!r.ok) throw new Error(r.error);
+      d.movs.push(r.mov.id);
+    });
+    Object.keys(malPorAlm).forEach(alm => {
+      const r = Docs.trf.directa({ tipoMov: 'TRF-LIQUID', origen: alm, destino: almMal, obs: 'Devolución en mal estado ' + d.id + ' de la venta ' + v.id, lineas: malPorAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor) })) });
+      d.trfs = (d.trfs || []).concat(r.trf.id);
+      d.movs.push(r.mov.id);
     });
     d.estado = 'Finalizada';
     d.finalizada = { f: UI.ahora(), u: Store.usuario().nom };

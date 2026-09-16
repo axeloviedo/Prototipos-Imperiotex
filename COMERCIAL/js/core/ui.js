@@ -42,7 +42,7 @@ const UI = {
   COLORES: {
     'Vigente': 'var(--prp)', 'Convertida': 'var(--aprobada)', 'Vencida': 'var(--borrador)', 'Anulada': 'var(--cancelada)', 'Anulado': 'var(--cancelada)',
     'Registrada': 'var(--confirmado)', 'Pendiente': 'var(--pendiente)', 'Finalizada': 'var(--completada)',
-    'Abierta': 'var(--aprobado-sol)', 'Cerrada': 'var(--borrador)',
+    'Abierta': 'var(--aprobado-sol)', 'Aprobada': 'var(--aprobada)', 'Recibida': 'var(--completada)', 'Cerrada': 'var(--borrador)',
     'Pagado': 'var(--completada)', 'Parcial': 'var(--parcial)', 'Pendiente de pago': 'var(--pendiente)', 'Por devolver': 'var(--rechazado-sol)',
     'Por validar': 'var(--pendiente)', 'Stock comprometido': 'var(--pendiente)', 'Stock entregado': 'var(--completada)', 'Stock liberado': 'var(--borrador)', 'Stock devuelto': 'var(--rechazado-sol)', 'Validado': 'var(--confirmado)', 'Procesado': 'var(--confirmado)',
     'Nuevo': 'var(--prp)', 'Activo': 'var(--confirmado)', 'Por recuperar': 'var(--parcial)', 'Sin compras': 'var(--borrador)', 'Inactivo': 'var(--borrador)'
