@@ -44,7 +44,9 @@ const COLOR_EST={
   "Pendiente Aprobar":"var(--pendiente)","Aprobada":"var(--confirmado)","Rechazada":"var(--rechazado-sol)","Convertida en Orden":"var(--completada)","Fabricada":"var(--prp)",
   /* Solicitud de Materiales (documento y línea) */
   "Pendiente":"var(--pendiente)","En proceso":"var(--aprobada)","Atendida":"var(--completada)","Anulada":"var(--cancelada)",
-  "Transferido":"var(--completada)","En compra":"var(--prp)","Recibido":"var(--completada)",
+  "Transferido":"var(--completada)","En compra":"var(--prp)","Recibido":"var(--completada)","En transferencia":"var(--aprobada)",
+  /* Solicitud de Transferencia */
+  "Parcial":"var(--parcial)","Recibida":"var(--completada)",
   /* Orden de Compra */
   "Pendiente de Validar":"var(--pendiente)","Para Recibir y Pagar":"var(--aprobada)","Para Recibir":"var(--oc-recibir)","Para Pagar":"var(--oc-pagar)","Cancelada":"var(--cancelada)",
   /* GRE */

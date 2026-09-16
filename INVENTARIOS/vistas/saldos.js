@@ -5,12 +5,12 @@ Vistas.pantallas(String.raw`
     <div class="screen-head">
       <h1>Saldos por Fecha</h1><span class="code">GI-20</span>
       <div class="spacer"></div>
-      <button class="btn btn-secondary" onclick="toast('Exportar a Excel (prototipo)')">Exportar</button>
+      
     </div>
     <p class="hint" style="margin:0 0 14px">Foto del inventario a una fecha de corte, por almacén y artículo. Es la tabla de saldos que pide el cierre contable: para recostear un periodo hay que poder responder cuánto había el último día del mes. El saldo no se guarda día a día — se reconstruye a partir de los movimientos de ingreso y de salida hasta la fecha elegida.</p>
     <div class="card">
       <div class="filters">
-        <div class="field req"><label>Fecha de corte</label><input type="date" id="f-sal-f" value="2026-07-19" onchange="renderSaldos()"></div>
+        <div class="field req"><label>Fecha de corte</label><input type="date" id="f-sal-f" onchange="renderSaldos()"></div>
         <div class="field"><label>Almacén</label><select id="f-sal-alm" onchange="renderSaldos()"><option value="">Todos</option></select></div>
         <div class="field"><label>Artículo</label><input id="f-sal-q" placeholder="Código o nombre…" oninput="renderSaldos()"></div>
         <div class="field"><label>Grupo de Artículo</label><select id="f-sal-g" onchange="renderSaldos()"><option value="">Todos</option></select></div>
@@ -30,6 +30,6 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="sal-count"></span></div>
     </div>
-    <p class="hint">El costo unitario es el promedio ponderado vigente a la fecha de corte. La valorización solo la mueven los ingresos.</p>
+    <p class="hint">El saldo y el costo unitario (promedio ponderado) se reconstruyen con los movimientos de la base hasta el cierre de la fecha de corte. Comprometido y Disponible solo se muestran para la fecha de hoy (el comprometido no tiene historia). Los almacenes sin Kardex valorizado muestran solo cantidades.</p>
   </section>
 `);

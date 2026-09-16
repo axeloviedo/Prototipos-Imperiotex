@@ -19,9 +19,10 @@ Vistas.pantallas(String.raw`
         <div class="formgrid">
           <div class="field req"><label>Código</label><input id="gru-cod" placeholder="Ej. MP"></div>
           <div class="field req"><label>Nombre</label><input id="gru-nom" placeholder="Ej. MATERIA PRIMA"></div>
-          <div class="field"><label>Prefijo del código de artículo</label><input id="gru-pref" placeholder="Ej. MP"></div>
+          <div class="field"><label>Prefijo del código de artículo</label><input id="gru-pref" placeholder="Ej. MP-"></div>
           <div class="field"><label>Asignación de código</label>
             <select id="gru-asig"><option>Interna</option><option>Externa</option></select></div>
+          <div class="field"><div class="check" style="margin-top:22px"><input type="checkbox" id="gru-inv" checked> Inventariable <span class="hint">(los artículos del grupo manejan stock)</span></div></div>
         </div>
         <p class="hint" style="margin-top:8px">El prefijo arma el código del artículo. La asignación define si el sistema autogenera (Interna) o el usuario ingresa un código único (Externa).</p>
       </div>

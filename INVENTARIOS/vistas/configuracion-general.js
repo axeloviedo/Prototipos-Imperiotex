@@ -21,7 +21,7 @@ Vistas.pantallas(String.raw`
       <b style="font-size:13px">Etiquetas de producto</b>
       <div class="formgrid" style="margin-top:12px">
         <div class="field"><label>Nombre del campo de referencia</label>
-          <input id="cfg-nom-etq" value="Referencia de etiqueta" oninput="cfgEtqNombre()"></div>
+          <input id="cfg-nom-etq" value="N° Referencia"></div>
         <div class="field"><div class="check" style="margin-top:22px"><input type="checkbox" id="cfg-imp-ref" checked onchange="cfgImprimirRef()"> Imprimir el valor de referencia en la etiqueta</div></div>
       </div>
       <p class="hint">El código de barras identifica al artículo y no cambia nunca. La referencia es un dato libre que se captura en el <button class="btn-link" onclick="go('gi09')">movimiento de ingreso</button> y se imprime debajo del código: aquí es el N° Referencia, en otra empresa puede ser una campaña o una fecha de vencimiento. Renombre el campo según lo que signifique para el cliente.</p>
@@ -69,7 +69,7 @@ Vistas.pantallas(String.raw`
 
     <div class="card">
       <b style="font-size:13px">Series de Guías de Remisión Electrónicas (referencial)</b>
-      <p class="hint" style="margin-top:5px">Series GRE por almacén de despacho, tal como están configuradas en el sistema. Solo visual: la numeración la controla la emisión electrónica ante SUNAT y no se edita aquí. Las guías se emiten desde GI-14 / GI-15.</p>
+      <p class="hint" style="margin-top:5px">Series GRE por almacén de despacho. Solo visual: en el prototipo todas las guías se numeran con la serie <b>T001-</b> de la base compartida (la numeración real la controla la emisión electrónica ante SUNAT). Las guías se emiten desde GI-14 / GI-15.</p>
       <table class="grid subtable" style="margin-top:12px">
         <thead><tr><th>Documento</th><th style="width:90px">Serie</th><th style="width:150px;text-align:right">Próximo correlativo</th><th>Almacén de despacho</th></tr></thead>
         <tbody id="series-gre-body"></tbody>

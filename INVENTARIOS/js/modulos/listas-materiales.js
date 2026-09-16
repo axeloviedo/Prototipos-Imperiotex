@@ -1,198 +1,136 @@
-/* INVENTARIOS · GI-17 Listas de Materiales */
-/* ===== GI-17 · Listas de Materiales (sin plantilla; nombre = producto final) ===== */
-const LDMS={
- ldm1:{id:"LDM-0001",prod:"PT-0001",prodNom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",desc:"Ensamble final (acabado, azul, talla 28)",cant:1,pred:true,
-  items:[{cod:"MP-0044",nom:"BOTON METALICO 17MM",u:"UND",qty:1},
-         {cod:"MP-0055",nom:"CUERO SINTETICO PARCHE",u:"UND",qty:1},
-         {cod:"MP-0063",nom:"ETIQUETA PANTALON SARA",u:"UND",qty:1},
-         {cod:"MP-0061",nom:"HANG TAG SARA DENIM",u:"UND",qty:1},
-         {cod:"MP-0064",nom:"BOLSA BRILLO 30X40",u:"UND",qty:1},
-         {cod:"MP-0031",nom:"HILO POLIESTER AZUL",u:"MT",qty:0.5},
-         {cod:"PPT-0021",nom:"PANTALON WIDE LEG ZULEIKA LAVADO COLOR AZUL TALLA 28",u:"UND",qty:1}]},
- ldm2:{id:"LDM-0002",prod:"PPT-0021",prodNom:"PANTALON WIDE LEG ZULEIKA LAVADO COLOR AZUL TALLA 28",desc:"Lavado del pantalón crudo",cant:1,pred:true,
-  items:[{cod:"PPT-0022",nom:"PANTALON WIDE LEG ZULEIKA CRUDO TALLA 28",u:"UND",qty:1}]},
- ldm3:{id:"LDM-0003",prod:"PPT-0022",prodNom:"PANTALON WIDE LEG ZULEIKA CRUDO TALLA 28",desc:"Confección del crudo",cant:1,pred:true,
-  items:[{cod:"MP-0045",nom:"CIERRE METALICO 12CM",u:"UND",qty:1},
-         {cod:"MP-0071",nom:"TALLITA TALLA 28",u:"UND",qty:1},
-         {cod:"MP-0031",nom:"HILO POLIESTER AZUL",u:"MT",qty:1},
-         {cod:"MP-0012",nom:"TELA DENIM 12 OZ AZUL",u:"MT",qty:1.5}]}
-};
-let LDM_ORDEN=["ldm1","ldm2","ldm3"], LDM=null, LDMkey="", LDM_SEQ=4;
-/* Catálogo de recursos para la LDM (mano de obra / máquina / servicio).
-   Espejo del maestro de Recursos de Producción (PRODUCCION · PR-11), que es donde se crean y editan. */
-const RECURSOS_LDM=[
- {cod:"REC-0001",nom:"Operario de corte · turno mañana",u:"HORA"},
- {cod:"REC-0002",nom:"Costurera · línea 1",u:"HORA"},
- {cod:"REC-0003",nom:"Máquina de corte",u:"HORA"},
- {cod:"REC-0004",nom:"Mesa de corte manual",u:"HORA"},
- {cod:"REC-0005",nom:"Energía eléctrica de planta",u:"HORA"},
- {cod:"REC-0008",nom:"Operario de acabado",u:"HORA"},
- {cod:"REC-0009",nom:"Patronista / tizado",u:"HORA"},
- {cod:"REC-0010",nom:"Máquina recta y remalladora",u:"HORA"},
- {cod:"REC-0011",nom:"Lavado · servicio de terceros",u:"UND"},
- {cod:"REC-0012",nom:"Acabado · servicio de terceros",u:"UND"}
-];
-/* Catálogo de almacenes para los selectores de la LDM */
-const ALMACENES=[
- {cod:"SB-ALM-MPT",nom:"Almacén MP Telas"},
- {cod:"SB-ALM-MPA",nom:"Almacén MP Avíos"},
- {cod:"SB-ALM-PPT",nom:"Almacén Producto en Proceso"},
- {cod:"SB-ALM-PT",nom:"Almacén Central Mercadería Gamarra"},
- {cod:"SB-TDA-01",nom:"Tienda Gamarra 1"},
- {cod:"SB-TRF-01",nom:"Almacén de Tránsito SB"}
-];
-/* Almacén sugerido para un componente, tomado de sus existencias (STOCK se indexa por nombre en el proto) */
-function almCodeFromStock(nom){
-  const r=(typeof STOCK!=="undefined")?STOCK.find(x=>x.art===nom):null;
-  return r ? (r.alm.split(" · ")[0]||"").trim() : "";
+/* INVENTARIOS · GI-17 Listas de Materiales sobre BD.d.maestros.ldms (contrato §3.1):
+   items [{tipo:'Artículo', cod, cant, alm, metodo:'Manual'|'Notificación'} | {tipo:'Recurso', cod, cant, metodo} | {tipo:'Texto', txt}]
+   Los recursos salen de BD.d.maestros.recursos (se crean en Producción PR-11). */
+const METODOS=["Notificación","Manual"];
+let LDM=null, LDM_ID="";   /* copia en edición y id original ('' = nueva) */
+function fillLDMFiltros(){
+  const g=document.getElementById('f-ldm-g'), v=g.value;
+  g.innerHTML=opcionesLista(M().grupos.filter(x=>x.inv!==false).map(x=>({v:x.cod,t:x.cod+' · '+x.nom})),v,'Todos');
 }
-const EMISION_OPTS=["Notificación","Manual"];
-/* Semilla del tipo de línea en las listas existentes */
-Object.values(LDMS).forEach(d=>{ (d.items||[]).forEach(it=>{if(!it.tipo)it.tipo="Artículo"}); });
-function ldmProdOptions(sel){
-  return '<option value="">Seleccionar…</option>'+ARTICULOS.filter(a=>a.manu).map(a=>'<option value="'+a.id+'"'+(a.id===sel?' selected':'')+'>'+a.id+' · '+a.n+'</option>').join('');
-}
-function mpCatalogo(){return ARTICULOS.filter(a=>a.inv==="Sí").map(a=>({cod:a.id,nom:a.n,u:a.u,cat:a.c||a.t}))}
 function renderLDM(){
-  const tb=document.getElementById('ldm-body'); tb.innerHTML="";
-  LDM_ORDEN.forEach(k=>{
-    const d=LDMS[k];
-    tb.innerHTML+='<tr class="clickable" onclick="loadLDM(\''+k+'\')"><td>'+d.id+'</td><td>'+d.prodNom+'</td><td>'+(d.desc||'<span class="hint">—</span>')+'</td>'+
-     '<td>'+(d.pred?'<span class="badge" style="background:var(--aprobado-sol)">Predeterminada</span>':'<span class="hint">Alternativa</span>')+'</td>'+
-     '<td style="text-align:right">'+d.cant+'</td><td style="text-align:right">'+d.items.length+'</td>'+
-     '<td><button class="btn-link" onclick="event.stopPropagation();loadLDM(\''+k+'\')">Abrir</button></td></tr>';
-  });
-  document.getElementById('ldm-count').textContent=LDM_ORDEN.length+" listas de materiales";
+  fillLDMFiltros();
+  const q=Fmt.s(document.getElementById('f-ldm-q').value), g=document.getElementById('f-ldm-g').value;
+  const lista=M().ldms.filter(l=>{const a=BD.art(l.art)||{};return (!g||a.grupo===g)&&(!q||Fmt.s([l.id,l.art,a.nom,l.nom,l.desc].join(' ')).includes(q))});
+  document.getElementById('ldm-body').innerHTML=lista.map(d=>{
+    const nA=d.items.filter(i=>i.tipo==='Artículo').length, nR=d.items.filter(i=>i.tipo==='Recurso').length;
+    return '<tr class="clickable" onclick="loadLDM(\''+d.id+'\')"><td>'+d.id+'</td><td>'+d.art+' · '+Fmt.e(BD.nomArt(d.art))+'</td><td>'+Fmt.e(d.nom||'')+'<br><span class="hint">'+Fmt.e(d.desc||'')+'</span></td>'+
+     '<td>'+(d.pred?badge('Predeterminada','var(--aprobado-sol)'):hint('Alternativa'))+'</td><td style="text-align:right">'+Fmt.n(d.base||1)+'</td><td style="text-align:right">'+nA+' art. · '+nR+' rec.</td>'+
+     '<td style="text-align:right">'+Explosion.pasoArt(d.art,d.id)+'</td><td><button class="btn-link" onclick="event.stopPropagation();loadLDM(\''+d.id+'\')">Abrir</button></td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:16px">Sin listas de materiales</td></tr>';
+  document.getElementById('ldm-count').textContent=lista.length+" de "+M().ldms.length+" listas de materiales";
 }
-function nuevaLDM(){
-  LDMkey=""; LDM={id:"LDM-000"+LDM_SEQ,prod:"",prodNom:"",desc:"",cant:1,items:[]};
-  document.getElementById('ldm-titulo').textContent="NUEVA LISTA DE MATERIALES";
-  document.getElementById('ldm-id').value=LDM.id;
-  document.getElementById('ldm-prod').innerHTML=ldmProdOptions("");
-  document.getElementById('ldm-desc').value="";
-  document.getElementById('ldm-cant').value="1";
-  document.getElementById('ldm-pred').checked=false;
-  renderLDMitems(); go('gi17f');
+RENDER.gi17=renderLDM;
+
+function sigLDM(){let max=0;M().ldms.forEach(l=>{const m=/^LDM-(\d+)$/.exec(l.id);if(m)max=Math.max(max,+m[1])});return 'LDM-'+String(max+1).padStart(4,'0')}
+function nuevaLDM(art){
+  LDM_ID=""; LDM={id:sigLDM(),art:art||"",nom:"",desc:"",base:1,pred:false,items:[]};
+  go('gi17f');
 }
-function loadLDM(k){
-  LDMkey=k; LDM=LDMS[k];
-  document.getElementById('ldm-titulo').textContent="LISTA DE MATERIALES: "+LDM.prodNom;
+function loadLDM(id){
+  const d=BD.ldm(id); if(!d){toast("No existe la lista "+id);return}
+  LDM_ID=id; LDM=BD.copia(d); go('gi17f');
+}
+function renderLDMform(){
+  if(!LDM)return;
+  document.getElementById('ldm-titulo').textContent=LDM_ID?"LISTA DE MATERIALES "+LDM.id:"NUEVA LISTA DE MATERIALES";
   document.getElementById('ldm-id').value=LDM.id;
-  document.getElementById('ldm-prod').innerHTML=ldmProdOptions(LDM.prod);
-  document.getElementById('ldm-desc').value=LDM.desc||"";
-  document.getElementById('ldm-cant').value=LDM.cant;
+  document.getElementById('ldm-prod').innerHTML='<option value="">Seleccionar…</option>'+opcionesLista(M().articulos.filter(a=>a.inv!==false&&(a.produccion||a.cod===LDM.art)&&(a.estado==='Activo'||a.cod===LDM.art)&&['PT','PPT','MERC'].includes(a.grupo)).map(a=>({v:a.cod,t:a.cod+' · '+a.nom})),LDM.art,false);
+  document.getElementById('ldm-prod').disabled=!!LDM_ID;
+  document.getElementById('ldm-nom').value=LDM.nom||'';
+  document.getElementById('ldm-desc').value=LDM.desc||'';
+  document.getElementById('ldm-cant').value=LDM.base||1;
   document.getElementById('ldm-pred').checked=!!LDM.pred;
-  renderLDMitems(); go('gi17f');
+  const otras=LDM.art?BD.ldmsDe(LDM.art).filter(l=>l.id!==LDM.id):[];
+  document.getElementById('ldm-otras').innerHTML=otras.length?'Otras listas de '+LDM.art+': '+otras.map(l=>'<button class="btn-link" onclick="loadLDM(\''+l.id+'\')">'+l.id+'</button>'+(l.pred?' (predeterminada)':'')).join(', '):'';
+  renderLDMitems();
 }
-function ldmProdChange(){
-  const id=document.getElementById('ldm-prod').value, a=ARTICULOS.find(x=>x.id===id);
-  document.getElementById('ldm-titulo').textContent="LISTA DE MATERIALES: "+(a?a.n:"");
-}
-function tipoBadgeLDM(t){
-  const col = t==="Recurso" ? "var(--aprobada)" : (t==="Texto" ? "var(--borrador)" : "var(--primario-claro)");
-  return '<span class="badge" style="background:'+col+'">'+t+'</span>';
-}
-function almSelectLDM(i,cur){
-  const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 6px;font-size:12px';
-  return '<select onchange="LDM.items['+i+'].alm=this.value" style="'+st+'"><option value="">—</option>'+
-    ALMACENES.map(a=>'<option value="'+a.cod+'"'+(a.cod===cur?' selected':'')+' title="'+a.nom+'">'+a.cod+'</option>').join('')+'</select>';
-}
-function emiSelectLDM(i,cur){
-  const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 6px;font-size:12px';
-  return '<select onchange="LDM.items['+i+'].emision=this.value" style="'+st+'">'+
-    EMISION_OPTS.map(o=>'<option'+(o===cur?' selected':'')+'>'+o+'</option>').join('')+'</select>';
-}
+RENDER.gi17f=renderLDMform;
+function ldmProdChange(){LDM.art=document.getElementById('ldm-prod').value;if(!LDM.nom)LDM.nom=BD.nomArt(LDM.art);renderLDMform()}
+function tipoBadgeLDM(t){return badge(t,t==="Recurso"?"var(--aprobada)":t==="Texto"?"var(--borrador)":"var(--primario-claro)")}
 function renderLDMitems(){
-  const tb=document.getElementById('ldm-items'); tb.innerHTML="";
-  LDM.items.forEach((l,i)=>{
-    if(!l.tipo)l.tipo="Artículo";
+  const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 6px;font-size:12px';
+  document.getElementById('ldm-items').innerHTML=LDM.items.map((l,i)=>{
     let cod,comp,cant,uni,alm,emi;
     if(l.tipo==="Texto"){
-      cod='<span class="hint">—</span>';
-      comp='<input value="'+(l.nom||"").replace(/"/g,'&quot;')+'" placeholder="Texto / instrucción" style="width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 7px;font-size:12.5px" oninput="LDM.items['+i+'].nom=this.value">';
-      cant='<span class="hint">—</span>'; uni='<span class="hint">—</span>';
-      alm='<span class="hint">—</span>'; emi='<span class="hint">—</span>';
-    } else {
-      if(l.alm==null)l.alm=almCodeFromStock(l.nom)||"";
-      if(l.emision==null)l.emision="Notificación";
-      cod=l.cod; comp=l.nom;
-      cant='<input value="'+l.qty+'" style="text-align:right" oninput="LDM.items['+i+'].qty=parseFloat(this.value)||0">';
-      uni=l.u;
-      alm=almSelectLDM(i,l.alm); emi=emiSelectLDM(i,l.emision);
+      cod=hint(); comp='<input value="'+Fmt.e(l.txt||'')+'" placeholder="Texto / instrucción" style="'+st+'" oninput="LDM.items['+i+'].txt=this.value">';
+      cant=uni=alm=emi=hint();
+    }else{
+      const R=l.tipo==='Recurso'?BD.rec(l.cod)||{}:null, A=R?null:BD.art(l.cod)||{};
+      cod=l.cod; comp=Fmt.e(R?R.nom+' · '+(R.tipo||''):A.nom)+(A&&BD.fabricable(l.cod)?' '+badge('Fabricable','var(--prp)'):'')+(R&&BD.esServicio(l.cod)?' '+badge('Servicio de terceros','var(--oc-pagar)'):'');
+      cant='<input value="'+l.cant+'" style="text-align:right" onchange="LDM.items['+i+'].cant=parseFloat(this.value)||0">';
+      uni=R?R.u||'':A.u||'';
+      alm=R?hint():'<select onchange="LDM.items['+i+'].alm=this.value" style="'+st+'">'+opcionesAlm(l.alm,null,'—')+'</select>';
+      const met=l.metodo||(R?(R.tipo==='RECURSO HUMANO'?'Manual':'Notificación'):'Manual');
+      emi='<select onchange="LDM.items['+i+'].metodo=this.value" style="'+st+'">'+opcionesLista(METODOS,met,false)+'</select>';
     }
-    tb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+tipoBadgeLDM(l.tipo)+'</td><td>'+cod+'</td><td>'+comp+'</td>'+
-     '<td>'+cant+'</td><td>'+uni+'</td><td>'+alm+'</td><td>'+emi+'</td>'+
-     '<td><button class="btn-link" onclick="LDM.items.splice('+i+',1);renderLDMitems()">Eliminar</button></td></tr>';
-  });
-  if(!LDM.items.length)tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:16px">Sin líneas: use "+ Artículo", "+ Recurso" o "+ Texto"</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+tipoBadgeLDM(l.tipo)+'</td><td>'+cod+'</td><td>'+comp+'</td><td>'+cant+'</td><td>'+uni+'</td><td>'+alm+'</td><td>'+emi+'</td>'+
+      '<td><button class="btn-link" onclick="LDM.items.splice('+i+',1);renderLDMitems()">Eliminar</button></td></tr>';
+  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:16px">Sin líneas: use "+ Artículo", "+ Recurso" o "+ Texto"</td></tr>';
 }
-function addTextoLDM(){ if(!LDM)return; LDM.items.push({tipo:"Texto",cod:"",nom:"",u:"",qty:0}); renderLDMitems(); }
-/* + Recurso: modal de búsqueda (espejo del de artículos) */
-function abrirBuscarRec(){ if(!LDM)return; document.getElementById('ldmrec-q').value=""; renderBuscarRec(); openModal('m-ldm-rec'); }
+function addTextoLDM(){LDM.items.push({tipo:"Texto",txt:""});renderLDMitems()}
+
+/* + Recurso */
+function abrirBuscarRec(){document.getElementById('ldmrec-q').value="";renderBuscarRec();openModal('m-ldm-rec')}
 function renderBuscarRec(){
-  const q=(document.getElementById('ldmrec-q').value||"").toLowerCase();
-  const tb=document.getElementById('ldmrec-body'); tb.innerHTML="";
-  RECURSOS_LDM.forEach(r=>{
-    if(LDM.items.some(l=>l.tipo==="Recurso" && l.cod===r.cod))return;
-    if(q && !(r.cod.toLowerCase().includes(q)||sinTildes(r.nom).includes(sinTildes(q))))return;
-    tb.innerHTML+='<tr><td>'+r.cod+'</td><td>'+r.nom+'</td><td>'+r.u+'</td>'+
-     '<td><button class="btn btn-primary btn-sm" onclick="addRecLDM(\''+r.cod+'\')">Agregar</button></td></tr>';
-  });
-  if(!tb.innerHTML)tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la lista)</td></tr>';
+  const q=Fmt.s(document.getElementById('ldmrec-q').value);
+  const lista=M().recursos.filter(r=>r.activo!==false&&!LDM.items.some(l=>l.tipo==="Recurso"&&l.cod===r.cod)&&(!q||Fmt.s(r.cod+' '+r.nom+' '+r.tipo).includes(q)));
+  document.getElementById('ldmrec-body').innerHTML=lista.map(r=>'<tr><td>'+r.cod+'</td><td>'+Fmt.e(r.nom)+'<br><span class="hint">'+Fmt.e(r.tipo||'')+'</span></td><td>'+(r.u||'')+'</td><td style="text-align:right">'+Fmt.m(r.costo)+'</td>'+
+    '<td><button class="btn btn-primary btn-sm" onclick="addRecLDM(\''+r.cod+'\')">Agregar</button></td></tr>').join('')||'<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la lista)</td></tr>';
 }
 function addRecLDM(cod){
-  const r=RECURSOS_LDM.find(x=>x.cod===cod); if(!r)return;
-  LDM.items.push({tipo:"Recurso",cod:r.cod,nom:r.nom,u:r.u,qty:1});
+  const r=BD.rec(cod); if(!r)return;
+  LDM.items.push({tipo:"Recurso",cod:r.cod,cant:1,metodo:r.tipo==='RECURSO HUMANO'?'Manual':'Notificación'});
   closeModal('m-ldm-rec'); renderLDMitems();
-  toast(r.nom+" agregado: indique la cantidad por unidad producida");
+  toast(r.nom+" agregado: indique la cantidad por la cantidad base");
 }
+/* + Artículo */
 function abrirBuscarMP(){document.getElementById('gi17a-q').value="";fillMPFiltros();renderBuscarMP();openModal('m-gi17a')}
 function fillMPFiltros(){
-  const g=document.getElementById('gi17a-g'); if(!g)return;
-  g.innerHTML='<option value="">Todos</option>'+TIPOS.map(t=>'<option>'+t.nom+'</option>').join('');
-  document.getElementById('gi17a-atr').innerHTML='<option value="">Cualquiera</option>'+ATRIBUTOS.map(x=>'<option>'+x.nom+'</option>').join('');
+  document.getElementById('gi17a-g').innerHTML=opcionesLista(M().grupos.filter(g=>g.inv!==false).map(g=>({v:g.cod,t:g.cod+' · '+g.nom})),'','Todos');
+  document.getElementById('gi17a-atr').innerHTML=opcionesLista(M().atributos.map(x=>x.nom),'','Cualquiera');
   fillMPVal();
 }
 function fillMPVal(){
-  const nom=document.getElementById('gi17a-atr').value;
-  const a=ATRIBUTOS.find(x=>x.nom===nom);
-  document.getElementById('gi17a-val').innerHTML='<option value="">Cualquiera</option>'+((a?a.vals:[]).map(v=>'<option>'+v+'</option>').join(''));
+  const a=M().atributos.find(x=>x.nom===document.getElementById('gi17a-atr').value);
+  document.getElementById('gi17a-val').innerHTML=opcionesLista(a?a.vals:[],'','Cualquiera');
 }
 function renderBuscarMP(){
-  const q=(document.getElementById('gi17a-q').value||"").toLowerCase();
-  const fg=document.getElementById('gi17a-g').value;
+  const q=Fmt.s(document.getElementById('gi17a-q').value), fg=document.getElementById('gi17a-g').value;
   const fa=document.getElementById('gi17a-atr').value, fv=document.getElementById('gi17a-val').value;
-  const tb=document.getElementById('gi17a-body'); tb.innerHTML="";
-  ARTICULOS.filter(a=>a.inv==="Sí" && a.e==="Activo").forEach(a=>{
-    if(LDM.items.some(l=>l.cod===a.id))return;
-    if(LDM.prod && a.id===LDM.prod)return;
-    if(q && !(a.id.toLowerCase().includes(q)||sinTildes(a.n).includes(sinTildes(q))))return;
-    if(fg && a.t!==fg)return;
-    if(fa){ const par=(a.attrs||[]).find(x=>x[0]===fa); if(!par)return; if(fv && par[1]!==fv)return; }
-    const attrTxt=(a.attrs&&a.attrs.length)?(' <span class="hint">'+a.attrs.map(x=>x[0]+": "+x[1]).join(" · ")+'</span>'):'';
-    tb.innerHTML+='<tr><td>'+a.id+'</td><td>'+a.n+attrTxt+'</td><td>'+a.u+'</td><td>'+(a.c||a.t)+'</td>'+
-     '<td><button class="btn btn-primary btn-sm" onclick="addMPLDM(\''+a.id+'\')">Agregar</button></td></tr>';
+  const lista=M().articulos.filter(a=>{
+    if(a.inv===false||a.estado!=='Activo'||a.cod===LDM.art||LDM.items.some(l=>l.tipo==='Artículo'&&l.cod===a.cod))return false;
+    if(q&&!Fmt.s(a.cod+' '+a.nom).includes(q))return false; if(fg&&a.grupo!==fg)return false;
+    if(fa){const v=(a.attrs||{})[fa]; if(!v||(fv&&v!==fv))return false;}
+    return true;
   });
-  if(!tb.innerHTML)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la lista)</td></tr>';
+  document.getElementById('gi17a-body').innerHTML=lista.slice(0,200).map(a=>'<tr><td>'+a.cod+'</td><td>'+Fmt.e(a.nom)+(a.attrs?' <span class="hint">'+Object.keys(a.attrs).map(k=>k+': '+a.attrs[k]).join(' · ')+'</span>':'')+'</td><td>'+a.u+'</td><td>'+Fmt.e(a.cat||a.grupo)+'</td>'+
+    '<td><button class="btn btn-primary btn-sm" onclick="addMPLDM(\''+a.cod+'\')">Agregar</button></td></tr>').join('')||'<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la lista)</td></tr>';
 }
 function addMPLDM(cod){
-  const m=mpCatalogo().find(x=>x.cod===cod); if(!m)return;
-  LDM.items.push({tipo:"Artículo",cod:m.cod,nom:m.nom,u:m.u,qty:1});
+  const a=BD.art(cod); if(!a)return;
+  LDM.items.push({tipo:"Artículo",cod:a.cod,cant:1,alm:a.alm||Explosion.almDe(a.cod)||'',metodo:BD.fabricable(a.cod)?'Manual':'Notificación'});
   closeModal('m-gi17a'); renderLDMitems();
-  toast(m.nom+" agregado: indique la cantidad por unidad producida");
+  toast(a.nom+" agregado: indique la cantidad y el almacén de donde se toma");
 }
 function guardarLDM(){
-  const prod=document.getElementById('ldm-prod').value;
-  if(!prod){toast("Seleccione el producto final");return}
+  LDM.art=document.getElementById('ldm-prod').value;
+  LDM.nom=document.getElementById('ldm-nom').value.trim()||BD.nomArt(LDM.art);
+  LDM.desc=document.getElementById('ldm-desc').value.trim();
+  LDM.base=parseFloat(document.getElementById('ldm-cant').value)||1;
+  if(!LDM.art){toast("Seleccione el producto");return}
   if(!LDM.items.length){toast("Agregue al menos una línea");return}
-  if(LDM.items.some(l=>l.tipo==="Texto" && !((l.nom||"").trim()))){toast("Complete el texto de las líneas de tipo Texto");return}
-  const a=ARTICULOS.find(x=>x.id===prod);
-  LDM.prod=prod; LDM.prodNom=a?a.n:prod; LDM.desc=document.getElementById('ldm-desc').value.trim();
-  LDM.cant=parseFloat(document.getElementById('ldm-cant').value)||1;
-  const marcarPred=document.getElementById('ldm-pred').checked;
-  if(marcarPred){LDM_ORDEN.forEach(k2=>{if(LDMS[k2].prod===prod && LDMS[k2]!==LDM)LDMS[k2].pred=false})}
-  LDM.pred=marcarPred || !LDM_ORDEN.some(k2=>LDMS[k2]!==LDM && LDMS[k2].prod===prod && LDMS[k2].pred);
-  if(!LDMkey){const k="ldm"+LDM_SEQ; LDMS[k]=LDM; LDM_ORDEN.push(k); LDMkey=k; LDM_SEQ++;}
-  renderLDM(); go('gi17');
-  toast(LDM.id+" guardada como "+(LDM.pred?"Predeterminada":"alternativa")+" de "+LDM.prodNom);
+  const i=LDM.items.findIndex(l=>l.tipo==='Texto'?!(l.txt||'').trim():!(l.cant>0)||(l.tipo==='Artículo'&&!l.alm));
+  if(i>=0){toast("Línea "+(i+1)+": "+(LDM.items[i].tipo==='Texto'?"complete el texto":LDM.items[i].tipo==='Artículo'&&!LDM.items[i].alm?"elija el almacén":"la cantidad debe ser mayor que cero"));return}
+  /* evitar ciclos: un componente fabricable no puede usar (directa o indirectamente) el producto de esta lista */
+  const usa=(art,visto)=>{if(visto[art])return false;visto[art]=1;return BD.ldmsDe(art).some(L=>L.id!==LDM.id&&L.items.some(x=>x.tipo==='Artículo'&&(x.cod===LDM.art||usa(x.cod,visto))))};
+  const ciclo=LDM.items.find(x=>x.tipo==='Artículo'&&usa(x.cod,{}));
+  if(ciclo){toast("Ciclo: "+ciclo.cod+" ya usa "+LDM.art+" en su propia lista");return}
+  const hermanas=BD.ldmsDe(LDM.art).filter(l=>l.id!==LDM.id);
+  LDM.pred=document.getElementById('ldm-pred').checked||!hermanas.some(l=>l.pred);
+  if(LDM.pred)hermanas.forEach(l=>l.pred=false);
+  if(LDM_ID)Object.assign(BD.ldm(LDM_ID),LDM); else M().ldms.push(Object.assign(LDM,{origen:'Inventarios'}));
+  const a=BD.art(LDM.art); if(a&&!a.produccion)a.produccion=true;
+  BD.guardar();
+  toast(LDM.id+" guardada como "+(LDM.pred?"predeterminada":"alternativa")+" de "+LDM.art);
+  go('gi17');
 }

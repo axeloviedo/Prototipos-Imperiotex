@@ -1,89 +1,117 @@
-/* INVENTARIOS · GI-11 Solicitud de Transferencia */
-/* ===== GI-11 · Transferencia (doble paso) ===== */
-const TRF={estado:"Borrador",lines:[
- {cod:"ART-0001-28AZ",nom:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",u:"UND",env:6,rec:0,lote:"REF-2026-0009"},
- {cod:"ART-0001-30AZ",nom:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",u:"UND",env:4,rec:0,lote:"REF-2026-0011"}
-]};
-const TRF_BADGE={"Borrador":["Borrador","var(--borrador)"],"Aprobada":["Aprobada / En tránsito","var(--aprobada)"],
- "Parcial":["Recibida parcial","var(--parcial)"],"Completada":["Completada","var(--completada)"],"Cancelada":["Cancelada","var(--cancelada)"]};
-function findStock(alm,art){return STOCK.find(r=>r.alm===alm&&r.art===art)}
-function trfPend(l){return l.env-l.rec}
-function renderTRF(){
-  const e=TRF.estado, tb=document.getElementById('trf-items'); tb.innerHTML="";
-  TRF.lines.forEach((l,i)=>{
-    const tr=document.createElement('tr');
-    const envCell=(e==="Borrador")?'<td><input value="'+l.env+'" style="text-align:right" oninput="TRF.lines['+i+'].env=parseFloat(this.value)||0"></td>':'<td style="text-align:right">'+l.env+'</td>';
-    const recCell=(e==="Borrador")?'<td style="text-align:right">-</td>':'<td style="text-align:right">'+l.rec+'</td>';
-    const pend=trfPend(l);
-    const pendCell=(e==="Borrador")?'<td style="text-align:right">-</td>':'<td style="text-align:right;'+(pend>0?'color:var(--pendiente);font-weight:600':'')+'">'+pend+'</td>';
-    tr.innerHTML='<td>'+(i+1)+'</td><td>'+l.cod+'</td><td>'+l.nom+'</td><td>'+l.u+'</td>'+envCell+recCell+pendCell+
-     '<td>'+l.lote+' <span class="hint">(viaja idéntico)</span></td>'+
-     '<td>'+(e==="Borrador"?'<button class="btn-link">Eliminar</button>':'')+'</td>';
-    tb.appendChild(tr);
-  });
-  const b=TRF_BADGE[e];
-  const badge=document.getElementById('trf-badge'); badge.textContent=b[0]; badge.style.background=b[1];
-  const show=(id,v)=>document.getElementById(id).style.display=v?"inline-block":"none";
-  show('trf-b-cancelar',e==="Borrador"); show('trf-b-guardar',e==="Borrador"); show('trf-b-aprobar',e==="Borrador");
-  show('trf-b-add',e==="Borrador");
-  show('trf-b-recibir',e==="Aprobada"||e==="Parcial");
-  show('trf-b-nota',e==="Aprobada"||e==="Parcial"||e==="Completada");
-  show('trf-b-cancelpend',e==="Parcial");
-  show('trf-b-volver',e==="Completada"||e==="Cancelada");
-  document.getElementById('trf-origen').disabled=(e!=="Borrador");
-  document.getElementById('trf-destino').disabled=(e!=="Borrador");
-}
+/* INVENTARIOS · GI-11 Solicitud de Transferencia en dos pasos sobre BD.d.trfs (Docs.trf, decisiones T1/T7):
+   crear (Borrador) → aprobar (compromete en origen y suma Pedido en destino) → recibir total o parcial (Stock.transferencia) → Recibida · cancelar pendientes. */
+const TRF={id:"",lineas:[]};
+const trfs=()=>BD.d.trfs||[];
+const stDoc=id=>trfs().find(x=>x.id===id);
+/* cantidad recibida de una línea (tolerante al nombre del campo) */
+const recLinea=l=>Number(l.rec!=null?l.rec:l.recibido!=null?l.recibido:l.recq)||0;
 function resetTRF(){
-  TRF.estado="Borrador"; TRF.lines.forEach(l=>{l.rec=0});
-  document.getElementById('trf-origen').value=""; document.getElementById('trf-destino').value="";
-  renderTRF(); go('gi11');
+  TRF.id=""; TRF.lineas=[];
+  go('gi11');
 }
-function aprobarTRF(){
-  const o=document.getElementById('trf-origen').value, d=document.getElementById('trf-destino').value;
-  if(!o||!d){toast("Debe seleccionar Almacén origen y Almacén destino (obligatorios)");return}
-  if(o===d){toast("El almacén origen y el destino no pueden ser el mismo");return}
-  TRF.origen=o; TRF.destino=d; TRF.estado="Aprobada";
-  TRF.lines.forEach(l=>{
-    const so=findStock(o,l.nom); if(so){so.res+=l.env}
-    let sd=findStock(d,l.nom);
-    if(!sd){sd={alm:d,art:l.nom,u:l.u,real:0,res:0,esp:0,sem:"cero",lot:null,t:"PRODUCTOS TERMINADOS",c:"PANTALÓN",sc:""};STOCK.push(sd)}
-    sd.esp+=l.env;
-  });
-  renderTRF(); renderStock();
-  toast("Transferencia aprobada: stock Comprometido en origen y Pedido en destino (ver Existencias)");
+function abrirST(id){
+  const s=stDoc(id); if(!s){toast("No existe la transferencia "+id);return}
+  TRF.id=s.id; TRF.lineas=s.lineas.map(l=>({art:l.art,cant:l.cant}));
+  go('gi11');
+}
+function cargarCabeceraST(){
+  const s=TRF.id?stDoc(TRF.id):null;
+  document.getElementById('trf-id').value=s?s.id:'(se asigna al guardar)';
+  document.getElementById('trf-user').value=s?(((s.hist||[])[0]||{}).u||''):BD.usuario;
+  document.getElementById('trf-fecha').value=s?(s.fecha||''):BD.ahora();
+  document.getElementById('trf-tipo').innerHTML=opcionesTipoMov('TRF',s?s.tipoMov:'TRF-INTERNO');
+  document.getElementById('trf-origen').innerHTML=opcionesAlm(s?s.origen:'');
+  document.getElementById('trf-destino').innerHTML=opcionesAlm(s?s.destino:'');
+  document.getElementById('trf-obs').value=s?(s.obs||''):'';
+}
+/* tipo sugerido según las categorías de los almacenes (el usuario puede cambiarlo) */
+function sugerirTipoTRF(){
+  const o=BD.alm(document.getElementById('trf-origen').value), d=BD.alm(document.getElementById('trf-destino').value); if(!o||!d)return;
+  const t=d.transito||o.transito?'TRF-FABRIC':d.cat==='Tienda Liquidación'||/LIQUID/.test(d.cod)?'TRF-LIQUID':o.cat==='Tienda'&&d.cat==='Tienda'?'TRF-ENTRETIENDA':d.cat==='Tienda'?'TRF-REPTIENDA':'TRF-INTERNO';
+  document.getElementById('trf-tipo').value=t;
+}
+function renderTRF(){
+  const s=TRF.id?stDoc(TRF.id):null, e=s?s.estado:'Nuevo', ed=!s;
+  document.getElementById('trf-titulo').textContent='SOLICITUD DE TRANSFERENCIA'+(s?' · '+s.id:'');
+  const b=document.getElementById('trf-badge'); b.textContent=e; b.style.background=COLOR_EST[e]||'var(--borrador)';
+  ['trf-tipo','trf-origen','trf-destino','trf-obs'].forEach(id=>document.getElementById(id).disabled=!ed);
+  const show=(id,v)=>document.getElementById(id).style.display=v?'inline-block':'none';
+  const pend=s&&s.lineas.some(l=>recLinea(l)<l.cant);
+  show('trf-b-guardar',ed); show('trf-b-add',ed);
+  show('trf-b-aprobar',ed||e==='Borrador');
+  show('trf-b-cancelar',s&&e==='Borrador');
+  show('trf-b-recibir',s&&(e==='Aprobada'||e==='Parcial')&&pend);
+  show('trf-b-cancelpend',s&&(e==='Aprobada'||e==='Parcial')&&pend);
+  if(ed){
+    tablaLineas(TRF,{thead:'trf-head',tbody:'trf-items',tfoot:'trf-foot',alm:document.getElementById('trf-origen').value,disp:true,dispLbl:'Disponible en origen',avisar:true,estVar:'TRF',render:'renderTRF'});
+  }else{
+    document.getElementById('trf-head').innerHTML='<tr><th style="width:36px">#</th><th>Código</th><th>Nombre</th><th>UM</th><th style="text-align:right">Cant. enviada</th><th style="text-align:right">Cant. recibida</th><th style="text-align:right">Pendiente</th></tr>';
+    document.getElementById('trf-items').innerHTML=s.lineas.map((l,i)=>{const r=recLinea(l), p=BD.r4(l.cant-r);
+      return '<tr><td>'+(i+1)+'</td><td>'+l.art+'</td><td>'+Fmt.e(BD.nomArt(l.art))+'</td><td>'+BD.u(l.art)+'</td><td style="text-align:right">'+Fmt.n(l.cant)+'</td><td style="text-align:right">'+Fmt.n(r)+'</td><td style="text-align:right;'+(p>0&&e!=='Cancelada'?'color:var(--pendiente);font-weight:600':'')+'">'+Fmt.n(p)+'</td></tr>'}).join('');
+    document.getElementById('trf-foot').innerHTML='';
+  }
+  const movs=s?BD.d.movs.filter(m=>m.doc===s.id||m.ndoc===s.id):[];
+  const av=document.getElementById('trf-aviso'), vinc=s?[s.sol?'Atiende '+docLink(s.sol):'',s.of?'Orden '+docLink(s.of):''].filter(Boolean):[];
+  if(s&&(movs.length||vinc.length)){av.style.display='block';av.innerHTML='<b style="font-size:12.5px">'+(movs.length?'Recepciones registradas: '+movs.map(m=>docLink(m.id)).join(', '):'Documento vinculado')+'</b>'+(vinc.length?'<p class="hint" style="margin-top:4px">'+vinc.join(' · ')+'</p>':'');}
+  else av.style.display='none';
+  const COL={ok:"var(--texto-sec)",pend:"var(--pendiente)",no:"var(--rechazado-sol)"};
+  document.getElementById('trf-hist').innerHTML=s&&(s.hist||[]).length?s.hist.slice().reverse().map(h=>'<div class="hline"><b style="font-size:12.5px">'+Fmt.e(h.a)+'</b><br><span class="hint" style="color:'+(COL[h.e]||COL.ok)+'">'+h.f+' · '+Fmt.e(h.u)+(h.d?' — '+Fmt.e(h.d):'')+'</span></div>').join(''):hint('Se registra al guardar.');
+}
+RENDER.gi11=()=>{cargarCabeceraST();renderTRF()};
+BUSCADOR_CTX.trf={etiqueta:"el almacén origen",soloInv:true,requiereAlm:true,avisaSinStock:true,alm:()=>document.getElementById('trf-origen').value,
+  agregar:cod=>{if(agregarLinea(TRF,cod))renderTRF(); if(Stock.disp(document.getElementById('trf-origen').value,cod)<=0)toast("Advertencia: sin stock disponible en el origen")}};
+function docsTrf(){if(typeof Docs==='undefined'||!Docs.trf){toast("La Solicitud de Transferencia (Docs.trf) aún no está disponible en la base");return null}return Docs.trf}
+function guardarST(aprobar){
+  const D=docsTrf(); if(!D)return;
+  let s=TRF.id?stDoc(TRF.id):null;
+  if(!s){
+    const o=document.getElementById('trf-origen').value, d=document.getElementById('trf-destino').value;
+    if(!o||!d){toast("Seleccione el almacén origen y el destino");return}
+    if(o===d){toast("El almacén origen y el destino no pueden ser el mismo");return}
+    if(!lineasValidas(TRF))return;
+    s=intentar(()=>D.crear({origen:o,destino:d,tipoMov:document.getElementById('trf-tipo').value,obs:document.getElementById('trf-obs').value.trim(),lineas:TRF.lineas.map(l=>({art:l.art,cant:l.cant}))}));
+    if(!s)return;
+  }
+  if(aprobar){const r=intentar(()=>D.aprobar(s.id)); if(!r){abrirST(s.id);return}}
+  toast(s.id+(aprobar?" aprobada: comprometido en "+s.origen+" y pedido en "+s.destino:" guardada como Borrador"));
+  abrirST(s.id);
+}
+function cancelarST(){
+  const D=docsTrf(); if(!D)return;
+  if(!confirm("¿Cancelar la transferencia "+TRF.id+"?"))return;
+  const r=intentar(()=>D.cancelar(TRF.id)); if(!r)return;
+  toast(TRF.id+" cancelada"); abrirST(TRF.id);
 }
 function abrirRecepcion(){
-  const tb=document.getElementById('rec-items'); tb.innerHTML="";
-  TRF.lines.forEach((l,i)=>{
-    const pend=trfPend(l); if(pend<=0)return;
-    tb.innerHTML+='<tr><td>'+l.cod+'</td><td>'+l.nom+'</td><td style="text-align:right">'+pend+'</td>'+
-     '<td><input id="rec-'+i+'" value="'+pend+'" style="text-align:right;width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px"></td></tr>';
-  });
+  const s=stDoc(TRF.id); if(!s)return;
+  document.getElementById('rec-items').innerHTML=s.lineas.map((l,i)=>{const p=BD.r4(l.cant-recLinea(l)); if(p<=0)return '';
+    return '<tr><td>'+l.art+'</td><td>'+Fmt.e(BD.nomArt(l.art))+'</td><td style="text-align:right">'+Fmt.n(p)+'</td><td><input id="rec-'+i+'" value="'+p+'" style="text-align:right;width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px"></td></tr>'}).join('');
   openModal('m-gi11a');
 }
 function confirmarRecepcion(){
+  const D=docsTrf(); if(!D)return;
+  const s=stDoc(TRF.id);
+  const lineas=s.lineas.map((l,i)=>{const x=document.getElementById('rec-'+i);return x?{art:l.art,cant:parseFloat(x.value)||0}:null}).filter(l=>l&&l.cant>0);
+  if(!lineas.length){toast("Indique al menos una cantidad recibida");return}
+  const r=intentar(()=>D.recibir(TRF.id,lineas)); if(!r)return;
   closeModal('m-gi11a');
-  TRF.lines.forEach((l,i)=>{
-    const inp=document.getElementById('rec-'+i); if(!inp)return;
-    let r=Math.max(0,Math.min(trfPend(l),parseFloat(inp.value)||0));
-    if(r>0){
-      const so=findStock(TRF.origen,l.nom); if(so){so.real-=r; so.res-=r}
-      const sd=findStock(TRF.destino,l.nom); if(sd){sd.real+=r; sd.esp-=r; sd.sem=(sd.real-sd.res)>0?"ok":sd.sem}
-      l.rec+=r;
-    }
-  });
-  const pendTotal=TRF.lines.reduce((a,l)=>a+trfPend(l),0);
-  TRF.estado=(pendTotal>0)?"Parcial":"Completada";
-  renderTRF(); renderStock();
-  toast(pendTotal>0?"Recepción parcial confirmada: pendiente registrado":"Recepción completa: Kardex en ambos almacenes, transferencia Completada");
+  const s2=stDoc(TRF.id);
+  toast("Recepción confirmada: "+s2.id+" queda "+s2.estado);
+  abrirST(TRF.id);
 }
 function cancelarPendientes(){
-  closeModal('m-gi11b');
-  TRF.lines.forEach(l=>{
-    const pend=trfPend(l); if(pend<=0)return;
-    const so=findStock(TRF.origen,l.nom); if(so){so.res-=pend}
-    const sd=findStock(TRF.destino,l.nom); if(sd){sd.esp-=pend}
-  });
-  TRF.estado="Cancelada"; renderTRF(); renderStock();
-  toast("Pendientes cancelados: reserva liberada y devuelta al stock del origen");
+  const D=docsTrf(); if(!D)return;
+  const r=intentar(()=>D.cancelar(TRF.id)); closeModal('m-gi11b'); if(!r)return;
+  toast("Pendientes cancelados: comprometido y pedido liberados"); abrirST(TRF.id);
+}
+/* listado en GI-07 */
+function renderST(){
+  const tb=document.getElementById('st-body'); if(!tb)return;
+  const e=document.getElementById('f-st-e').value;
+  const lista=trfs().filter(s=>!e||s.estado===e);
+  tb.innerHTML=lista.map(s=>{
+    const movs=BD.d.movs.filter(m=>m.doc===s.id||m.ndoc===s.id);
+    return '<tr class="clickable" onclick="abrirST(\''+s.id+'\')"><td>'+s.id+'</td><td>'+(s.fecha||'')+'</td><td>'+(s.tipoMov||'')+'</td><td>'+s.origen+' → '+s.destino+'</td><td>'+s.lineas.length+'</td>'+
+      '<td onclick="event.stopPropagation()">'+(docLink(s.sol||s.of))+'</td><td onclick="event.stopPropagation()">'+(movs.map(m=>docLink(m.id)).join(' ')||hint('-'))+'</td><td>'+badge(s.estado)+'</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:12px">Sin solicitudes de transferencia</td></tr>';
 }
