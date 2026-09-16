@@ -55,3 +55,10 @@ Inventarios y Compras cargan **los mismos archivos**. Cada `index.html` solo cam
 5. Si la pantalla va en el menú: `<div class="nav-item" data-go="xx01">…</div>`.
 
 Producción y Comercial tienen su propia estructura (`js/core`, `js/data`, `js/modules`) y no comparten código con Inventarios y Compras.
+
+## Documentación de la base compartida
+
+- `docs/16_BASE_DATOS_COMPARTIDA.md`: contrato de la base (maestros, stock, documentos, quién hace qué).
+- `docs/17_GUIA_PRODUCCION_MASIVA.md`: guía paso a paso para probar la producción masiva con los dos escenarios de datos.
+- `docs/00_DECISIONES_CERRADAS.md` sección K y los documentos de cada módulo: `INVENTARIOS/docs`, `COMPRAS/docs`, `PRODUCCION/docs`, `COMERCIAL/docs`.
+- Herramientas: `COMPARTIDO/herramientas/importar_plantillas.py` (maestros desde los Excel), `actualizar_estructura_word.py` (Word actualizado desde los Excel) y `generar-escenario.js` (escenario «Con operación»).
