@@ -355,6 +355,13 @@ const Docs = (() => {
   /* ================= Factura de proveedor ================= */
   const fac = {
     ESTADOS: ['Impagado', 'Pagado', 'Anulada'],
+    /* avisos antes de facturar (C-4): faltante abierto de la orden tercerizada que originó la OC. Avisa, no bloquea (hay reclamo aparte, CO-11) */
+    avisos(ocId) {
+      const o = BD.oc(ocId); if (!o || !o.of) return [];
+      const of = BD.of(o.of), f = of && of.faltante;
+      if (!f || f.estado !== 'Abierto') return [];
+      return ['La orden ' + of.id + ' tiene ' + f.cant + ' ' + BD.u(of.art) + ' enviadas que no retornaron de ' + BD.provNom(f.prov) + ': revise el importe antes de registrar la factura o abra un reclamo'];
+    },
     /* d = {oc, ndoc, fecha, lineas:[{art, cant, pu}], obs}; sin lineas factura lo pendiente de facturar de la OC */
     crear(d) {
       const o = BD.oc(d.oc); exigir(o && !['Borrador', 'Pendiente de Validar', 'Cancelada'].includes(o.est), 'La OC no está aprobada');

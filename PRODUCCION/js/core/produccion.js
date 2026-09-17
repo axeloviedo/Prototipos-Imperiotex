@@ -157,6 +157,16 @@ const Prod = {
     Prod._hist(of, 'Orden cancelada', '');
     Prod._revisarSF(of);
   },
+  /* enviado al proveedor del servicio y lo que no retornó (C-4): se compara con lo recibido en la orden */
+  enviadoTercero(of) { return UI.r4((of.envios || []).reduce((a, e) => a + e.cant, 0)); },
+  faltanteTercero(of) { return (of.envios || []).length ? UI.r4(Math.max(0, Prod.enviadoTercero(of) - of.prod)) : 0; },
+  /* deja registrado el faltante del proveedor al cerrar la orden; no mueve stock (el material sigue en el almacén de tránsito) */
+  _registrarFaltante(of) {
+    const c = Prod.faltanteTercero(of);
+    if (c <= 0.00005) { of.faltante = null; return; }
+    of.faltante = { cant: c, prov: Prod.provServicio(of), f: UI.ahora(), u: BD.usuario, estado: 'Abierto' };
+    Prod._hist(of, 'Faltante del proveedor', UI.n(c, 0) + ' ' + M.u(of.art) + ' enviadas que no retornaron · ' + (M.provNom(of.faltante.prov) || 'proveedor del servicio') + ' · queda abierto para el reclamo (CO-11)');
+  },
   cerrar(of) {
     if (of.estado !== 'Liberado') throw new Error('Solo se cierra una orden Liberada');
     Prod._liberarComprometido(of);
@@ -166,6 +176,7 @@ const Prod = {
       Stock.revalorizar(of.alm, of.art, resto); of.absorbido = UI.r2(of.absorbido + resto);
       Prod._hist(of, 'Diferencia de costo al cerrar', UI.s(resto) + ' emitido y no recibido se suma al costo de ' + of.art);
     }
+    Prod._registrarFaltante(of);
     of.estado = 'Cerrado'; of.fechaCierre = UI.ahora();
     Prod._hist(of, 'Orden cerrada', 'Recibido ' + UI.n(of.prod, 0) + ' de ' + UI.n(of.cant, 0));
     Prod._revisarSF(of);

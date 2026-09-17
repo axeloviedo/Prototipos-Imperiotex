@@ -92,6 +92,13 @@ function loadFacForm(sinIr){
     av.style.display="block";
     av.innerHTML='<b style="font-size:12.5px">Servicio de la orden de fabricación '+coEsc(o.of)+'</b><p class="hint" style="margin-top:5px">'+(FAC.nuevo?'Al registrarla, esta factura pasa':'Esta factura pasó')+' a la <b>pestaña Costo de la orden</b>, donde el importe real se contrasta con el costo estándar del servicio.'+(BD.of(o.of)?'':' <span style="color:var(--pendiente)">La orden '+coEsc(o.of)+' no existe en la base: no se registra en ninguna orden.</span>')+' <button class="btn-link" onclick="verOFdeOC(\''+coEsc(o.of)+'\')">Abrir la orden en Producción</button></p>';
   }else av.style.display="none";
+  /* C-4: si la orden tercerizada dejó un faltante abierto, se avisa (no bloquea: el reclamo va por CO-11) */
+  const avFalta=Docs.fac.avisos(FAC.oc);
+  if(avFalta.length){
+    av.style.display="block";
+    av.style.borderLeftColor="var(--pendiente)";
+    av.innerHTML=(av.innerHTML||"")+'<p class="hint" style="margin-top:6px"><b>Faltante del servicio:</b> '+coEsc(avFalta.join(" · "))+'</p>';
+  }else av.style.borderLeftColor="var(--primario-claro)";
   renderFacForm();
   if(!sinIr)go('co10');
 }
@@ -173,6 +180,8 @@ function registrarFac(){
   if(!lineas.length){toast("Indique al menos una cantidad a facturar");return}
   if(FAC.items.some(it=>it.pu<=0 && it.cant>0)){toast("Todas las líneas facturadas deben tener precio");return}
   const fecha=coDMY(document.getElementById('fac-fecha').value)||BD.hoy();
+  const avisos=Docs.fac.avisos(FAC.oc);
+  if(avisos.length&&!FAC.avisado){FAC.avisado=true;toast(avisos[0]+". Vuelva a pulsar Registrar factura para continuar");return}
   const f=coTry(()=>Docs.fac.crear({oc:FAC.oc,ndoc:nd,fecha:fecha,lineas:lineas,obs:document.getElementById('fac-obs').value}));
   if(!f)return;
   const o=BD.oc(f.oc), a=Docs.oc.avance(o);
