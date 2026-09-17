@@ -1,59 +1,74 @@
-/* INVENTARIOS · GI-18 Rotación de Artículos · DATOS DE EJEMPLO: no conectado a la base compartida (fuera de alcance, docs/16 §5) */
-const COSTOS_REF={"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO":38.5,"BLUSA MANGA GLOBO PERLA TALLA M COLOR BLANCO":22,"CASACA DENIM OVERSIZE TALLA M COLOR AZUL":52,"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL":38.5,"FALDA DENIM MIDI TALLA 28 COLOR CELESTE":28.5,"SHORT JEAN CLASICO TALLA 30 COLOR AZUL":24,"TELA POPELINA BLANCA":6.5,"POLO BOX FIT TALLA M COLOR BLANCO":15.5,"HILO POLIESTER AZUL":24,"JEAN RECTO KIARA TALLA 30 COLOR NEGRO":36,"CIERRE METALICO 12CM":0.8,"BOTON METALICO 17MM":0.35,"POLO BOX FIT TALLA L COLOR BLANCO":15.5,"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL":38.5,"TELA DENIM 12 OZ AZUL":19.1};
-/* ===== GI-18 · Rotación de Artículos ===== */
-const ROT=[
- {art:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR NEGRO",alm:"SB-ALM-LIQ · Liquidación Central",sg:"PRODUCTOS TERMINADOS - PANTALONES",stock:80,uing:"20/12/2025",usal:"21/12/2025",dias:210},
- {art:"BLUSA MANGA GLOBO PERLA TALLA M COLOR BLANCO",alm:"SB-TDA-02 · Tienda Gamarra 2",sg:"PRODUCTOS TERMINADOS - BLUSAS",stock:34,uing:"05/12/2025",usal:"28/12/2025",dias:203},
- {art:"CASACA DENIM OVERSIZE TALLA M COLOR AZUL",alm:"SB-ALM-PT · Central Mercadería",sg:"PRODUCTOS TERMINADOS - CASACAS",stock:26,uing:"10/01/2026",usal:"02/02/2026",dias:167},
- {art:"PANTALON WIDE LEG ZULEIKA TALLA 30 COLOR AZUL",alm:"SB-ALM-PT · Central Mercadería",sg:"PRODUCTOS TERMINADOS - PANTALONES",stock:4,uing:"15/06/2026",usal:"24/02/2026",dias:145},
- {art:"FALDA DENIM MIDI TALLA 28 COLOR CELESTE",alm:"SB-TDA-03 · Tienda Zárate",sg:"PRODUCTOS TERMINADOS - FALDAS",stock:18,uing:"20/02/2026",usal:"08/03/2026",dias:133},
- {art:"SHORT JEAN CLASICO TALLA 30 COLOR AZUL",alm:"SB-TDA-01 · Tienda Gamarra 1",sg:"PRODUCTOS TERMINADOS - SHORTS",stock:22,uing:"12/03/2026",usal:"30/04/2026",dias:80},
- {art:"TELA POPELINA BLANCA",alm:"SB-ALM-MPT · MP Telas",sg:"MATERIAS PRIMAS - TELAS",stock:12.50,uing:"08/04/2026",usal:"02/05/2026",dias:78},
- {art:"POLO BOX FIT TALLA M COLOR BLANCO",alm:"SB-TDA-02 · Tienda Gamarra 2",sg:"PRODUCTOS TERMINADOS - POLOS",stock:45,uing:"12/06/2026",usal:"05/06/2026",dias:44},
- {art:"HILO POLIESTER AZUL",alm:"SB-ALM-MPA · MP Avíos",sg:"MATERIAS PRIMAS - AVIOS CONFECCION",stock:45,uing:"05/06/2026",usal:"20/03/2026",dias:44},
- {art:"JEAN RECTO KIARA TALLA 30 COLOR NEGRO",alm:"SB-TDA-03 · Tienda Zárate",sg:"PRODUCTOS TERMINADOS - JEANS",stock:15,uing:"28/05/2026",usal:"25/06/2026",dias:24},
- {art:"CIERRE METALICO 12CM",alm:"SB-ALM-MPA · MP Avíos",sg:"MATERIAS PRIMAS - AVIOS CONFECCION",stock:58,uing:"05/07/2026",usal:"10/05/2026",dias:14},
- {art:"BOTON METALICO 17MM",alm:"SB-ALM-MPA · MP Avíos",sg:"MATERIAS PRIMAS - AVIOS ACABADOS",stock:340,uing:"05/07/2026",usal:"03/04/2026",dias:14},
- {art:"POLO BOX FIT TALLA L COLOR BLANCO",alm:"SB-TDA-01 · Tienda Gamarra 1",sg:"PRODUCTOS TERMINADOS - POLOS",stock:28,uing:"12/06/2026",usal:"16/07/2026",dias:3},
- {art:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",alm:"SB-ALM-PT · Central Mercadería",sg:"PRODUCTOS TERMINADOS - PANTALONES",stock:40,uing:"15/06/2026",usal:"12/07/2026",dias:7},
- {art:"PANTALON WIDE LEG ZULEIKA TALLA 28 COLOR AZUL",alm:"SB-TDA-01 · Tienda Gamarra 1",sg:"PRODUCTOS TERMINADOS - PANTALONES",stock:9,uing:"20/06/2026",usal:"17/07/2026",dias:2},
- {art:"TELA DENIM 12 OZ AZUL",alm:"SB-ALM-MPT · MP Telas",sg:"MATERIAS PRIMAS - TELAS",stock:282.40,uing:"28/06/2026",usal:"14/07/2026",dias:5}
-];
+/* INVENTARIOS · GI-18 Rotación de Artículos · sobre la base compartida (BD.d.stock + BD.d.movs).
+   Cada fila es (almacén × artículo) con stock actual: días desde su último movimiento en ese almacén,
+   valor al costo promedio del almacén y semáforo de rotación. */
 function rotSem(d){
   if(d>180)return["Crítico >180 días","var(--cancelada)"];
   if(d>90)return["Inmovilizado","#C2410C"];
   if(d>30)return["Vigilar","var(--pendiente)"];
   return["Rota bien","var(--confirmado)"];
 }
-function rotGrp(r){return r.sg.split(" - ")[0]}
-function rotCat(r){return r.sg.split(" - ")[1]||""}
-function renderRot(){
-  const selA=document.getElementById('f-rot-alm'), selS=document.getElementById('f-rot-sg'), selG=document.getElementById('f-rot-g');
-  if(selA.options.length<=1){
-    [...new Set(ROT.map(r=>r.alm))].forEach(a=>{const o=document.createElement('option');o.textContent=a;selA.appendChild(o)});
-    [...new Set(ROT.map(rotGrp))].forEach(a=>{const o=document.createElement('option');o.textContent=a;selG.appendChild(o)});
-    [...new Set(ROT.map(rotCat))].forEach(a=>{const o=document.createElement('option');o.textContent=a;selS.appendChild(o)});
-  }
-  const fa=selA.value, fs=selS.value, fg=selG.value, fq=(document.getElementById('f-rot-q').value||"").toLowerCase(), fd=parseInt(document.getElementById('f-rot-d').value)||0;
-  const tb=document.getElementById('rot-body'); tb.innerHTML=""; let n=0;
-  ROT.slice().sort((a,b)=>b.dias-a.dias).forEach(r=>{
-    if(fa&&r.alm!==fa)return; if(fg&&rotGrp(r)!==fg)return; if(fs&&rotCat(r)!==fs)return;
-    if(fq&&!r.art.toLowerCase().includes(fq))return;
-    if(fd&&r.dias<=fd)return;
-    n++;
-    const val=r.stock*(COSTOS_REF[r.art]||0);
-    const[t,c]=rotSem(r.dias);
-    tb.innerHTML+='<tr><td>'+r.art+'</td><td>'+r.alm+'</td><td style="text-align:right">'+r.stock+'</td>'+
-     '<td style="text-align:right">'+val.toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
-     '<td>'+r.uing+'</td><td>'+r.usal+'</td>'+
-     '<td style="text-align:right;font-weight:700;'+(r.dias>90?'color:var(--cancelada)':'')+'">'+r.dias+'</td>'+
-     '<td><span class="badge" style="background:'+c+'">'+t+'</span></td></tr>';
+/* días entre una fecha dd/mm/aaaa [hh:mm] y hoy; sin fecha, vacío */
+function rotDias(f){
+  if(!f)return null;
+  const p=String(f).split(' ')[0].split('/'); if(p.length!==3)return null;
+  const d=new Date(Number(p[2]),Number(p[1])-1,Number(p[0])), hoy=Fmt.iso(BD.hoy()).split('-');
+  const h=new Date(Number(hoy[0]),Number(hoy[1])-1,Number(hoy[2]));
+  return Math.max(0,Math.round((h-d)/86400000));
+}
+/* filas de rotación: stock con Actual > 0, con su último ingreso y última salida */
+function rotFilas(){
+  const ult={};
+  BD.d.movs.forEach(m=>m.lineas.forEach(l=>{
+    const k=l.alm+'|'+l.art, u=ult[k]=ult[k]||{ing:'',sal:''};
+    const campo=l.signo>0?'ing':'sal';
+    if(!u[campo]||Fmt.num(m.fecha)>=Fmt.num(u[campo]))u[campo]=m.fecha;
+  }));
+  return BD.d.stock.filter(s=>s.act>0.00005).map(s=>{
+    const a=BD.art(s.art)||{}, u=ult[s.alm+'|'+s.art]||{ing:'',sal:''};
+    const dIng=rotDias(u.ing), dSal=rotDias(u.sal);
+    const dias=[dIng,dSal].filter(x=>x!=null);
+    return { art:s.art, nom:a.nom||s.art, alm:s.alm, almNom:BD.almNom(s.alm), grupo:a.grupo||'', cat:a.cat||'',
+      stock:s.act, u:a.u||'', valor:BD.r2(s.act*(s.costo||0)), uing:u.ing?u.ing.slice(0,10):'', usal:u.sal?u.sal.slice(0,10):'',
+      dias:dias.length?Math.min.apply(null,dias):null };
   });
-  document.getElementById('rot-count').textContent=n+" artículos";
-  const inm=ROT.filter(r=>r.dias>90);
-  document.getElementById('rot-valor').textContent="S/. "+inm.reduce((a,r)=>a+r.stock*(COSTOS_REF[r.art]||0),0).toLocaleString("es-PE",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function rotGrupoNom(cod){const g=BD.d.maestros.grupos.find(x=>x.cod===cod);return g?g.nom:cod}
+function renderRot(){
+  const F=rotFilas();
+  const selA=document.getElementById('f-rot-alm'), selS=document.getElementById('f-rot-sg'), selG=document.getElementById('f-rot-g');
+  const opciones=(sel,valores,textos)=>{
+    const v=sel.value;
+    sel.innerHTML='<option value="">'+sel.dataset.todos+'</option>'+valores.map((x,i)=>'<option value="'+Fmt.e(x)+'">'+Fmt.e(textos?textos[i]:x)+'</option>').join('');
+    sel.value=valores.indexOf(v)>=0?v:'';
+  };
+  const alms=[...new Set(F.map(r=>r.alm))].sort();
+  const grupos=[...new Set(F.map(r=>r.grupo))].filter(Boolean).sort();
+  const cats=[...new Set(F.map(r=>r.cat))].filter(Boolean).sort();
+  opciones(selA,alms,alms.map(c=>c+' · '+BD.almNom(c)));
+  opciones(selG,grupos,grupos.map(rotGrupoNom));
+  opciones(selS,cats);
+  const fa=selA.value, fs=selS.value, fg=selG.value, fq=Fmt.s(document.getElementById('f-rot-q').value||''), fd=parseInt(document.getElementById('f-rot-d').value)||0;
+  const lista=F.filter(r=>{
+    if(fa&&r.alm!==fa)return false; if(fg&&r.grupo!==fg)return false; if(fs&&r.cat!==fs)return false;
+    if(fq&&!Fmt.s(r.art+' '+r.nom).includes(fq))return false;
+    if(fd&&!(r.dias!=null&&r.dias>fd))return false;
+    return true;
+  }).sort((a,b)=>(b.dias==null?-1:b.dias)-(a.dias==null?-1:a.dias));
+  document.getElementById('rot-body').innerHTML=lista.map(r=>{
+    const[t,c]=r.dias==null?["Sin movimientos","var(--borrador)"]:rotSem(r.dias);
+    return '<tr><td><b>'+r.art+'</b><br><span class="mini">'+Fmt.e(r.nom)+'</span></td><td>'+r.alm+'<br><span class="mini">'+Fmt.e(r.almNom)+'</span></td>'+
+      '<td style="text-align:right">'+Fmt.q(r.stock,r.u)+'</td>'+
+      '<td style="text-align:right">'+Fmt.m(r.valor)+'</td>'+
+      '<td>'+(r.uing||hint('-'))+'</td><td>'+(r.usal||hint('-'))+'</td>'+
+      '<td style="text-align:right;font-weight:700;'+(r.dias>90?'color:var(--cancelada)':'')+'">'+(r.dias==null?'—':r.dias)+'</td>'+
+      '<td><span class="badge" style="background:'+c+'">'+t+'</span></td></tr>';
+  }).join('')||'<tr><td colspan="8" class="hint" style="text-align:center;padding:18px">Sin artículos con stock</td></tr>';
+  document.getElementById('rot-count').textContent=lista.length+" artículos";
+  const inm=F.filter(r=>r.dias!=null&&r.dias>90);
+  document.getElementById('rot-valor').textContent="S/. "+Fmt.m(inm.reduce((a,r)=>a+r.valor,0));
   document.getElementById('rot-count90').textContent=inm.length;
-  document.getElementById('rot-edad').textContent=Math.round(ROT.reduce((a,r)=>a+r.dias,0)/ROT.length)+" días";
+  const conDias=F.filter(r=>r.dias!=null);
+  document.getElementById('rot-edad').textContent=conDias.length?Math.round(conDias.reduce((a,r)=>a+r.dias,0)/conDias.length)+" días":"—";
 }
 
 RENDER.gi18=renderRot;

@@ -51,7 +51,7 @@ Vistas.pantallas(String.raw`
     <div class="card">
       <p class="hint">Series y correlativos de las notas internas de movimiento. El próximo correlativo es editable: al imprimir la primera nota de un movimiento se asigna el número y la serie avanza sola. Correlativo continuo, sin reinicio anual.</p>
       <table class="grid subtable" style="margin-top:12px">
-        <thead><tr><th>Documento</th><th style="width:90px">Serie</th><th style="width:150px;text-align:right">Próximo correlativo</th><th>Se imprime desde</th></tr></thead>
+        <thead><tr><th>Documento</th><th style="width:90px">Serie</th><th style="width:150px;text-align:right">Próximo correlativo</th><th style="width:110px;text-align:right">Emitidos</th><th>Se imprime desde</th></tr></thead>
         <tbody id="series-body"></tbody>
       </table>
       <p class="hint" style="margin-top:10px">Las notas internas son documentos de control sin valor tributario: el traslado por vía pública se sustenta con la Guía de Remisión Electrónica (GI-14). <span class="warn" title="Formatos definitivos de impresión a validar con Logística">⚠</span></p>
