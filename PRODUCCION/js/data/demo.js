@@ -6,7 +6,8 @@
       y abastecimiento a SB-ZARATE-MP en dos pasos (Solicitud de Transferencia: crear → aprobar → recibir al día siguiente) con guía.
    2) SF azul (PT-0001/0002) aprobada y FABRICADA completa: piezas → crudo → lavado tercerizado
       (SOL del servicio → OC de servicio → envío con GRE → retorno → conformidad → factura) → producto final.
-   3) SF negro (PT-0003/0004) en curso: crudo T30 a medias, lavado T28 enviado a la lavandería, lavado T30 con el servicio pedido.
+   3) SF negro (PT-0003/0004) en curso: usa 10 crudos T28 adelantados en una orden manual (el crudo no tiene color: el color nace en el lavado),
+      crudo T30 a medias, lavado T28 enviado a la lavandería, lavado T30 con el servicio pedido.
    4) SF de los cuatro PT aprobada sin órdenes (su materia prima queda comprometida). */
 const Demo = {
   USUARIOS: { comercial: 'Comercial 01', logistica: 'USER02 · Logística', compras: 'USER03 · Compras', gerencia: 'Gerencia General', produccion: 'USER05 · Producción' },
@@ -115,11 +116,11 @@ const Demo = {
     const c1 = Prod.generarDesdeSF(sf1.id, null, Demo._almsProceso()); BD.guardar();
     const f1 = art => c1.find(o => o.art === art);
     Demo._producir(f1('PPT-0001'), '07/07/2026 08:00', { reales: { m0: 57 }, cerrar: true });
-    Prod.adjuntar(f1('PPT-0001'), 'tizado_zuleika_azul_T28.pdf', 'Tizado para 40 unidades');
+    Prod.adjuntar(f1('PPT-0001'), 'tizado_zuleika_T28.pdf', 'Tizado para 40 unidades');
     Demo._producir(f1('PPT-0002'), '07/07/2026 13:00', { cerrar: true });
-    Demo._producir(f1('PPT-0005'), '08/07/2026 08:00', { emitir: [25, 15], cerrar: true });
-    Demo._producir(f1('PPT-0006'), '08/07/2026 09:00', { cerrar: true });
-    [['PPT-0009', 'F002-000345', null], ['PPT-0010', 'F002-000346', 3.6]].forEach(([art, ndoc, pu], k) => {
+    Demo._producir(f1('PPT-0003'), '08/07/2026 08:00', { emitir: [25, 15], cerrar: true });
+    Demo._producir(f1('PPT-0004'), '08/07/2026 09:00', { cerrar: true });
+    [['PPT-0005', 'F002-000345', null], ['PPT-0006', 'F002-000346', 3.6]].forEach(([art, ndoc, pu], k) => {
       const of = f1(art);
       const { oc } = Demo._comprarServicio(of, '10/07/2026 09:' + (10 + k * 5), '10/07/2026 15:' + (10 + k * 5), '10/07/2026 17:0' + k);
       Demo._en('11/07/2026 08:' + (10 + k * 10), 'produccion'); Prod.enviarProveedor(of, { cant: of.cant }); BD.guardar();
@@ -134,17 +135,23 @@ const Demo = {
     /* ---------- 3) SF negro: en curso ---------- */
     const sf2 = Demo._sf('08/07/2026 11:00', '09/07/2026 10:00', '09/07/2026 12:00',
       { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '05/08/2026', obs: 'Reposición Zuleika negro', lineas: NEGRO });
+    /* crudo sin color: Producción adelanta 10 crudos talla 28 (orden manual con sus piezas cortadas); la SF negro los usa y fabrica solo 20 */
+    Demo._en('10/07/2026 10:00', 'produccion');
+    const adelanto = Prod.crearManual({ art: 'PPT-0003', ldm: BD.ldmPred('PPT-0003').id, cant: 10, alm: 'SB-ZARATE-PP', sugeridas: { 'PPT-0001': 10 }, alms: Demo._almsProceso(), obs: 'Adelanto de crudo talla 28 para cualquier color' });
+    BD.guardar();
+    Demo._producir(adelanto.find(o => o.art === 'PPT-0001'), '10/07/2026 10:30', { cerrar: true });
+    Demo._producir(adelanto.find(o => o.art === 'PPT-0003'), '11/07/2026 08:00', { cerrar: true });
     Demo._en('13/07/2026 09:15', 'produccion');
     const c2 = Prod.generarDesdeSF(sf2.id, null, Demo._almsProceso()); BD.guardar();
     const f2 = art => c2.find(o => o.art === art);
-    Demo._producir(f2('PPT-0003'), '14/07/2026 08:00', { cerrar: true });
-    Demo._producir(f2('PPT-0004'), '14/07/2026 13:30', { cerrar: true });
-    Demo._producir(f2('PPT-0007'), '15/07/2026 08:00', { cerrar: true });
-    Demo._producir(f2('PPT-0008'), '16/07/2026 08:00', { emitir: [24], recibir: [16] });
-    const lav28 = f2('PPT-0011');
+    Demo._producir(f2('PPT-0001'), '14/07/2026 08:00', { cerrar: true });
+    Demo._producir(f2('PPT-0002'), '14/07/2026 13:30', { cerrar: true });
+    Demo._producir(f2('PPT-0003'), '15/07/2026 08:00', { cerrar: true });
+    Demo._producir(f2('PPT-0004'), '16/07/2026 08:00', { emitir: [24], recibir: [16] });
+    const lav28 = f2('PPT-0007');
     Demo._comprarServicio(lav28, '17/07/2026 09:00', '17/07/2026 15:00', '18/07/2026 10:00');
     Demo._en('20/07/2026 08:30', 'produccion'); Prod.enviarProveedor(lav28, { cant: lav28.cant }); BD.guardar();
-    Demo._comprarServicio(f2('PPT-0012'), '17/07/2026 09:05');
+    Demo._comprarServicio(f2('PPT-0008'), '17/07/2026 09:05');
 
     /* ---------- 4) SF de los cuatro terminados: aprobada, sin órdenes ---------- */
     Demo._sf('20/07/2026 10:00', '22/07/2026 09:00', '22/07/2026 11:30',
