@@ -6,7 +6,8 @@ const UI = {
   esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
   r2(v) { return Math.round((Number(v) || 0) * 100) / 100; },
   r4(v) { return Math.round((Number(v) || 0) * 10000) / 10000; },
-  n(v, d) { d = d == null ? 2 : d; return (Number(v) || 0).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d }); },
+  /* las cantidades se guardan con 4 decimales y se muestran con 2 como máximo */
+  n(v, d) { d = Math.min(2, d == null ? 2 : d); return (Number(v) || 0).toLocaleString('es-PE', { minimumFractionDigits: d, maximumFractionDigits: d }); },
   /* cantidad con su unidad: enteros sin decimales */
   q(v, u) { const r = UI.r4(v); return UI.n(r, Number.isInteger(r) ? 0 : 2) + (u ? ' ' + u : ''); },
   s(v) { return 'S/ ' + UI.n(v, 2); },
