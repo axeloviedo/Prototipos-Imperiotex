@@ -40,16 +40,6 @@ Vistas.pantallas(String.raw`
       </div>
       <p class="hint">El sistema soporta lotes siempre; cada artículo decide si los usa en su pestaña Inventario (Control de inventario = Lote). El consumo automático solo es recomendable cuando el almacén físico está ordenado: si no lo está, agrava los descuadres en lugar de resolverlos.</p>
     </div>
-
-    <div class="card">
-      <b style="font-size:13px">Campos de usuario</b>
-      <p class="hint" style="margin-top:5px">Campos libres que el cliente rellena para filtrar y buscar, sin efecto contable ni lógica asociada. Se muestran como columna y como filtro en el listado de artículos.</p>
-      <table class="grid subtable" style="margin-top:10px">
-        <thead><tr><th style="width:40px">#</th><th>Etiqueta</th><th style="width:160px">Se aplica a</th><th style="width:90px">Filtrable</th><th style="width:70px"></th></tr></thead>
-        <tbody id="cfg-cu-body"></tbody>
-      </table>
-      <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addCampoUsuario()">+ Agregar campo</button>
-    </div>
   </section>
 
   <!-- ==================================================== GI-19 · Series de Documentos -->

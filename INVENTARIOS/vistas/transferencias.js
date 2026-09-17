@@ -23,8 +23,8 @@ Vistas.pantallas(String.raw`
             <div class="field"><label>Registrado por</label><input id="trf-user" readonly></div>
             <div class="field req"><label>Tipo de movimiento</label><select id="trf-tipo"></select></div>
             <div class="field"><label>Fecha</label><input id="trf-fecha" readonly></div>
-            <div class="field req"><label>Almacén origen</label><select id="trf-origen" onchange="sugerirTipoTRF();renderTRF()"></select></div>
-            <div class="field req"><label>Almacén destino</label><select id="trf-destino" onchange="sugerirTipoTRF();renderTRF()"></select></div>
+            <div class="field req"><label>Almacén origen</label><select id="trf-origen" onchange="bloquearMismoAlm();renderTRF()"></select></div>
+            <div class="field req"><label>Almacén destino</label><select id="trf-destino" onchange="bloquearMismoAlm();renderTRF()"></select></div>
             <div class="field full"><label>Observaciones</label><input id="trf-obs" placeholder="Ej. reposición de tienda por alerta de mínimos"></div>
           </div>
         </div>

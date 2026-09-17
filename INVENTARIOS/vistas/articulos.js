@@ -1,4 +1,4 @@
-/* INVENTARIOS · GI-01 Artículos y GI-02 ficha del artículo (maestro completo de la base compartida) — HTML */
+/* INVENTARIOS · GI-01 Artículos y GI-02 ficha del artículo (diseño V9 sobre la base compartida, decisión L1) — HTML */
 Vistas.pantallas(String.raw`
   <!-- ==================================================== GI-01 · Artículos Lista -->
   <section class="screen" id="scr-gi01">
@@ -18,12 +18,12 @@ Vistas.pantallas(String.raw`
     </div>
     <div class="tbl-wrap">
       <table class="grid" id="tbl-art">
-        <thead><tr><th>Código</th><th>Nombre</th><th>Grupo</th><th>Categoría</th><th>Estado</th><th>UM Inventario</th><th>Inventariable</th><th style="text-align:right">Stock actual</th><th style="width:200px">Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Nombre</th><th>Grupo</th><th>Categoría</th><th>Estado</th><th>UM Inventario</th><th>Inventariable</th><th style="width:200px">Acciones</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="pager"><span id="art-count"></span></div>
     </div>
-    <p class="hint">Maestro de la base compartida: 101 materias primas y 17 servicios de la plantilla, más los avíos y la familia ZULEIKA (piezas PPT-0001..0004, crudo PPT-0005..0008, lavado PPT-0009..0012 y producto final PT-0001..0004). Cada nombre es único. Para crear artículos parecidos use <b>Duplicar</b>. Stock actual = suma de todos los almacenes.</p>
+    <p class="hint">Maestro de la base compartida: 101 materias primas y 17 servicios de la plantilla, más los avíos y la familia ZULEIKA (piezas PPT-0001..0004, crudo PPT-0005..0008, lavado PPT-0009..0012 y producto final PT-0001..0004). Cada nombre es único. Para crear artículos parecidos use <b>Duplicar</b>.</p>
   </section>
 
   <!-- ==================================================== GI-02 · Artículo Formulario -->
@@ -50,23 +50,22 @@ Vistas.pantallas(String.raw`
         <div class="tab active" data-t="general" onclick="tab(this)">General</div>
         <div class="tab" data-t="inv" id="tab-inv" onclick="tab(this)">Inventario</div>
         <div class="tab" data-t="plan" id="tab-plan" onclick="tab(this)">Planificación de Stock</div>
-        <div class="tab" data-t="venta" id="tab-venta" onclick="tab(this)">Venta</div>
-        <div class="tab" data-t="compra" id="tab-compra" onclick="tab(this)">Compra</div>
+        <div class="tab" data-t="venta" onclick="tab(this)">Venta</div>
+        <div class="tab" data-t="compra" onclick="tab(this)">Compra</div>
         <div class="tab" data-t="imp" onclick="tab(this)">Impuestos</div>
         <div class="tab" data-t="manu" id="tab-manu" onclick="tab(this)">Producción</div>
         <div class="tab" data-t="atr" id="tab-atr" onclick="tab(this)">Atributos</div>
-        <div class="tab" data-t="exist" id="tab-exist" onclick="tab(this)">Existencias</div>
       </div>
 
       <!-- General -->
       <div class="tabpane active" id="pane-general">
         <div class="formgrid">
-          <div class="field req"><label>Grupo de Artículo</label>
+          <div class="field req"><label>Grupo de Artículo <span class="hint">(bridge contable · no se cambia una vez creado)</span></label>
             <select id="sel-grupo" onchange="applyGrupo(this.value)"></select></div>
           <div class="field req"><label id="lbl-codigo">Código (auto · asignación interna)</label>
             <input id="inp-codigo" readonly></div>
           <div class="field"><label>Categoría (opcional · hija del grupo)</label>
-            <select id="sel-subgrupo" onchange="fillSubcat();refreshCV()"><option value=""></option></select></div>
+            <select id="sel-subgrupo" onchange="fillSubcat()"><option value=""></option></select></div>
           <div class="field"><label>Sub categoría (opcional · hija de la categoría)</label>
             <select id="sel-subsubgrupo"><option value=""></option></select></div>
           <div class="field full req"><label>Nombre <span class="hint">(único e irrepetible)</span></label>
@@ -77,12 +76,11 @@ Vistas.pantallas(String.raw`
         </div>
         <div style="margin-top:16px;border-top:1px solid var(--borde);padding-top:14px">
           <b style="font-size:13px">¿Para qué se usa este artículo?</b>
-          <p class="hint" style="margin-top:4px">Un artículo puede ser de varias cosas a la vez; los servicios (SRV) no son inventariables y solo se compran.</p>
+          <p class="hint" style="margin-top:4px">Un artículo puede ser de las tres cosas a la vez; los servicios no son inventariables.</p>
           <div style="display:flex;gap:26px;flex-wrap:wrap;margin-top:10px">
             <div class="check"><input type="checkbox" checked id="chk-invble" onchange="refreshTitle()"> Es inventariable</div>
             <div class="check"><input type="checkbox" id="chk-venta" onchange="refreshTitle()"> Se vende</div>
             <div class="check"><input type="checkbox" id="chk-compra" onchange="refreshTitle()"> Se compra</div>
-            <div class="check"><input type="checkbox" id="chk-manu" onchange="refreshTitle()"> Producción <span class="hint">(componente o producto de una lista de materiales)</span></div>
           </div>
         </div>
       </div>
@@ -90,9 +88,9 @@ Vistas.pantallas(String.raw`
       <!-- Planificación de Stock -->
       <div class="tabpane" id="pane-plan">
         <b style="font-size:13px">Stock mínimo por almacén</b>
-        <p class="hint" style="margin-top:4px">Origen del semáforo de Existencias (GI-05): por agotarse cuando el disponible es menor o igual al mínimo. La unidad es la de inventario.</p>
+        <p class="hint" style="margin-top:4px">Origen de las alertas por agotarse / agotado. La unidad es siempre la Unidad de Medida de Inventario del artículo.</p>
         <table class="grid subtable" style="margin-top:10px">
-          <thead><tr><th>Almacén</th><th style="width:160px">Cantidad mínima</th><th style="width:120px">Unidad</th><th style="width:70px"></th></tr></thead>
+          <thead><tr><th>Almacén</th><th>Cantidad mínima</th><th>Unidad (Inventario)</th><th style="width:70px"></th></tr></thead>
           <tbody id="plan-body"></tbody>
         </table>
         <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addPlanRow()">+ Agregar mínimo</button>
@@ -101,21 +99,20 @@ Vistas.pantallas(String.raw`
       <!-- Inventario -->
       <div class="tabpane" id="pane-inv">
         <div class="formgrid">
-          <div class="field req"><label>Unidad de Medida de Inventario <span class="hint">(base para todo el stock)</span></label>
+          <div class="field req"><label>Unidad de Medida de Inventario <span class="hint">(base para trabajar todo)</span></label>
             <select id="sel-um-inv" onchange="syncUMInv()"></select></div>
-          <div class="field"><label>Control de inventario</label>
-            <select id="sel-ctrl"><option>Nada</option><option>Lote</option><option>Serie</option></select></div>
-          <div class="field"><label>Clase de valoración</label><select id="sel-cv"></select></div>
-          <div class="field"><label>Valorización</label><input value="Promedio ponderado por almacén" readonly></div>
-          <div class="field"><label>Almacén por defecto <span class="hint">(donde entra lo producido)</span></label><select id="sel-alm-def"></select></div>
-          <div class="field"><label>Costo inicial de referencia (S/.)</label><input id="inp-costo" style="text-align:right"></div>
+          <div class="field"><label>Control de inventario <span class="hint">(uno o ninguno)</span></label>
+            <select id="sel-ctrl" onchange="ctrlChange()"><option>Nada</option><option>Lote</option><option>Serie</option></select></div>
+          <div class="field"><label>Valorización</label><input value="Promedio ponderado" readonly></div>
+          <div class="field" id="fld-vence" style="display:none"><div class="check" style="margin-top:22px"><input type="checkbox" id="chk-vence"> Este artículo vence <span class="hint">(sus lotes tienen fecha de vencimiento)</span></div></div>
+          <div class="field"><label>Formato de numeración (auto)</label><input id="ctrl-fmt" readonly></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:18px">
           <b style="font-size:13px">Códigos de barras del artículo</b>
           <div style="flex:1"></div>
           <button class="btn btn-secondary btn-sm" onclick="addBarcode()">+ Agregar código</button>
         </div>
-        <p class="hint" style="margin-top:4px">Un artículo puede tener varios códigos de barras, cada uno con su tipo (maestro Tipos de Código de Barra). Cada código apunta únicamente a este artículo.</p>
+        <p class="hint" style="margin-top:4px">Un artículo puede tener varios códigos de barras únicos e independientes, cada uno con su tipo (maestro Tipos de Código de Barra). Cada código apunta únicamente a este artículo.</p>
         <table class="grid subtable" style="margin-top:10px">
           <thead id="bc-head"></thead>
           <tbody id="bc-body"></tbody>
@@ -125,60 +122,63 @@ Vistas.pantallas(String.raw`
       <!-- Venta -->
       <div class="tabpane" id="pane-venta">
         <div class="formgrid">
-          <div class="field"><label>Precio de venta sugerido (S/.)</label><input id="inp-pventa" style="text-align:right"></div>
-          <div class="field"><label>Precio de venta mínimo (S/.)</label><input id="inp-pmin" style="text-align:right"></div>
+          <div class="field"><label>Precio de Venta (Valor Sugerido) (S/.)</label><input id="inp-pventa" style="text-align:right"></div>
+          <div class="field"><label>Unidad de Medida de Venta predeterminada <span class="hint">(ayuda)</span></label><select id="sel-um-venta"></select></div>
+          <div class="field"><div class="check" style="margin-top:6px"><input type="checkbox" id="chk-precio-min" onchange="togglePrecioMin(this.checked)"> Verificar Precio Mínimo</div></div>
+          <div class="field" id="fld-precio-min" style="display:none"><label>Precio de venta mínimo (único) (S/.)</label><input id="inp-pmin" style="text-align:right"></div>
           <div class="field"><label>Descuento mínimo (%)</label><input id="inp-dmin" style="text-align:right"></div>
           <div class="field"><label>Descuento máximo (%)</label><input id="inp-dmax" style="text-align:right"></div>
-          <div class="field"><label>Control de stock al vender</label><select id="sel-stockctrl"><option value="">—</option><option>Bloquear</option><option>Avisar</option><option>No verificar</option></select></div>
-          <div class="field full"><label>Unidades de medida de venta</label><div id="uventa-box" style="display:flex;gap:14px;flex-wrap:wrap;padding:6px 0"></div></div>
         </div>
         <p class="hint" id="nota-precio-min" style="margin-top:10px"></p>
+        <p class="hint" style="margin-top:4px">Las unidades de venta y de compra son referenciales: todo el stock se mueve en la Unidad de Medida de Inventario. Si la unidad es distinta, debe existir su factor de conversión (Configuraciones → Conversiones).</p>
       </div>
 
       <!-- Compra -->
       <div class="tabpane" id="pane-compra">
         <div class="formgrid">
-          <div class="field"><label>Grupo de compras</label><select id="sel-gcompra"></select></div>
           <div class="field"><label>Proveedor por defecto</label><select id="sel-prov"></select></div>
-          <div class="field"><label>Unidad de Medida de Compra</label><select id="sel-um-compra"></select></div>
-          <div class="field"><label>Precio de compra de referencia (S/.)</label><input id="inp-pcompra" style="text-align:right"></div>
-          <div class="field"><label>Último precio de compra (S/.) <span class="hint">(de las OC)</span></label><input id="inp-ultpc" readonly style="text-align:right"></div>
+          <div class="field"><label>Unidad de Medida de Compra predeterminada <span class="hint">(ayuda)</span></label><select id="sel-um-compra"></select></div>
+          <div class="field"><label>Grupo de compras <span class="hint">(del Grupo de Artículo)</span></label><input id="inp-gcompra" readonly></div>
+          <div class="field"><label>Último precio de compra (S/.) <span class="hint">(calculado)</span></label><input id="inp-ultpc" readonly style="text-align:right"></div>
+          <div class="field"><label>Precio de compra promedio (S/.) <span class="hint">(calculado)</span></label><input id="inp-prompc" readonly style="text-align:right"></div>
         </div>
-        <p class="hint" style="margin-top:10px">El precio de referencia se propone en las Órdenes de Compra creadas desde una Solicitud de Materiales. El último precio se calcula de las órdenes de compra registradas en la base.</p>
+        <p class="hint" style="margin-top:10px">El precio de compra no se captura aquí: es un atributo de la operación. El sistema lo deriva de las facturas de compra registradas (último y promedio) y lo muestra como referencia de solo lectura.</p>
       </div>
 
       <!-- Impuestos -->
       <div class="tabpane" id="pane-imp">
         <div class="formgrid">
-          <div class="field"><label>Afectación IGV</label><select id="sel-igv"><option>Gravado</option><option>Exonerado</option><option>Inafecto</option></select></div>
+          <div class="field"><label>Afectación IGV</label><select id="sel-igv"><option value="Gravado">Gravado - Operación Onerosa (18%)</option><option value="Exonerado">Exonerado</option><option value="Inafecto">Inafecto</option></select></div>
         </div>
       </div>
 
       <!-- Producción -->
       <div class="tabpane" id="pane-manu">
-        <div class="card" style="margin:0;border-left:4px solid var(--primario-claro)">
-          <b style="font-size:12.5px">Listas de Materiales del artículo</b>
+        <div class="formgrid">
+          <div class="field full"><div class="check"><input type="checkbox" id="chk-manu" onchange="refreshTitle()"> Apto para producción / fabricación <span class="hint" id="hint-manu">(el artículo puede ser el producto final de una Lista de Materiales)</span></div></div>
+        </div>
+        <div class="card" style="margin:14px 0 0;border-left:4px solid var(--primario-claro)">
+          <b style="font-size:12.5px">Lista de Materiales del artículo</b>
           <div id="art-ldms" style="margin-top:8px"></div>
-          <p class="hint" style="margin-top:8px">La composición se administra en <button class="btn-link" onclick="go('gi17')">Maestros → Listas de Materiales (GI-17)</button>. Si el artículo tiene lista, es <b>fabricable</b>: Producción crea su orden.</p>
+          <p class="hint" style="margin-top:5px">La composición se administra en <button class="btn-link" onclick="go('gi17')">Configuraciones → Listas de Materiales</button>. Un artículo apto para producción puede tener una lista Predeterminada y otras alternativas.</p>
         </div>
       </div>
 
       <!-- Atributos -->
       <div class="tabpane" id="pane-atr">
-        <b style="font-size:13px">Atributos del artículo</b>
-        <p class="hint" style="margin:4px 0 10px">Opcionales. Se eligen del <button class="btn-link" onclick="go('matr')">maestro de Atributos</button>. Talla y color son atributos del artículo, no de un producto padre.</p>
-        <div class="formgrid" id="atr-box"></div>
-      </div>
-
-      <!-- Existencias -->
-      <div class="tabpane" id="pane-exist">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px">
+          <b style="font-size:13px">Atributos del artículo</b>
+          <div style="flex:1"></div>
+          <button class="btn btn-secondary btn-sm" onclick="addAtributoRow()">+ Crear</button>
+        </div>
         <table class="grid subtable">
-          <thead><tr><th>Almacén</th><th style="text-align:right">Actual</th><th style="text-align:right">Comprometido</th><th style="text-align:right">Disponible</th><th style="text-align:right">Costo prom. S/.</th><th></th></tr></thead>
-          <tbody id="art-exist"></tbody>
+          <thead><tr><th style="width:50px">#</th><th>Atributo</th><th>Valor de Atributo</th><th style="width:70px"></th></tr></thead>
+          <tbody id="tbl-atributos"></tbody>
         </table>
+        <p class="hint" style="margin-top:8px">Los atributos son opcionales y se eligen del <button class="btn-link" onclick="go('matr')">maestro de Atributos</button> (cada atributo tiene sus valores). No dependen de un producto padre: son una característica más de este artículo. Para crear artículos parecidos con distintos valores, use <b>Duplicar</b>.</p>
       </div>
     </div>
-    <p class="hint">La cuenta contable no se define en el artículo: se configura en la pestaña <b>Finanzas</b> de su <button class="btn-link" onclick="go('mtipos')">Grupo de Artículo</button>. El grupo SRV oculta Inventario, Planificación y Existencias. Todo lo guardado aquí lo usan Compras, Producción y Comercial.</p>
+    <p class="hint">La cuenta contable no se define en el artículo: se configura en la pestaña <b>Finanzas</b> de su <button class="btn-link" onclick="go('mtipos')">Grupo de Artículo</button> (todos los artículos del grupo comparten esas cuentas). El grupo SERVICIOS oculta las pestañas de Inventario, Planificación y Producción. La numeración de código depende del grupo de artículo (asignación interna o externa).</p>
   </section>
 `);
 
@@ -199,10 +199,10 @@ Vistas.modales(String.raw`
   <div class="modal">
     <div class="modal-h"><b>Duplicar artículo</b><span class="code" style="font-size:11px;color:var(--texto-sec)">GI-02d</span><span class="x" onclick="closeModal('m-gi02d')">✕</span></div>
     <div class="modal-b">
-      <p class="hint" style="margin-bottom:12px">Se copia toda la configuración de <b id="dup-src">—</b> (grupo, categoría, unidades, control, precios y atributos). Indique el nombre nuevo; el código se asigna según el grupo.</p>
+      <p class="hint" style="margin-bottom:12px">Se copia toda la configuración del artículo <b id="dup-src">—</b> (grupo, categoría, unidades, control, precios y producción). <b>No se copian los códigos de barras</b>: cada código es de un solo artículo. Indique el nombre nuevo; el código se asigna según el grupo. Los atributos se copian sin valor para que los complete.</p>
       <div class="formgrid">
-        <div class="field full"><label>Nombre nuevo (único) <span style="color:var(--cancelada)">*</span></label><input id="dup-nombre" placeholder="Ej. PANTALON WIDE LEG ZULEIKA TALLA 32 COLOR AZUL"></div>
-        <div class="field"><label>Grupo</label><input id="dup-tipo" readonly></div>
+        <div class="field full"><label>Nombre nuevo (único e irrepetible) <span style="color:var(--cancelada)">*</span></label><input id="dup-nombre" placeholder="Ej. PANTALON WIDE LEG ZULEIKA TALLA 32 COLOR AZUL"></div>
+        <div class="field"><label>Grupo de Artículo</label><input id="dup-tipo" readonly></div>
         <div class="field"><label id="dup-cod-lbl">Código</label><input id="dup-cod" readonly></div>
       </div>
       <p class="hint" id="dup-cod-nota" style="margin-top:8px"></p>

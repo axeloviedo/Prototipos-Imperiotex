@@ -7,19 +7,7 @@ function renderCfg(){
   document.getElementById('cfg-nom-etq').value=c.nombreEtiqueta||'';
   document.getElementById('cfg-imp-ref').checked=!!c.imprimirRef;
   document.getElementById('cfg-lotes-modo').value=c.lotesModo||'manual';
-  renderCamposUsr();
 }
-function renderCamposUsr(){
-  const cu=cfg().camposUsuario;
-  document.getElementById('cfg-cu-body').innerHTML=cu.map((c,i)=>
-   '<tr><td>'+(i+1)+'</td>'+
-   '<td><input value="'+Fmt.e(c.lbl)+'" oninput="cfg().camposUsuario['+i+'].lbl=this.value"></td>'+
-   '<td><select onchange="cfg().camposUsuario['+i+'].apl=this.value">'+opcionesLista(["Artículos","Almacenes","Movimientos"],c.apl,false)+'</select></td>'+
-   '<td style="text-align:center"><input type="checkbox"'+(c.filtro?" checked":"")+' onchange="cfg().camposUsuario['+i+'].filtro=this.checked"></td>'+
-   '<td><button class="btn-link" onclick="delCampoUsuario('+i+')">Eliminar</button></td></tr>').join('');
-}
-function addCampoUsuario(){cfg().camposUsuario.push({lbl:"Nuevo campo",apl:"Artículos",filtro:true});renderCamposUsr()}
-function delCampoUsuario(i){cfg().camposUsuario.splice(i,1);renderCamposUsr()}
 function cfgPrecioMin(){}
 function cfgEtqNombre(){}
 function cfgImprimirRef(){}

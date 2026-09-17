@@ -43,7 +43,7 @@ function nuevaSP(){
   NSP={lineas:[]};
   document.getElementById('n-sp-fecha').value=BD.hoy();
   document.getElementById('n-sp-mes').innerHTML='<option value="">Seleccionar…</option>'+opcionesLista(mesesProyectados(),'',false);
-  document.getElementById('n-sp-almdest').innerHTML=opcionesAlm('SB-CENTRAL',a=>a.contenido==='Productos Terminados'&&!a.transito);
+  document.getElementById('n-sp-almdest').innerHTML=opcionesAlm('SB-CENTRAL');
   document.getElementById('n-sp-freq').value='';
   document.getElementById('n-sp-obs').value='';
   document.getElementById('n-sp-solic').value=BD.usuario;
@@ -123,7 +123,7 @@ function renderSPform(){
   document.getElementById('sp-id').value=s.id;
   document.getElementById('sp-resumen').value=spResumen(SPF);
   document.getElementById('sp-mes').innerHTML=opcionesLista(mesesProyectados(SPF.mes),SPF.mes,false);
-  document.getElementById('sp-almdest').innerHTML=opcionesAlm(SPF.almDestino,a=>a.contenido==='Productos Terminados'&&!a.transito||a.cod===SPF.almDestino);
+  document.getElementById('sp-almdest').innerHTML=opcionesAlm(SPF.almDestino);
   document.getElementById('sp-freq').value=Fmt.iso(SPF.fechaReq);
   document.getElementById('sp-solic').value=s.solic||'';
   document.getElementById('sp-obs').value=SPF.obs||'';

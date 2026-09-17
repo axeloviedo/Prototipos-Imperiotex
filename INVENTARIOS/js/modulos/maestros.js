@@ -2,12 +2,12 @@
    CRUD genérico sobre BD.d.maestros (base compartida): lo que se guarda aquí lo ven Compras, Producción y Comercial. */
 const MST={
  tipos:{sing:"Grupo de Artículo",lista:()=>M().grupos,ficha:"grupoOpen",
-  cols:[{k:"cod",t:"text",l:"Código"},{k:"nom",t:"text",l:"Nombre"},{k:"prefijo",t:"text",l:"Prefijo"},{k:"asignacion",t:"sel",l:"Asignación de código",o:["Interna","Externa"]},{k:"inv",t:"bool",l:"Inventariable"}],
+  cols:[{k:"cod",t:"text",l:"Código"},{k:"nom",t:"text",l:"Nombre"},{k:"prefijo",t:"text",l:"Prefijo"},{k:"asignacion",t:"sel",l:"Asignación de código",o:["Interna","Externa"]},{k:"inv",t:"bool",l:"Inventariable"},{k:"grupoCompra",t:"selGC",l:"Grupo de compras"}],
   nuevo:()=>({cod:"",nom:"",prefijo:"",asignacion:"Interna",inv:true}),
   enUso:r=>M().articulos.filter(a=>a.grupo===r.cod).length},
  cat:{sing:"Categoría",lista:()=>M().categorias,
-  cols:[{k:"cod",t:"text",l:"Código"},{k:"grupo",t:"selGrupo",l:"Grupo de Artículo"},{k:"nom",t:"text",l:"Nombre"},{k:"cv",t:"selCV",l:"Clase de valoración"}],
-  nuevo:()=>({cod:"",grupo:"MP",nom:"",cv:"CV-01"}),
+  cols:[{k:"cod",t:"text",l:"Código"},{k:"grupo",t:"selGrupo",l:"Grupo de Artículo"},{k:"nom",t:"text",l:"Nombre"}],
+  nuevo:()=>({cod:"",grupo:"MP",nom:""}),
   enUso:r=>M().articulos.filter(a=>a.cat===r.nom).length+M().subcategorias.filter(s=>s.cat===r.nom).length},
  sub:{sing:"Sub categoría",lista:()=>M().subcategorias,
   cols:[{k:"cat",t:"selCat",l:"Categoría"},{k:"nom",t:"text",l:"Nombre"}],
@@ -36,7 +36,6 @@ function mstFila(m,row){return m.texto?{nom:row}:row}
 function mstCellText(c,v){
   if(c.t==="bool")return v?"Sí":"No";
   if(c.t==="selGrupo")return v?Fmt.e(v)+' <span class="hint">'+Fmt.e(grupoNom(v))+'</span>':hint();
-  if(c.t==="selCV"){const cv=M().clasesValoracion.find(x=>x.cod===v);return v?Fmt.e(v)+(cv?' <span class="hint">'+Fmt.e(cv.nom)+'</span>':''):hint()}
   return (v===undefined||v==="")?hint():Fmt.e(v);
 }
 function renderMst(key){
@@ -67,7 +66,6 @@ function crudFieldEditor(c,v){
   let opts=[];
   if(c.t==="sel")opts=c.o.map(o=>({v:o,t:o}));
   else if(c.t==="selGrupo")opts=M().grupos.map(g=>({v:g.cod,t:g.cod+' · '+g.nom}));
-  else if(c.t==="selCV")opts=M().clasesValoracion.map(x=>({v:x.cod,t:x.cod+' · '+x.nom}));
   else if(c.t==="selCat")opts=M().categorias.map(x=>({v:x.nom,t:x.nom+' ('+x.grupo+')'}));
   else if(c.t==="selUM")opts=M().unidades.map(x=>({v:x.cod,t:x.cod+' · '+x.nom}));
   return '<select id="crud-f-'+c.k+'" style="'+st+'">'+opcionesLista(opts,v,false)+'</select>';

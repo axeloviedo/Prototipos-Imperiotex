@@ -10,6 +10,7 @@ function grupoOpen(idx){
   document.getElementById('gru-pref').value=g.prefijo||"";
   document.getElementById('gru-asig').value=g.asignacion||"Interna";
   document.getElementById('gru-inv').checked=g.inv!==false;
+  document.getElementById('gru-gc').innerHTML='<option value="">(no se compra)</option>'+opcionesLista((M().gruposCompra||[]).map(x=>({v:x.cod,t:x.cod+' · '+x.nom})),g.grupoCompra||'',false);
   document.querySelectorAll('#grupo-tabs .tab').forEach((x,k)=>x.classList.toggle('active',k===0));
   document.querySelectorAll('#scr-grupo .gtabpane').forEach(x=>x.classList.remove('active'));
   document.getElementById('gpane-general').classList.add('active');
@@ -38,6 +39,7 @@ function grupoSave(){
   const g=GRUPO_IDX>=0?M().grupos[GRUPO_IDX]:{cod};
   let pref=document.getElementById('gru-pref').value.trim().toUpperCase(); if(pref&&!pref.endsWith('-'))pref+='-';
   Object.assign(g,{nom,prefijo:pref,asignacion:document.getElementById('gru-asig').value,inv:document.getElementById('gru-inv').checked});
+  const gc=document.getElementById('gru-gc').value; if(gc)g.grupoCompra=gc; else delete g.grupoCompra;
   if(GRUPO_IDX<0)M().grupos.push(g);
   const fin={}; mLog('conceptosFinanzas').forEach(cp=>{const v=(document.getElementById('gfin-'+cp.c)||{}).value; if(v&&v.trim())fin[cp.c]=v.trim();});
   mLog('finanzasGrupo')[cod]=fin;
