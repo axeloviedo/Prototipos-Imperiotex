@@ -22,30 +22,30 @@
 | Solicitud de Fabricación lista para aprobar | — | **SF-000004** (100 de cada PT, **Pendiente Aprobar**) |
 | Historia ya registrada | — | SF-000001 fabricada (lavado tercerizado completo), SF-000002 en curso, SF-000003 aprobada sin órdenes, ventas y cajas en tiendas, reposición ST-000007 en camino |
 
-**Familia de trabajo** (2 colores × 2 tallas): PIEZAS CORTADAS PPT-0001..0004 → CRUDO PPT-0005..0008 → LAVADO tercerizado PPT-0009..0012 → PRODUCTO FINAL PT-0001 (azul 28), PT-0002 (azul 30), PT-0003 (negro 28), PT-0004 (negro 30).
+**Familia de trabajo** (2 colores × 2 tallas; el color nace en el lavado, K9): PIEZAS CORTADAS por talla PPT-0001..0002 → CRUDO por talla PPT-0003..0004 → LAVADO tercerizado por color y talla PPT-0005..0008 → PRODUCTO FINAL PT-0001 (azul 28), PT-0002 (azul 30), PT-0003 (negro 28), PT-0004 (negro 30).
 **Almacenes**: SB-CENTRAL-MP (compra) → SB-ZARATE-MP (materia prima en planta) → SB-ZARATE-PP (producto en proceso) → SB-TRANSITO (en la lavandería) → SB-CENTRAL (producto terminado) → SB-TIENDA01..05.
 
 ## 2. Recorrido con «Con operación» (SF-000004, 400 pantalones)
 
 | # | Módulo · pantalla | Qué hacer | Qué verificar |
 |---|---|---|---|
-| 1 | Inventarios · **GI-05** Inventario | Filtrar SB-ZARATE-MP. | Hay stock de tela MP-0070/MP-0071, hilos, cierres, tallitas y avíos; Disponible suficiente. |
-| 2 | Inventarios · **GI-21** → **SF-000004** (GI-23) | **Dar V°B° (Logística)** y luego **Aprobar (Gerencia)**. | Estado **Aprobada**. En GI-05 sube el **Comprometido** de la materia prima (p. ej. tela azul +286 m). |
-| 3 | Producción · **PR-03** Solicitudes de Fabricación → SF-000004 | **Crear órdenes**. | 16 órdenes **Liberadas** con un mismo N° Referencia (4 piezas, 4 crudos, 4 lavados, 4 finales). En Inventarios GI-21 la SF queda **Convertida en Orden**. |
-| 4 | Producción · **PR-01** → orden de PIEZAS CORTADAS (PR-02) | **+ Emisión** (tela Manual + horas de patronista y operario de corte con sus operarios) → **Registrar emisión**; luego **+ Recibo** por 100 → **Registrar recibo**; **Cerrar orden**. Repetir en las 4. | Movimientos **SAL-USOPROD** (tela) e **ING-PROD** (piezas a SB-ZARATE-PP). En Inventarios GI-06 Kardex de MP-0070 baja el saldo. |
-| 5 | Producción · órdenes de CRUDO | Emisión (piezas cortadas + horas de costurera) → Recibo (consume hilos, cierre y tallita por notificación) → Cerrar. Repetir en las 4. | Crudos PPT-0005..0008 en SB-ZARATE-PP; costo unitario acumulado visible en la pestaña Costo. |
+| 1 | Inventarios · **GI-05** Inventario | Filtrar SB-ZARATE-MP. | Hay stock de tela MP-0070, hilos MP-0055/MP-0058, cierre MP-0003, tallitas y avíos; Disponible suficiente. |
+| 2 | Inventarios · **GI-21** → **SF-000004** (GI-23) | **Dar V°B° (Logística)** y luego **Aprobar (Gerencia)**. | Estado **Aprobada**. En GI-05 sube el **Comprometido** de la materia prima (p. ej. tela MP-0070 +572 m). |
+| 3 | Producción · **PR-03** Solicitudes de Fabricación → SF-000004 | **Crear órdenes**. | 12 órdenes **Liberadas** con un mismo N° Referencia: 2 de piezas cortadas y 2 de crudo (una por talla, 200 cada una: juntan los dos colores), 4 lavados y 4 finales. En Inventarios GI-21 la SF queda **Convertida en Orden**. |
+| 4 | Producción · **PR-01** → orden de PIEZAS CORTADAS (PR-02) | **+ Emisión** (tela Manual + horas de patronista y operario de corte con sus operarios) → **Registrar emisión**; luego **+ Recibo** por 200 → **Registrar recibo**; **Cerrar orden**. Repetir en la otra talla. | Movimientos **SAL-USOPROD** (tela) e **ING-PROD** (piezas a SB-ZARATE-PP). En Inventarios GI-06 Kardex de MP-0070 baja el saldo. |
+| 5 | Producción · órdenes de CRUDO | Emisión (piezas cortadas + horas de costurera) → Recibo por 200 (consume hilos, cierre y tallita por notificación) → Cerrar. Repetir en la otra talla. | Crudos PPT-0003..0004 en SB-ZARATE-PP (sin color: cada lavado toma los de su talla); costo unitario acumulado visible en la pestaña Costo. |
 | 6 | Producción · orden de LAVADO (PR-02) | **Pedir servicio**. | Se crea una **Solicitud de Materiales** de Producción con la línea **SRV-0001 × 100**, destino SB-TRANSITO, estado **Pendiente**. |
 | 7 | Inventarios · **GI-13** → esa solicitud | **Atender ▾**: propósito **Compra** → **Aprobar**; **Crear ▾ → Crear Orden de Compra** eligiendo **PROV-0005 LAVANDERIA LANDEO**. | Se abre CO-07 con la **OC de servicio** en Borrador (3,50 por prenda). La línea de la solicitud queda **En compra**. |
 | 8 | Compras · **CO-07** esa OC | **Enviar a validación** → **Validar (Logística)** → **Aprobar (Gerencia)**. | Estado **Para Recibir y Pagar**. En Producción, pestaña **Costo** de la orden de lavado aparece la OC. |
 | 9 | Producción · orden de LAVADO | **Enviar al proveedor** (cantidad 100). | **Solicitud de Transferencia** TRF-FABRIC SB-ZARATE-PP → SB-TRANSITO recibida en el momento y **guía T001-…** «Traslado de bienes para transformación». Se ve en Inventarios GI-11, GI-07 y GI-14. |
-| 10 | Producción · orden de LAVADO | Retorno: **+ Emisión** (crudo en tránsito, **SAL-MAQUILA**) → **+ Recibo** por 100 (consume el servicio, **ING-PROD** a SB-ZARATE-PP) → **Cerrar orden**. | Lavados PPT-0009..0012 en SB-ZARATE-PP; costo incluye 3,50 del servicio. |
+| 10 | Producción · orden de LAVADO | Retorno: **+ Emisión** (crudo en tránsito, **SAL-MAQUILA**) → **+ Recibo** por 100 (consume el servicio, **ING-PROD** a SB-ZARATE-PP) → **Cerrar orden**. | Lavados PPT-0005..0008 en SB-ZARATE-PP; costo incluye 3,50 del servicio. |
 | 11 | Compras · CO-07 la OC de servicio → **Conformidad del servicio**; **CO-09 + Registrar Factura** desde la OC (número del proveedor) | | OC **Completada**; la solicitud de materiales **Atendida**; en la pestaña Costo de la orden: estándar vs OC vs factura. |
 | 12 | Repetir 6–11 para los otros 3 lavados | (una solicitud y una OC de servicio por orden) | |
 | 13 | Producción · órdenes de PRODUCTO FINAL | Emisión (lavado Manual + horas de acabado) → Recibo por 100 (consume botón, 6 remaches, parche, etiqueta, hang tag y bolsa) → Cerrar. Repetir en las 4. | PT-0001..0004 +100 cada uno en **SB-CENTRAL** (costo unitario ≈ S/ 44). La SF queda **Fabricada** (Producción PR-03 e Inventarios GI-21). PR-09 Costos por N° Referencia. |
 | 14 | Inventarios · GI-11 **+ Transferencia** SB-CENTRAL → SB-TIENDA01 (TRF-REPTIENDA) | **Aprobar Transferencia** (compromete en central, **Pedido** en tienda) → **Confirmar Recepción** (parcial o total). | GI-05: Pedido en la tienda hasta confirmar; luego el stock pasa a la tienda. |
 | 15 | Comercial · Ventas (tienda 1) | Vender PT-0001 y cobrar. | Venta pendiente compromete; al validar el pago completo sale el stock (**SAL-VENTA**). Visible en Inventarios GI-07 y en CL-32. |
 
-**Resultado verificado (prueba automática del 16/09/2026 sobre este mismo recorrido):** 16 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 43,78 – 45,24), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
+**Resultado verificado (prueba automática del 16/09/2026 sobre este mismo recorrido):** 12 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 43,67 – 44,82), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
 
 ## 3. Recorrido desde «Solo maestros»
 
@@ -53,7 +53,7 @@ Antes del paso 2 de la sección anterior hay que tener materia prima en planta:
 
 | # | Módulo · pantalla | Qué hacer | Qué verificar |
 |---|---|---|---|
-| A | Compras · **CO-06 → + Agregar OC** | Proveedor **PROV-0001 TEXTIL SAN JACINTO** con MP-0070 y MP-0071 (telas); otra OC a **PROV-0002 AVÍOS DEL SUR** con hilos, cierres, tallitas y avíos MP-0102..0107. Almacén destino SB-CENTRAL-MP. **Guardar borrador → Enviar a validación → Validar (Logística) → Aprobar (Gerencia)**. | Estado Para Recibir y Pagar; en Inventarios GI-05 aparece **Pedido** en SB-CENTRAL-MP. |
+| A | Compras · **CO-06 → + Agregar OC** | Proveedor **PROV-0001 TEXTIL SAN JACINTO** con la tela MP-0070; otra OC a **PROV-0002 AVÍOS DEL SUR** con hilos MP-0055/MP-0058, cierre MP-0003, tallitas y avíos MP-0102..0107. Almacén destino SB-CENTRAL-MP. **Guardar borrador → Enviar a validación → Validar (Logística) → Aprobar (Gerencia)**. | Estado Para Recibir y Pagar; en Inventarios GI-05 aparece **Pedido** en SB-CENTRAL-MP. |
 | B | Compras · CO-07 **Registrar ingreso** (o Inventarios GI-09 vinculando la OC) | Recibir todo en SB-CENTRAL-MP. | Movimiento **ING-COMPRA**; el Pedido baja y sube el Actual. |
 | C | Compras · **CO-09 + Registrar Factura** | Desde cada OC. | OC Completada. |
 | D | Inventarios · **GI-11 + Transferencia** SB-CENTRAL-MP → SB-ZARATE-MP (TRF-INTERNO) | Agregar lo comprado → **Aprobar Transferencia** → al día siguiente **Confirmar Recepción**. Opcional: guía en GI-15. | Comprometido en central y Pedido en Zárate hasta confirmar; luego stock en SB-ZARATE-MP. |

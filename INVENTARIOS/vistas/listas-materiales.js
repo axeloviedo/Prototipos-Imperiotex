@@ -20,7 +20,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="ldm-count"></span></div>
     </div>
-    <p class="hint">Un artículo puede tener varias listas (p. ej. LDM-0017, alternativa de PT-0001 sin parche): una sola es la Predeterminada, que usan GI-23 y Producción por defecto. Si un componente también tiene lista es <b>fabricable</b> y tiene su propia orden; la <b>fase</b> sale de esa cadena (piezas cortadas 1 → crudo 2 → lavado 3 → producto final 4). Producción (PR-10) lee estas mismas listas.</p>
+    <p class="hint">Un artículo puede tener varias listas (p. ej. LDM-0013, alternativa de PT-0001 sin parche): una sola es la Predeterminada, que usan GI-23 y Producción por defecto. Si un componente también tiene lista es <b>fabricable</b> y tiene su propia orden; la <b>fase</b> sale de esa cadena (piezas cortadas 1 → crudo 2 → lavado 3 → producto final 4). Producción (PR-10) lee estas mismas listas.</p>
   </section>
 
   <!-- GI-17f · Lista de Materiales (formulario) -->

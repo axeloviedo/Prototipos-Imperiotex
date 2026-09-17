@@ -83,14 +83,16 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
   origen:'plantilla'|'complemento'|..., aConfirmar? }
 ```
 
-**Familia ZULEIKA** (2 colores × 2 tallas):
+**Familia ZULEIKA** (2 colores × 2 tallas). El color nace en el lavado (K9): piezas cortadas y crudo van solo por talla y sirven para cualquier color.
 
 | Etapa | Códigos | Entra en (lo elige Producción, L7) | Lista |
 |---|---|---|---|
-| Piezas cortadas | PPT-0001 azul 28 · 0002 azul 30 · 0003 negro 28 · 0004 negro 30 | SB-ZARATE-PP | LDM-0013..0016: tela MP-0070 (azul) / MP-0071 (negro) 1,40 / 1,46 MT (Manual, SB-ZARATE-MP) + patronista, operario y máquina de corte |
-| Crudo | PPT-0005..0008 | SB-ZARATE-PP | LDM-0009..0012: piezas (Manual, SB-ZARATE-PP) + 2 hilos 0,05, cierre YKK, tallita (Notificación, SB-ZARATE-MP) + costurera y máquina |
-| Lavado (tercerizado) | PPT-0009..0012 | SB-ZARATE-PP | LDM-0005..0008: crudo (Manual, **SB-TRANSITO**) + servicio **SRV-0001** Lavandería Landeo (Notificación) |
-| Producto final | PT-0001 azul 28 · 0002 azul 30 · 0003 negro 28 · 0004 negro 30 | SB-CENTRAL | LDM-0001..0004: lavado (Manual, SB-ZARATE-PP) + botón, 6 remaches, parche, etiqueta, hang tag, bolsa (Notificación) + operario de acabado. LDM-0017: alternativa PT-0001 sin parche |
+| Piezas cortadas | PPT-0001 talla 28 · 0002 talla 30 | SB-ZARATE-PP | LDM-0011..0012: tela MP-0070 1,40 / 1,46 MT (Manual, SB-ZARATE-MP) + patronista, operario y máquina de corte |
+| Crudo | PPT-0003 talla 28 · 0004 talla 30 (fallados PPT-0003F..0004F) | SB-ZARATE-PP | LDM-0009..0010: piezas de la talla (Manual, SB-ZARATE-PP) + hilos MP-0055 y MP-0058 0,05, cierre YKK MP-0003, tallita (Notificación, SB-ZARATE-MP) + costurera y máquina |
+| Lavado (tercerizado) | PPT-0005 azul 28 · 0006 azul 30 · 0007 negro 28 · 0008 negro 30 | SB-ZARATE-PP | LDM-0005..0008: crudo de la talla (Manual, **SB-TRANSITO**) + servicio **SRV-0001** Lavandería Landeo (Notificación) + receta del color |
+| Producto final | PT-0001 azul 28 · 0002 azul 30 · 0003 negro 28 · 0004 negro 30 | SB-CENTRAL | LDM-0001..0004: lavado (Manual, SB-ZARATE-PP) + botón, 6 remaches, parche, etiqueta, hang tag, bolsa (Notificación) + operario de acabado. LDM-0013: alternativa PT-0001 sin parche |
+
+Al crear órdenes, Producción junta en una sola orden de crudo (y de piezas cortadas) lo que piden los lavados de distintos colores de la misma talla y descuenta el crudo disponible sin importar para qué color se hizo.
 
 ### 3.3 Stock y movimientos
 
