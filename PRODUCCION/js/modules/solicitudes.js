@@ -32,7 +32,7 @@ const PR03D = {
       bloque = '<div class="sec">Órdenes que se van a crear (nacen Liberadas)<div style="flex:1"></div><button class="btn btn-primary" onclick="PR03D.generar()">Crear órdenes</button></div>' +
         UI.tabla([['Fase', 'num', '60px'], 'Orden para', ['Se necesita', 'num'], ['A fabricar', 'num'], 'Entra en'], filas.map(x =>
           '<tr><td class="num"><b>' + x.fase + '</b></td><td>' + (x.input ? '' : '<b>') + UI.esc(M.nomArt(x.art)) + (x.input ? '' : '</b>') + '<br><span class="mini">' + x.art + '</span></td>' +
-          '<td class="num">' + UI.n(x.need, 0) + '</td><td class="num">' + (x.input ? '<input type="number" min="0" step="any" id="sfa-' + x.art + '" value="' + x.val + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px">' : '<b>' + UI.n(x.val, 0) + '</b>') + '</td><td class="mini">' + x.alm + '</td></tr>'));
+          '<td class="num">' + UI.n(x.need, 0) + '</td><td class="num">' + (x.input ? '<input type="number" min="0" step="any" id="sfa-' + x.art + '" value="' + x.val + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px">' : '<b>' + UI.n(x.val, 0) + '</b>') + '</td><td>' + (x.input ? '<select id="sfalm-' + x.art + '" style="border:1px solid var(--borde);border-radius:5px;padding:5px">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod }))), x.alm) + '</select>' : '<span class="mini">' + x.alm + '</span>') + '</td></tr>'));
     } else {
       const ofs = Explosion.ordenar(sf.ofs.map(id => BD.of(id)).filter(Boolean)), sec = Explosion.secuencia(ofs);
       bloque = '<div class="sec">Órdenes · ' + UI.esc(R) + ' ' + UI.esc(sf.ref) + '</div>' +
@@ -54,9 +54,12 @@ const PR03D = {
         '<td class="num">' + UI.q(r.cant, M.u(r.art)) + '</td><td class="num">' + UI.n(Stock.act(r.alm, r.art)) + '</td><td class="num">' + UI.n(Stock.disp(r.alm, r.art)) + '</td></tr>'), { vacio: 'Sin compromiso' });
   },
   generar() {
-    const sf = BD.sf(App.params.id), sug = {};
+    const sf = BD.sf(App.params.id), sug = {}, alms = {};
     document.querySelectorAll('input[id^="sfa-"]').forEach(i => { sug[i.id.slice(4)] = parseFloat(i.value) || 0; });
-    const r = App.accion(() => Prod.generarDesdeSF(sf.id, sug), x => x.length + ' órdenes creadas · ' + Prod.nombreRef() + ' ' + x[0].ref);
+    document.querySelectorAll('select[id^="sfalm-"]').forEach(s => { alms[s.id.slice(6)] = s.value; });
+    const faltan = Object.keys(sug).filter(a => sug[a] > 0 && !alms[a]);
+    if (faltan.length) { UI.toast('Elija el almacén donde entra lo producido de: ' + faltan.map(a => M.nomArt(a)).join(', ')); return; }
+    const r = App.accion(() => Prod.generarDesdeSF(sf.id, sug, alms), x => x.length + ' órdenes creadas · ' + Prod.nombreRef() + ' ' + x[0].ref);
     if (r) App.go('pr01');
   }
 };

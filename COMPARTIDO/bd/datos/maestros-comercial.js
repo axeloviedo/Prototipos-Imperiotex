@@ -49,11 +49,6 @@ const BD_COMERCIAL = (() => {
     ],
     agencias: ['SHALOM', 'OLVA COURIER', 'MARVISUR'],
     motivosAnulacion: ['Error de registro', 'Cliente desistió de la compra', 'Precio o cantidad equivocados', 'Otro'],
-    stockCtrl: [
-      { v: 'Bloquear', t: 'Bloquear si no hay disponible' },
-      { v: 'Avisar', t: 'Avisar y permitir' },
-      { v: 'No verificar', t: 'No verificar' }
-    ],
     afectacion: ['Gravado', 'Exonerado', 'Inafecto'],
     /* clientes: el socio de negocio NO se unifica con el proveedor */
     tiposDoc: [{ cod: 'DNI', nom: 'DNI', largo: 8 }, { cod: 'RUC', nom: 'RUC', largo: 11 }, { cod: 'CE', nom: 'Carné de extranjería', largo: 0 }],
@@ -89,17 +84,17 @@ const BD_COMERCIAL = (() => {
   };
 
   /* servicios que vende la tienda (no inventariables: sin almacén, stock ni devolución) */
-  const srv = (cod, nom, cat, precio, min, dctoMax, igv) => ({ cod, nom, desc: nom, grupo: 'SRV', cat, subcat: '', u: 'UND', ctrl: 'Nada', cv: 'CV-09',
+  const srv = (cod, nom, cat, precio, min, dctoMax, igv) => ({ cod, nom, desc: nom, grupo: 'SRV', cat, subcat: '', u: 'UND', ctrl: 'Nada',
     inv: false, compra: false, venta: true, produccion: false, igv, estado: 'Activo', costo: 0,
-    precioVenta: precio, precioMin: min, uVenta: ['UND'], dctoMin: 0, dctoMax, stockCtrl: '', origen: O, aConfirmar: true });
+    precioVenta: precio, precioMin: min, uVenta: 'UND', dctoMin: 0, dctoMax, origen: O, aConfirmar: true });
   const articulos = [
     srv('SERV-VTA-0001', 'SERVICIO DE BORDADO DE NOMBRE', 'PERSONALIZACION', 15.00, 0, 20, 'Gravado'),
     srv('SERV-VTA-0002', 'SERVICIO DE ARREGLO DE BASTA', 'ARREGLOS', 10.00, 0, 50, 'Gravado'),
     srv('SERV-VTA-0003', 'SERVICIO DE PERSONALIZACION CON PARCHE', 'PERSONALIZACION', 25.00, 18.00, 10, 'Exonerado')
   ];
   const categorias = [
-    { cod: 'SVPER', nom: 'PERSONALIZACION', cv: 'CV-09', grupo: 'SRV', origen: O },
-    { cod: 'SVARR', nom: 'ARREGLOS', cv: 'CV-09', grupo: 'SRV', origen: O }
+    { cod: 'SVPER', nom: 'PERSONALIZACION', grupo: 'SRV', origen: O },
+    { cod: 'SVARR', nom: 'ARREGLOS', grupo: 'SRV', origen: O }
   ];
 
   const cli = (n, tipoDoc, doc, nom, tipo, tel, email, dir, ubigeo, cond, obs, alta, activo) =>
@@ -134,7 +129,7 @@ const BD_COMERCIAL = (() => {
       /* configuración comercial editable en CL-45 */
       comercial: {
         cfg: {
-          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 3, verificarPrecioMin: true, almMalEstado: 'SB-LIQUID',
+          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 3, almMalEstado: 'SB-LIQUID',
           catIngreso: ['Fondo de caja chica', 'Sobrante de caja', 'Otros ingresos'],
           catEgreso: ['Pasajes y movilidad', 'Útiles de oficina', 'Pago a personal eventual', 'Depósito al banco', 'Otros egresos']
         }

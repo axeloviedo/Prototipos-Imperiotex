@@ -5,8 +5,7 @@
 const BD_LOGISTICA = (() => {
   /* GI-CFG · Configuración General de la empresa */
   const configLogistica = {
-    precioMinGlobal: true, nombreEtiqueta: 'N° Referencia', imprimirRef: true, lotesModo: 'manual',
-    camposUsuario: [{ lbl: 'Línea comercial', apl: 'Artículos', filtro: true }, { lbl: 'Campaña', apl: 'Artículos', filtro: true }]
+    precioMinGlobal: true, nombreEtiqueta: 'N° Referencia', imprimirRef: true, lotesModo: 'manual'
   };
   /* Pestaña Finanzas del Grupo de Artículo: 28 conceptos contables (referencia SAP B1) */
   const conceptosFinanzas = [
@@ -38,18 +37,12 @@ const BD_LOGISTICA = (() => {
     { serie: 'T004', alm: 'SB-ZARATE-PP' }, { serie: 'T005', alm: 'SB-TIENDA01' }
   ];
   /* GI-02 · Planificación de stock: mínimo por artículo y almacén (alertas del semáforo) */
-  const minimos = [
-    { art: 'PT-0001', alm: 'SB-CENTRAL', cant: 15 }, { art: 'PT-0002', alm: 'SB-CENTRAL', cant: 10 },
-    { art: 'PT-0003', alm: 'SB-CENTRAL', cant: 15 }, { art: 'PT-0004', alm: 'SB-CENTRAL', cant: 10 },
-    { art: 'MP-0070', alm: 'SB-ZARATE-MP', cant: 50 }, { art: 'MP-0071', alm: 'SB-ZARATE-MP', cant: 50 },
-    { art: 'MP-0102', alm: 'SB-ZARATE-MP', cant: 100 }, { art: 'MP-0103', alm: 'SB-ZARATE-MP', cant: 600 }
-  ];
   /* GI-15 · datos de la guía */
   const transportistas = ['TRANSPORTES GAMARRA EXPRESS SAC · RUC 20456789123', 'LOGISTICA ANDINA SAC · RUC 20321654987'];
   const ubigeos = ['LIMA / Lima / 150115 - La Victoria', 'LIMA / Lima / 150132 - San Juan de Lurigancho', 'LIMA / Lima / 150101 - Lima', 'LAMBAYEQUE / Chiclayo / 140101 - Chiclayo'];
 
   return {
-    maestros: { configLogistica, conceptosFinanzas, finanzasGrupo, seriesInternas, seriesGRE, minimos, transportistas, ubigeos },
+    maestros: { configLogistica, conceptosFinanzas, finanzasGrupo, seriesInternas, seriesGRE, transportistas, ubigeos },
     /* notas internas impresas: id de movimiento → número de nota (NI-000001) */
     colecciones: { notasInternas: {} }
   };

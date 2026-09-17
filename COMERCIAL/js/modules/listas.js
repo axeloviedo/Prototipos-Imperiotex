@@ -6,7 +6,7 @@ const CM08 = {
     const arts = Store.arts().filter(a => a.venta);
     let a = Store.art(CM08.art);
     if (!a || !a.venta) { a = arts[0]; CM08.art = a.cod; }
-    const ums = a.uVenta || [a.u];
+    const ums = Precios.unidades(a.cod);
     if (ums.indexOf(CM08.sim.um) < 0) CM08.sim.um = ums[0];
     const ed = Store.puede('editar_precios'), s = CM08.sim;
     const filas = Store.d.listas.filter(l => l.art === a.cod).sort((x, y) => x.mon.localeCompare(y.mon) || x.um.localeCompare(y.um) || CM08.ORDEN[Listas.nivel(x)] - CM08.ORDEN[Listas.nivel(y)]);
@@ -18,8 +18,8 @@ const CM08 = {
       'Si una línea no tiene precio en la moneda del documento, el cambio de moneda se revierte. El precio mínimo y el rango de descuento se controlan aparte (CL-43).', 'info');
     html += '<div class="card"><div class="formgrid c4">' +
       UI.campo('Artículo', '<select onchange="CM08.art=this.value;App.refrescar()">' + UI.opts(arts.map(x => ({ v: x.cod, t: x.cod + ' · ' + x.nom })), a.cod) + '</select>', { estilo: 'grid-column:span 2' }) +
-      UI.dato('Precio sugerido · mínimo', UI.s(a.precioVenta) + ' · ' + (a.precioMin ? UI.s(a.precioMin) + (a.verifMin || Store.cfg().verificarPrecioMin ? ' (se verifica)' : ' (no se verifica)') : 'sin mínimo')) +
-      UI.dato('Unidades de venta', ums.map(u => u + (Precios.factor(a.cod, u) > 1 ? ' = ' + Precios.factor(a.cod, u) + ' ' + a.u : '')).join(' · ')) + '</div></div>';
+      UI.dato('Precio sugerido · mínimo', UI.s(a.precioVenta) + ' · ' + (a.precioMin ? UI.s(a.precioMin) + (Precios.verificaMin(a) ? ' (se verifica)' : ' (no se verifica)') : 'sin mínimo')) +
+      UI.dato('Unidades de venta (con conversión)', ums.map(u => u + (Precios.factor(a.cod, u) > 1 ? ' = ' + Precios.factor(a.cod, u) + ' ' + a.u : '')).join(' · ')) + '</div></div>';
 
     html += '<div class="sec">Precios de ' + a.cod + '<div class="spacer"></div>' + (ed ? '<button class="btn btn-primary btn-sm" onclick="CM08.fila()">+ Agregar precio</button>' : '') + '</div>' +
       UI.tabla(['Fila', 'Moneda', 'UM', 'Tienda', 'Tipo de cliente', 'Nivel', ['Precio', 'num'], ['', '', '120px']], filas.map(l =>
@@ -48,11 +48,11 @@ const CM08 = {
     return html;
   },
   fila(id) {
-    const a = Store.art(CM08.art), l = id ? Store.d.listas.find(x => x.id === id) : { um: (a.uVenta || [a.u])[0], sede: '', tipo: '', mon: 'PEN', precio: '' };
+    const a = Store.art(CM08.art), l = id ? Store.d.listas.find(x => x.id === id) : { um: Precios.umVenta(a.cod), sede: '', tipo: '', mon: 'PEN', precio: '' };
     UI.modal({
       titulo: (id ? 'Editar ' + id : 'Nuevo precio') + ' · ' + a.cod, code: 'CL-41',
       cuerpo: '<div class="formgrid">' + UI.dato('Artículo', UI.esc(a.nom), { full: true }) +
-        UI.campo('Unidad de venta', '<select id="lp-um">' + UI.opts(a.uVenta || [a.u], l.um) + '</select>', { req: true }) +
+        UI.campo('Unidad de venta', '<select id="lp-um">' + UI.opts(Precios.unidades(a.cod), l.um) + '</select>', { req: true }) +
         UI.campo('Moneda', '<select id="lp-mon">' + UI.opts(M.MONEDAS.map(m => m.cod), l.mon) + '</select>', { req: true }) +
         UI.campo('Tienda', '<select id="lp-sede">' + UI.opts([{ v: '', t: 'Todas' }].concat(M.SEDES.map(x => ({ v: x.cod, t: x.nom }))), l.sede) + '</select>') +
         UI.campo('Tipo de cliente', '<select id="lp-tipo">' + UI.opts([{ v: '', t: 'Todos' }].concat(M.TIPOS_CLIENTE.map(t => ({ v: t, t }))), l.tipo) + '</select>') +
@@ -83,15 +83,14 @@ const CM09 = {
     return '<div class="screen-head"><h1>Artículos de venta</h1><span class="code">CL-43</span></div>' +
       '<div class="card"><div class="filters">' + UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM09.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       UI.campo('Grupo de Artículo', '<select onchange="CM09.f.grupo=this.value;App.refrescar()">' + UI.opts([...new Set(Store.arts().map(a => a.grupo))].map(g => ({ v: g, t: M.grupoNom(g) })), f.grupo, 'Todos') + '</select>') + '</div></div>' +
-      UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio sugerido', 'num'], ['Precio mínimo', 'num'], ['Descuento', 'num'], 'IGV', 'Control de stock al vender', ['Disponible', 'num'], ['', '', '70px']], arts.map(a =>
-        '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + (a.origen === 'comercial' ? '<br><span class="mini">servicio de Comercial</span>' : '') + '</td><td>' + (a.uVenta || [a.u]).join(', ') + '</td>' +
-        '<td class="num">' + UI.s(a.precioVenta) + '</td><td class="num">' + (a.precioMin ? UI.s(a.precioMin) + '<br><span class="mini">' + (a.verifMin || Store.cfg().verificarPrecioMin ? 'se verifica' : 'no se verifica') + '</span>' : '—') + '</td>' +
+      UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio sugerido', 'num'], ['Precio mínimo', 'num'], ['Descuento', 'num'], 'IGV', ['Disponible', 'num'], ['', '', '70px']], arts.map(a =>
+        '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + (a.origen === 'comercial' ? '<br><span class="mini">servicio de Comercial</span>' : '') + '</td><td>' + (a.uVenta || a.u) + '</td>' +
+        '<td class="num">' + UI.s(a.precioVenta) + '</td><td class="num">' + (a.precioMin ? UI.s(a.precioMin) + '<br><span class="mini">' + (Precios.verificaMin(a) ? 'se verifica' : 'no se verifica') + '</span>' : '—') + '</td>' +
         '<td class="num">' + (a.dctoMin || 0) + '% – ' + (a.dctoMax || 0) + '%</td><td class="mini">' + a.igv + '</td>' +
-        '<td class="mini">' + (a.inv ? (M.STOCK_CTRL.find(s => s.v === a.stockCtrl) || {}).t : 'Servicio: sin stock') + '</td>' +
         '<td class="num">' + (a.inv ? UI.n(Stock.totalDisp(a.cod), 0) : '—') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" onclick="CM09.editar(\'' + a.cod + '\')">Editar</button>' : '') + '</td></tr>'), { vacio: 'Sin artículos' }) +
       '<p class="hint">Son los artículos de la base compartida marcados «Venta» (el maestro completo vive en Inventarios, GI-02); aquí solo se ven y ajustan los datos de su pestaña Venta, que se guardan en la misma base. ' +
-      'Control de stock (contra el Disponible, que ya descuenta lo comprometido por ventas pendientes): <b>Bloquear</b> impide vender sin disponible · <b>Avisar y permitir</b> muestra el aviso y deja vender · <b>No verificar</b> vende sin mirar el stock. Los servicios no son inventariables: no llevan almacén, stock ni devolución.</p>';
+      'Stock (L6): la orden y la venta directa <b>no se registran sin Disponible</b> (ya descuenta lo comprometido por ventas pendientes); la cotización solo avisa porque no reserva stock. Los servicios no son inventariables: no llevan almacén, stock ni devolución.</p>';
   },
   editar(cod) {
     const a = Store.art(cod);
@@ -100,16 +99,16 @@ const CM09 = {
       cuerpo: '<div class="formgrid">' + UI.dato('Artículo', UI.esc(a.nom), { full: true }) +
         UI.campo('Precio sugerido (S/, por ' + a.u + ')', '<input id="av-precio" type="number" min="0" step="any" value="' + (a.precioVenta || 0) + '">', { req: true }) +
         UI.campo('Precio mínimo de venta (S/)', '<input id="av-min" type="number" min="0" step="any" value="' + (a.precioMin || 0) + '">', { hint: '0 = sin mínimo' }) +
-        '<div class="field full"><label class="check"><input type="checkbox" id="av-verif"' + (a.verifMin ? ' checked' : '') + '> Verificar el precio mínimo en este artículo <span class="hint">(la Configuración puede exigirlo para toda la empresa)</span></label></div>' +
+        '<div class="field full"><label class="check"><input type="checkbox" id="av-verif"' + (a.verifMin ? ' checked' : '') + '> Verificar el precio mínimo en este artículo <span class="hint">(la Configuración General de Inventarios puede exigirlo para toda la empresa)</span></label></div>' +
         UI.campo('Descuento mínimo (%)', '<input id="av-dmin" type="number" min="0" max="100" step="any" value="' + (a.dctoMin || 0) + '">') +
         UI.campo('Descuento máximo (%)', '<input id="av-dmax" type="number" min="0" max="100" step="any" value="' + (a.dctoMax || 0) + '">') +
         UI.campo('Afectación IGV', '<select id="av-igv">' + UI.opts(M.AFECTACION, a.igv) + '</select>', { req: true }) +
-        (a.inv ? UI.campo('Control de stock al vender', '<select id="av-ctrl">' + UI.opts(M.STOCK_CTRL, a.stockCtrl) + '</select>', { req: true }) : UI.dato('Control de stock', 'Servicio: no aplica')) + '</div>',
+        '</div>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM09.guardar(\'' + cod + '\')">Guardar</button>'
     });
   },
   guardar(cod) {
-    const x = { precio: UI.v('av-precio'), precioMin: UI.v('av-min'), verifMin: UI.chk('av-verif'), dctoMin: UI.v('av-dmin'), dctoMax: UI.v('av-dmax'), igv: UI.v('av-igv'), stockCtrl: UI.v('av-ctrl') };
+    const x = { precio: UI.v('av-precio'), precioMin: UI.v('av-min'), verifMin: UI.chk('av-verif'), dctoMin: UI.v('av-dmin'), dctoMax: UI.v('av-dmax'), igv: UI.v('av-igv') };
     if (App.accion(() => Arts.guardar(cod, x), cod + ' actualizado')) { UI.cerrar(); App.refrescar(); }
   }
 };

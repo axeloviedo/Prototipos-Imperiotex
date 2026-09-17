@@ -74,7 +74,7 @@ const Doc = {
     const a = Store.art(cod);
     if (!Store.activo(a)) throw new Error('El artículo ' + cod + ' no existe o está inactivo');
     if (!a.venta) throw new Error(a.nom + ' no está marcado como artículo de venta (GI-02)');
-    const um = (a.uVenta && a.uVenta[0]) || a.u;
+    const um = Precios.umVenta(a.cod);
     const l = { art: a.cod, nom: a.nom, desc: '', um, factor: Precios.factor(a.cod, um), alm: a.inv ? Doc.sedeAlm(d) : '', cant: 1, precio: 0, origen: '', dcto: 0, obsequio: false };
     Doc.precio(d, l);
     Precios.linea(l);
@@ -148,16 +148,17 @@ const Doc = {
     if (!l.obsequio && l.precio > 0) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');
-      if (a.precioMin > 0 && (Store.cfg().verificarPrecioMin || a.verifMin)) {
+      if (a.precioMin > 0 && Precios.verificaMin(a)) {
         const neto = Precios.netoEnSoles(l, d.mon);
         if (neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
       }
     }
-    if (a.inv && l.alm && l.cant > 0 && a.stockCtrl !== 'No verificar') {
+    /* L6: sin stock disponible no se vende (bloquea siempre); la cotización solo avisa porque no reserva stock */
+    if (a.inv && l.alm && l.cant > 0) {
       const nec = Doc.necesidad(d, l.art, l.alm), disp = Stock.disp(l.alm, l.art);
       if (nec > disp + 0.00005) {
         const txt = 'disponible ' + UI.n(disp, 0) + ' ' + a.u + ' en ' + l.alm + ', se necesitan ' + UI.n(nec, 0);
-        if (modo === 'venta' && a.stockCtrl === 'Bloquear') e.push(txt); else w.push(txt);
+        if (modo === 'venta') e.push(txt); else w.push(txt);
       }
     }
     return { e, w };
@@ -355,7 +356,7 @@ const Ventas = {
     const porAlm = {};
     d.lineas.forEach((l, i) => { l.n = i + 1; if ((Store.art(l.art) || {}).inv) (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
     Object.keys(porAlm).forEach(alm => porAlm[alm].forEach(l => {
-      if (Store.art(l.art).stockCtrl === 'Bloquear' && Doc.necesidad(d, l.art, alm) > Stock.disp(alm, l.art) + 0.00005) throw new Error('Stock disponible insuficiente de ' + l.art + ' en ' + alm);
+      if (Doc.necesidad(d, l.art, alm) > Stock.disp(alm, l.art) + 0.00005) throw new Error('Stock disponible insuficiente de ' + l.art + ' en ' + alm);
     }));
     const ses = (d.pagos || []).length ? Caja.abierta(d.sede, d.mon) : null;
     const v = Doc.snapCliente(JSON.parse(JSON.stringify(d)));

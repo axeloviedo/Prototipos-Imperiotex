@@ -9,13 +9,24 @@ const Precios = {
     { t: 'General', f: l => !l.sede && !l.tipo }
   ],
 
-  /* unidades por UM de venta respecto a la UM de inventario (A1: factor global por par) */
+  /* unidades por UM de venta respecto a la UM de inventario (A1: factor global por par). La UM de venta es referencial (L5):
+     se puede usar cualquier unidad con conversión a la de inventario; sin conversión no se realiza la operación */
   factor(art, um) {
     const a = Store.art(art);
     if (!a || !um || um === a.u) return 1;
     const c = M.CONVERSIONES.find(x => x.de === um && x.a === a.u);
-    return c ? c.factor : 1;
+    if (!c) throw new Error('No existe la conversión ' + um + ' → ' + a.u + ' para ' + a.cod + ': créela en Inventarios (Configuraciones → Conversiones)');
+    return c.factor;
   },
+  /* unidades con las que se puede vender el artículo: la de venta predeterminada primero, luego la de inventario y las que tienen conversión */
+  unidades(art) {
+    const a = Store.art(art); if (!a) return [];
+    const ok = u => u === a.u || M.CONVERSIONES.some(x => x.de === u && x.a === a.u);
+    return [...new Set([a.uVenta || a.u, a.u].concat(M.CONVERSIONES.filter(x => x.a === a.u).map(x => x.de)))].filter(ok);
+  },
+  umVenta(art) { const a = Store.art(art); return a ? Precios.unidades(art)[0] || a.u : ''; },
+  /* verificación del precio mínimo: la de Configuración General de Inventarios (L1) o la del artículo */
+  verificaMin(a) { return !!((BD.d.maestros.configLogistica || {}).precioMinGlobal || (a && a.verifMin)); },
 
   /* -> {precio, origen, fila} o null si no hay precio en esa moneda */
   resolver(art, um, sede, tipoCli, mon) {

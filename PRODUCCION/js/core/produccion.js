@@ -19,8 +19,11 @@ const Prod = {
   MODULO: 'Producción',
   _hist(of, a, d) { of.hist.push({ f: UI.ahora(), a, d: d || '', u: BD.usuario }); },
   nombreRef() { return (BD.d.config || {}).nombreRef || 'N° Referencia'; },
-  /* almacén donde entra lo producido: el del artículo o, si no tiene, el de su lista de materiales */
-  almRecibo(art) { const a = M.art(art); return (a && a.alm) || Explosion.almDe(art) || 'SB-CENTRAL'; },
+  /* almacén propuesto donde entra lo producido: el que usan las listas de materiales para tomarlo. Sin propuesta queda vacío
+     y el usuario debe elegirlo (decisión L1: el artículo no tiene almacén por defecto y nunca se asume SB-CENTRAL) */
+  almRecibo(art) { return Explosion.almDe(art) || ''; },
+  /* almacén (no de tránsito) donde el artículo tiene más stock: origen del envío al proveedor del servicio */
+  almStock(art) { const s = BD.d.stock.filter(x => x.art === art && x.act > 0 && !(M.alm(x.alm) || {}).transito).sort((a, b) => b.act - a.act)[0]; return s ? s.alm : ''; },
   /* el nombre de la referencia es solo la etiqueta del campo (un texto por empresa): se edita desde PR-04 */
   renombrarRef(nom) { nom = String(nom || '').trim(); if (!nom) throw new Error('Indique el nombre'); (BD.d.config = BD.d.config || {}).nombreRef = nom; return nom; },
   nuevaRef() { return BD.sig('ref', '', 4); },
@@ -58,6 +61,7 @@ const Prod = {
     if (!M.art(o.art)) throw new Error('Elija el artículo');
     const cant = UI.r4(o.cant);
     const alm = o.alm || Prod.almRecibo(o.art);
+    if (!alm) throw new Error('Elija el almacén donde entra lo producido de ' + M.nomArt(o.art));
     if (!M.alm(alm)) throw new Error('Almacén no válido: ' + alm);
     const of = {
       id: BD.sig('of', 'OF-', 6), ref: o.ref, art: o.art, ldm: L ? L.id : '', tipofab: L ? 'Estándar' : 'Especial',
@@ -70,11 +74,11 @@ const Prod = {
     Prod._hist(of, 'Orden creada', of.tipofab + ' · ' + (of.sf ? 'desde ' + of.sf : 'en Producción') + ' · ' + Prod.nombreRef() + ' ' + of.ref);
     return of;
   },
-  _crearSugeridas(sugeridas, nec, base) {
+  _crearSugeridas(sugeridas, nec, base, alms) {
     return Object.keys(sugeridas || {}).filter(art => (Number(sugeridas[art]) || 0) > 0).map(art => {
       const n = nec.find(x => x.art === art), L = M.ldmPred(art);
       if (!n && !L) throw new Error(M.nomArt(art) + ' no tiene lista de materiales');
-      return Prod.crearOF(Object.assign({}, base, { art, ldm: n ? n.ldm : L.id, cant: Number(sugeridas[art]), alm: n ? n.alm : Prod.almRecibo(art) }));
+      return Prod.crearOF(Object.assign({}, base, { art, ldm: n ? n.ldm : L.id, cant: Number(sugeridas[art]), alm: (alms && alms[art]) || (n ? n.alm : Prod.almRecibo(art)) }));
     });
   },
   /* orden creada en Producción (nace Planificada); la lista es opcional; sugeridas = {artículo fabricable: cantidad} */
@@ -84,13 +88,13 @@ const Prod = {
     const ref = String(o.ref || '').trim() || Prod.nuevaRef();
     const nec = o.ldm && o.sugeridas ? Explosion.necesidades([{ art: o.art, cant: o.cant, ldm: o.ldm }]) : [];
     const base = { ref, origen: 'Manual', fechaFin: o.fechaFin, obs: o.obs };
-    return [Prod.crearOF(Object.assign({}, base, { art: o.art, ldm: o.ldm, cant: o.cant, alm: o.alm }))].concat(o.ldm ? Prod._crearSugeridas(o.sugeridas, nec, base) : []);
+    return [Prod.crearOF(Object.assign({}, base, { art: o.art, ldm: o.ldm, cant: o.cant, alm: o.alm }))].concat(o.ldm ? Prod._crearSugeridas(o.sugeridas, nec, base, o.alms) : []);
   },
 
   /* ---------- Solicitud de Fabricación (aprobada en Inventarios GI-23): sus órdenes nacen Liberadas ---------- */
   sfsProduccion() { return BD.d.sfs.filter(s => s.est === 'Aprobada' || s.est === 'Convertida en Orden' || s.est === 'Fabricada'); },
   firmasSF(sf) { return (sf.hist || []).filter(h => /V°B°|Aprobación/.test(h.a)).map(h => h.a + ' ' + String(h.f).slice(0, 10)).join(' · '); },
-  generarDesdeSF(sfId, sugeridas) {
+  generarDesdeSF(sfId, sugeridas, alms) {
     const sf = BD.sf(sfId);
     if (!sf) throw new Error('Solicitud no encontrada');
     if (sf.est !== 'Aprobada') throw new Error('La solicitud ' + sf.id + ' está ' + sf.est + ': solo se crean órdenes de una solicitud Aprobada');
@@ -103,7 +107,7 @@ const Prod = {
     if (sinLista.length) throw new Error('Sin lista de materiales: ' + sinLista.map(l => M.nomArt(l.art)).join(', '));
     const ref = Prod.nuevaRef();
     const base = { ref, origen: 'Solicitud', sf: sf.id, fechaFin: sf.fechaReq || '' };
-    const creadas = sf.lineas.map(l => Prod.crearOF(Object.assign({}, base, { art: l.art, ldm: l.ldm, cant: l.cant, alm: alm || Prod.almRecibo(l.art) }))).concat(Prod._crearSugeridas(sug, nec, base));
+    const creadas = sf.lineas.map(l => Prod.crearOF(Object.assign({}, base, { art: l.art, ldm: l.ldm, cant: l.cant, alm: alm || Prod.almRecibo(l.art) }))).concat(Prod._crearSugeridas(sug, nec, base, alms));
     /* la solicitud libera lo que comprometió al aprobarse; cada orden compromete lo suyo al liberarse (sin duplicar ni perder compromiso) */
     Docs.sf.convertir(sf.id, creadas.map(o => o.id), ref);
     creadas.forEach(of => Prod.liberar(of, 'Nace liberada desde ' + sf.id));
@@ -131,6 +135,8 @@ const Prod = {
   liberar(of, detalle) {
     if (of.estado !== 'Planificado') throw new Error('Solo se libera una orden Planificada');
     if (!of.mats.length && !of.recs.length) throw new Error('Agregue al menos un material o recurso antes de liberar');
+    const sinAlm = of.mats.filter(m => !m.alm);
+    if (sinAlm.length) throw new Error('Elija el almacén de: ' + sinAlm.map(m => M.nomArt(m.cod)).join(', '));
     Prod._comprometer(of);
     of.estado = 'Liberado'; of.fechaLib = UI.ahora();
     Prod._hist(of, 'Orden liberada', detalle || '');
@@ -178,7 +184,7 @@ const Prod = {
     } else {
       const a = M.art(t.cod); if (!a) throw new Error('Elija el artículo');
       if (a.inv === false) throw new Error('Solo artículos inventariables: un servicio se agrega como recurso');
-      of.mats.push({ cod: a.cod, cons: 1, plan: 0, u: a.u, alm: Prod.almRecibo(a.cod), metodo: Explosion.fabricable(a.cod) ? 'Manual' : 'Notificación', fab: Explosion.fabricable(a.cod), consumido: 0, comp: 0, valor: 0 });
+      of.mats.push({ cod: a.cod, cons: 1, plan: 0, u: a.u, alm: Prod.almRecibo(a.cod) || Prod.almStock(a.cod), metodo: Explosion.fabricable(a.cod) ? 'Manual' : 'Notificación', fab: Explosion.fabricable(a.cod), consumido: 0, comp: 0, valor: 0 });
     }
     Prod._recalc(of);
   },
@@ -296,7 +302,8 @@ const Prod = {
     const P = M.prov(d.prov), A = M.alm(d.alm), R = M.rec(d.rec);
     if (!R || !Prod.esServicio(R.cod)) throw new Error('Elija el servicio');
     if (!P) throw new Error('Elija el proveedor');
-    if (!A || !A.transito) throw new Error('Elija el almacén de tránsito');
+    if (!A) throw new Error('Elija el almacén');
+    if (!A.transito) throw new Error('El almacén ' + A.cod + ' no está marcado como «en tránsito»: el material en poder del proveedor va a un almacén en tránsito');
     const anteriores = Prod.serviciosDe(of);
     const abiertas = anteriores.flatMap(cod => Prod.solicitudesServicio(of, cod)).filter(s => s.estado !== 'Borrador' && s.estado !== 'Pendiente');
     if (abiertas.length && anteriores.some(c => c !== R.cod)) throw new Error('Logística ya atendió ' + abiertas.map(s => s.id).join(', ') + ': no se cambia el servicio');
@@ -328,7 +335,7 @@ const Prod = {
     const lineas = Prod.lineasTercero(of);
     if (!lineas.length) throw new Error('La orden no tiene materiales en un almacén de tránsito');
     const rutas = {};
-    lineas.forEach(m => { const origen = m.almPropio || Prod.almRecibo(m.cod), k = origen + '|' + m.alm; (rutas[k] = rutas[k] || { origen, destino: m.alm, items: [] }).items.push({ m, cant: UI.r4(m.cons * cant) }); });
+    lineas.forEach(m => { const origen = m.almPropio || Prod.almStock(m.cod) || Prod.almRecibo(m.cod), k = origen + '|' + m.alm; (rutas[k] = rutas[k] || { origen, destino: m.alm, items: [] }).items.push({ m, cant: UI.r4(m.cons * cant) }); });
     Object.values(rutas).forEach(g => {
       if (g.origen === g.destino) throw new Error('El material ' + M.nomArt(g.items[0].m.cod) + ' ya está en ' + g.destino);
       const f = Stock.faltantes(g.origen, g.items.map(x => ({ art: x.m.cod, cant: x.cant })));

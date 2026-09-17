@@ -5,7 +5,7 @@ const Listas = {
     Store.exigir('editar_precios', 'modificar listas de precios');
     const a = Store.art(x.art);
     if (!a) throw new Error('Elija el artículo');
-    if ((a.uVenta || [a.u]).indexOf(x.um) < 0) throw new Error('La unidad ' + x.um + ' no es de venta para ' + a.cod);
+    if (Precios.unidades(a.cod).indexOf(x.um) < 0) throw new Error('No existe la conversión ' + x.um + ' → ' + a.u + ' para ' + a.cod + ': créela en Inventarios (Configuraciones → Conversiones)');
     if (x.sede && !Store.sede(x.sede)) throw new Error('Tienda no válida');
     if (x.tipo && M.TIPOS_CLIENTE.indexOf(x.tipo) < 0) throw new Error('Tipo de cliente no válido');
     if (!M.MONEDAS.find(m => m.cod === x.mon)) throw new Error('Elija la moneda');
@@ -44,8 +44,7 @@ const Arts = {
     if (dctoMax > 100) throw new Error('El descuento máximo no puede superar el 100%');
     if (dctoMin > dctoMax) throw new Error('El descuento mínimo no puede ser mayor que el máximo');
     if (M.AFECTACION.indexOf(x.igv) < 0) throw new Error('Elija la afectación del IGV');
-    if (a.inv && !M.STOCK_CTRL.find(s => s.v === x.stockCtrl)) throw new Error('Elija el control de stock al vender');
-    return Object.assign(a, { precioVenta: UI.r2(precio), precioMin: UI.r2(precioMin), verifMin: !!x.verifMin, dctoMin, dctoMax, igv: x.igv, stockCtrl: a.inv ? x.stockCtrl : '' });
+    return Object.assign(a, { precioVenta: UI.r2(precio), precioMin: UI.r2(precioMin), verifMin: !!x.verifMin, dctoMin, dctoMax, igv: x.igv });
   }
 };
 
@@ -56,7 +55,7 @@ const Cfg = {
     const c = Store.cfg();
     const igv = n(x.igv, 0, 30, 'El IGV'), tc = n(x.tc, 0.01, 99, 'El tipo de cambio'), dv = n(x.diasValidez, 1, 90, 'La validez de la cotización'), da = n(x.diasAnulacion, 0, 30, 'El plazo para anular');
     if (!M.ALMACENES.some(a => a.cod === x.almMalEstado)) throw new Error('Elija el almacén para devoluciones en mal estado');
-    Object.assign(c, { igv, tc: UI.r4(tc), diasValidez: Math.round(dv), diasAnulacion: Math.round(da), verificarPrecioMin: !!x.verificarPrecioMin, almMalEstado: x.almMalEstado });
+    Object.assign(c, { igv, tc: UI.r4(tc), diasValidez: Math.round(dv), diasAnulacion: Math.round(da), almMalEstado: x.almMalEstado });
     return c;
   },
   agregarCat(tipo, nombre) {

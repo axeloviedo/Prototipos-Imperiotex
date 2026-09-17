@@ -185,7 +185,7 @@ const PRENV = {
     const of = PR02.of(), box = document.getElementById('env-res'); if (!box) return;
     const c = Math.max(0, UI.f('env-cant'));
     box.innerHTML = UI.tabla(['Material', 'Desde', 'Hacia', ['Cantidad', 'num'], ['Stock en origen', 'num']], Prod.lineasTercero(of).map(m => {
-      const o = m.almPropio || Prod.almRecibo(m.cod), q = UI.r4(m.cons * c), act = Stock.act(o, m.cod);
+      const o = m.almPropio || Prod.almStock(m.cod) || Prod.almRecibo(m.cod) || '—', q = UI.r4(m.cons * c), act = Stock.act(o, m.cod);
       return '<tr><td>' + UI.esc(M.nomArt(m.cod)) + '</td><td class="mini">' + o + '</td><td class="mini">' + m.alm + '</td><td class="num">' + UI.q(q, m.u) + '</td><td class="num"><span class="' + (act + 0.00005 < q ? 'err-t' : 'mini') + '">' + UI.n(act) + '</span></td></tr>';
     }));
   },

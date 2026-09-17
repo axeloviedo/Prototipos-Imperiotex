@@ -13,15 +13,15 @@ const BD_COMPLEMENTOS = (() => {
   const conversiones = [{ de: 'DOC', a: 'UND', factor: 12 }, { de: 'MILLAR', a: 'UND', factor: 1000 }];
 
   const grupos = [
-    { cod: 'MP', nom: 'MATERIA PRIMA', prefijo: 'MP-', asignacion: 'Interna', inv: true },
-    { cod: 'SRV', nom: 'SERVICIOS', prefijo: 'SRV-', asignacion: 'Interna', inv: false },
+    { cod: 'MP', nom: 'MATERIA PRIMA', prefijo: 'MP-', asignacion: 'Interna', inv: true, grupoCompra: 'MP1' },
+    { cod: 'SRV', nom: 'SERVICIOS', prefijo: 'SRV-', asignacion: 'Interna', inv: false, grupoCompra: 'SRV' },
     { cod: 'PPT', nom: 'PRODUCTOS EN PROCESO', prefijo: 'PPT-', asignacion: 'Interna', inv: true, origen: C },
     { cod: 'PT', nom: 'PRODUCTOS TERMINADOS', prefijo: 'PT-', asignacion: 'Interna', inv: true, origen: C },
-    { cod: 'MERC', nom: 'MERCADERÍA', prefijo: 'MERC-', asignacion: 'Interna', inv: true, origen: C }
+    { cod: 'MERC', nom: 'MERCADERÍA', prefijo: 'MERC-', asignacion: 'Interna', inv: true, grupoCompra: 'MSC', origen: C }
   ];
   const categorias = [
-    { cod: 'PAN', nom: 'PANTALON', cv: 'CV-06', grupo: 'PT', origen: C },
-    { cod: 'PANPP', nom: 'PANTALON EN PROCESO', cv: 'CV-04', grupo: 'PPT', origen: C }
+    { cod: 'PAN', nom: 'PANTALON', grupo: 'PT', origen: C },
+    { cod: 'PANPP', nom: 'PANTALON EN PROCESO', grupo: 'PPT', origen: C }
   ];
   const subcategorias = [
     { cat: 'PANTALON', nom: 'WIDE LEG', origen: C },
@@ -36,12 +36,12 @@ const BD_COMPLEMENTOS = (() => {
 
   /* Almacén de producto en proceso: creado el 2026-09-16 por decisión del usuario (las plantillas no lo traían);
      figura en ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx */
-  const almacenes = ['SB', 'CN'].map(emp => ({ emp, cod: emp + '-ZARATE-PP', nom: 'Almacén Zárate Producto en Proceso', cat: 'Común', sede: 'Zárate', fisico: 'Físico', contenido: 'Productos en Proceso', estado: 'Activo', kardexValorizado: false, transito: false, obs: 'Piezas cortadas, crudos y lavados en planta (solo cantidades en contabilidad)', origen: C }));
+  const almacenes = ['SB', 'CN'].map(emp => ({ emp, cod: emp + '-ZARATE-PP', nom: 'Almacén Zárate Producto en Proceso', sede: 'Zárate', estado: 'Activo', kardexValorizado: false, transito: false, obs: 'Piezas cortadas, crudos y lavados en planta (solo cantidades en contabilidad)', origen: C }));
 
   /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto */
   const ajustesArticulos = {
-    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', aConfirmar: true },
-    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', aConfirmar: true },
+    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
+    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
     'MP-0052': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0054': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0055': { produccion: true, precioCompra: 8.90, costo: 8.90, provDef: 'PROV-0002', aConfirmar: true },
@@ -52,11 +52,11 @@ const BD_COMPLEMENTOS = (() => {
     'MP-0043': { produccion: true, precioCompra: 0.05, costo: 0.05, provDef: 'PROV-0002', aConfirmar: true }
   };
 
-  const mp = (cod, nom, subcat, precio) => ({ cod, nom, desc: nom, grupo: 'MP', cat: 'AVIOS DE ACABADOS PRINCIPALES', subcat, u: 'UND', ctrl: 'Nada', cv: 'CV-02', inv: true, compra: true, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', precioCompra: precio, costo: precio, uCompra: 'UND', provDef: 'PROV-0002', origen: C, aConfirmar: true });
+  const mp = (cod, nom, subcat, precio) => ({ cod, nom, desc: nom, grupo: 'MP', cat: 'AVIOS DE ACABADOS PRINCIPALES', subcat, u: 'UND', ctrl: 'Nada', inv: true, compra: true, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', precioCompra: precio, costo: precio, uCompra: 'UND', provDef: 'PROV-0002', origen: C, aConfirmar: true });
   const articulos = [
     /* avíos de acabado de Zuleika: la plantilla trae las sub categorías pero no los artículos */
-    mp('MP-0102', 'BOTON METALICO 17MM PLATA ENVEJECIDA', 'BOTON', 0.35),
-    mp('MP-0103', 'REMACHE METALICO 9MM PLATA ENVEJECIDA', 'BOTON', 0.12),
+    Object.assign(mp('MP-0102', 'BOTON METALICO 17MM PLATA ENVEJECIDA', 'BOTON', 0.35), { stockMin: 100 }),
+    Object.assign(mp('MP-0103', 'REMACHE METALICO 9MM PLATA ENVEJECIDA', 'BOTON', 0.12), { stockMin: 600 }),
     mp('MP-0104', 'PARCHE CUERO SINTETICO SARA BQ', 'CUEROS', 0.60),
     mp('MP-0105', 'ETIQUETA PANTALON SARA BQ', 'ETIQUETA PANTALON', 0.18),
     mp('MP-0106', 'HANG TAG SARA DENIM', 'HANG TAG', 0.25),
@@ -79,15 +79,15 @@ const BD_COMPLEMENTOS = (() => {
   combos.forEach(({ co, ta }, i) => {
     const pt = 'PT-' + pad(i + 1);
     zuleika.pt[co.c + ta.t] = pt;
-    articulos.push({ cod: pt, nom: 'PANTALON WIDE LEG ZULEIKA TALLA ' + ta.t + ' COLOR ' + co.c, desc: 'Pantalón wide leg Zuleika terminado', grupo: 'PT', cat: 'PANTALON', subcat: 'WIDE LEG', u: 'UND', ctrl: 'Nada', cv: 'CV-06',
-      inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', alm: 'SB-CENTRAL', costo: 0,
+    articulos.push({ cod: pt, nom: 'PANTALON WIDE LEG ZULEIKA TALLA ' + ta.t + ' COLOR ' + co.c, desc: 'Pantalón wide leg Zuleika terminado', grupo: 'PT', cat: 'PANTALON', subcat: 'WIDE LEG', u: 'UND', ctrl: 'Nada',
+      inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
       attrs: { Color: co.c, Talla: ta.t, Acabado: 'TERMINADO', Material: 'DENIM CONFORT', Género: 'DAMA' },
-      precioVenta: co.precio, precioMin: co.min, uVenta: ['UND', 'DOC'], dctoMin: 0, dctoMax: 15, stockCtrl: 'Bloquear', origen: C });
+      precioVenta: co.precio, precioMin: co.min, uVenta: 'UND', dctoMin: 0, dctoMax: 15, stockMin: ta.t === '28' ? 15 : 10, origen: C });
     ETAPAS.forEach(e => {
       const cod = 'PPT-' + pad(e.base + i);
       zuleika.ppt[e.et + co.c + ta.t] = cod;
-      articulos.push({ cod, nom: 'PANTALON WIDE LEG ZULEIKA ' + e.et + ' COLOR ' + co.c + ' TALLA ' + ta.t, desc: 'Pantalón Zuleika en proceso: ' + e.et.toLowerCase(), grupo: 'PPT', cat: 'PANTALON EN PROCESO', subcat: e.et, u: 'UND', ctrl: 'Nada', cv: 'CV-04',
-        inv: true, compra: false, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', alm: 'SB-ZARATE-PP', costo: 0,
+      articulos.push({ cod, nom: 'PANTALON WIDE LEG ZULEIKA ' + e.et + ' COLOR ' + co.c + ' TALLA ' + ta.t, desc: 'Pantalón Zuleika en proceso: ' + e.et.toLowerCase(), grupo: 'PPT', cat: 'PANTALON EN PROCESO', subcat: e.et, u: 'UND', ctrl: 'Nada',
+        inv: true, compra: false, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
         attrs: { Color: co.c, Talla: ta.t, Acabado: e.et, Material: 'DENIM CONFORT', Género: 'DAMA' }, origen: C });
     });
   });

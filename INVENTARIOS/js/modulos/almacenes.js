@@ -7,15 +7,15 @@ function fillSedes(){
 }
 function renderAlmacenes(){
   fillSedes();
-  const q=Fmt.s(document.getElementById('f-alm-q').value), cat=document.getElementById('f-alm-cat').value, sede=document.getElementById('f-alm-sede').value, e=document.getElementById('f-alm-e').value;
-  const lista=M().almacenes.filter(a=>a.emp===empresaAbrev()&&(!q||Fmt.s(a.cod+' '+a.nom).includes(q))&&(!cat||a.cat===cat)&&(!sede||a.sede===sede)&&(!e||a.estado===e));
+  const q=Fmt.s(document.getElementById('f-alm-q').value), sede=document.getElementById('f-alm-sede').value, e=document.getElementById('f-alm-e').value;
+  const lista=M().almacenes.filter(a=>a.emp===empresaAbrev()&&(!q||Fmt.s(a.cod+' '+a.nom).includes(q))&&(!sede||a.sede===sede)&&(!e||a.estado===e));
   document.getElementById('alm-body').innerHTML=lista.map(a=>{
     const n=Stock.deAlmacen(a.cod).length;
     const ind=[a.transito?badge('En tránsito','var(--aprobada)'):'',a.kardexValorizado?badge('Kardex valorizado','var(--primario-claro)'):badge('Solo cantidades','var(--borrador)')].join(' ');
-    return '<tr class="clickable" onclick="abrirAlmacen(\''+a.cod+'\')"><td>'+a.cod+(a.aConfirmar?' <span class="warn" title="Dato del prototipo a confirmar">⚠</span>':'')+'</td><td>'+Fmt.e(a.nom)+'<br><span class="hint">'+Fmt.e(a.obs||'')+'</span></td><td>'+a.cat+'</td><td>'+Fmt.e(a.sede)+'</td><td>'+a.fisico+'</td><td>'+Fmt.e(a.contenido)+'</td><td>'+ind+'</td>'+
+    return '<tr class="clickable" onclick="abrirAlmacen(\''+a.cod+'\')"><td>'+a.cod+(a.aConfirmar?' <span class="warn" title="Dato del prototipo a confirmar">⚠</span>':'')+'</td><td>'+Fmt.e(a.nom)+'<br><span class="hint">'+Fmt.e(a.obs||'')+'</span></td><td>'+Fmt.e(a.sede)+'</td><td>'+ind+'</td>'+
      '<td style="text-align:right">'+(n||hint('-'))+'</td><td>'+badge(a.estado)+'</td>'+
      '<td><button class="btn-link" onclick="event.stopPropagation();abrirAlmacen(\''+a.cod+'\')">Editar</button> <button class="btn-link" onclick="event.stopPropagation();go(\'gi05\');document.getElementById(\'f-stk-a\').value=\''+a.cod+'\';renderStock()">Stock</button></td></tr>';
-  }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:16px">Sin almacenes para los filtros</td></tr>';
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--texto-sec);padding:16px">Sin almacenes para los filtros</td></tr>';
   document.getElementById('alm-count').textContent=lista.length+" almacenes ("+empresaAbrev()+")";
 }
 RENDER.gi03=renderAlmacenes;
@@ -28,11 +28,7 @@ function abrirAlmacen(cod){
   document.getElementById('gi04-emp').disabled=!!a;
   const cd=document.getElementById('gi04-cod'); cd.value=a?a.cod:(empresaAbrev()+'-'); cd.readOnly=!!a;
   document.getElementById('gi04-nom').value=a?a.nom:'';
-  document.getElementById('gi04-cat').value=a?a.cat:'Común';
   document.getElementById('gi04-sede').innerHTML=opcionesLista(M().sedes.map(s=>s.nom),a?a.sede:'',false);
-  document.getElementById('gi04-fisico').value=a?a.fisico:'Físico';
-  const cont=document.getElementById('gi04-cont'); if(a&&![...cont.options].some(o=>o.value===a.contenido))cont.insertAdjacentHTML('beforeend','<option>'+Fmt.e(a.contenido)+'</option>');
-  cont.value=a?a.contenido:'Materia Prima';
   document.getElementById('gi04-estado').value=a?a.estado:'Activo';
   document.getElementById('gi04-obs').value=a?a.obs||'':'';
   document.getElementById('alm-transito').checked=a?!!a.transito:false;
@@ -60,7 +56,7 @@ function guardarAlmacen(){
   const a=ALM_ACTUAL?BD.alm(ALM_ACTUAL):{cod,origen:'Inventarios'};
   const estado=v('gi04-estado');
   if(ALM_ACTUAL&&estado==='Inactivo'&&a.estado!=='Inactivo'&&Stock.deAlmacen(a.cod).length){toast("No se puede desactivar: el almacén tiene existencias");return}
-  Object.assign(a,{emp:v('gi04-emp'),nom,cat:v('gi04-cat'),sede:v('gi04-sede'),fisico:v('gi04-fisico'),contenido:v('gi04-cont'),estado,obs:v('gi04-obs'),
+  Object.assign(a,{emp:v('gi04-emp'),nom,sede:v('gi04-sede'),estado,obs:v('gi04-obs'),
     transito:document.getElementById('alm-transito').checked,kardexValorizado:document.getElementById('alm-kardex').checked});
   if(document.getElementById('chk-permisos-alm').checked&&ALM_ROLES.length)a.roles=ALM_ROLES.slice(); else delete a.roles;
   if(!ALM_ACTUAL)M().almacenes.push(a);

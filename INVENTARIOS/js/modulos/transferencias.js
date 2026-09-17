@@ -19,16 +19,17 @@ function cargarCabeceraST(){
   document.getElementById('trf-id').value=s?s.id:'(se asigna al guardar)';
   document.getElementById('trf-user').value=s?(((s.hist||[])[0]||{}).u||''):BD.usuario;
   document.getElementById('trf-fecha').value=s?(s.fecha||''):BD.ahora();
-  document.getElementById('trf-tipo').innerHTML=opcionesTipoMov('TRF',s?s.tipoMov:'TRF-INTERNO');
+  document.getElementById('trf-tipo').innerHTML=opcionesTipoMov('TRF',s?s.tipoMov:'','Seleccionar…');
   document.getElementById('trf-origen').innerHTML=opcionesAlm(s?s.origen:'');
   document.getElementById('trf-destino').innerHTML=opcionesAlm(s?s.destino:'');
   document.getElementById('trf-obs').value=s?(s.obs||''):'';
+  bloquearMismoAlm();
 }
-/* tipo sugerido según las categorías de los almacenes (el usuario puede cambiarlo) */
-function sugerirTipoTRF(){
-  const o=BD.alm(document.getElementById('trf-origen').value), d=BD.alm(document.getElementById('trf-destino').value); if(!o||!d)return;
-  const t=d.transito||o.transito?'TRF-FABRIC':d.cat==='Tienda Liquidación'||/LIQUID/.test(d.cod)?'TRF-LIQUID':o.cat==='Tienda'&&d.cat==='Tienda'?'TRF-ENTRETIENDA':d.cat==='Tienda'?'TRF-REPTIENDA':'TRF-INTERNO';
-  document.getElementById('trf-tipo').value=t;
+/* el tipo de transferencia lo elige el usuario (L3); origen y destino no pueden ser el mismo almacén */
+function bloquearMismoAlm(){
+  const o=document.getElementById('trf-origen'), d=document.getElementById('trf-destino');
+  [...d.options].forEach(x=>x.disabled=!!x.value&&x.value===o.value);
+  [...o.options].forEach(x=>x.disabled=!!x.value&&x.value===d.value);
 }
 function renderTRF(){
   const s=TRF.id?stDoc(TRF.id):null, e=s?s.estado:'Nuevo', ed=!s;
@@ -69,6 +70,7 @@ function guardarST(aprobar){
     if(!o||!d){toast("Seleccione el almacén origen y el destino");return}
     if(o===d){toast("El almacén origen y el destino no pueden ser el mismo");return}
     if(!lineasValidas(TRF))return;
+    if(!document.getElementById('trf-tipo').value){toast("Elija el tipo de transferencia");return}
     s=intentar(()=>D.crear({origen:o,destino:d,tipoMov:document.getElementById('trf-tipo').value,obs:document.getElementById('trf-obs').value.trim(),lineas:TRF.lineas.map(l=>({art:l.art,cant:l.cant}))}));
     if(!s)return;
   }

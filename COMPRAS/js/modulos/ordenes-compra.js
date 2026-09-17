@@ -28,12 +28,11 @@ function ocIGV(art,prov){ const p=BD.prov(prov), a=BD.art(art); if(p&&p.tipo==="
 function ocPrecioRef(cod){ const a=BD.art(cod)||{}, r=BD.rec(cod)||{}; return Number(a.precioCompra||r.costo||a.costo||0); }
 function ocPendRec(o){ return o.items.filter(i=>i.cant-i.recq>0.00005); }
 function ocPendFac(o){ return o.items.filter(i=>i.cant-i.facq>0.00005); }
-/* estructura organizativa: organización (SB/CN) y grupo de compras (MP1, SRV, IMP, EE1, MSC, SG1) de la OC */
+/* estructura organizativa: organización (SB/CN) y grupo de compras de la OC; el grupo de compras sale del Grupo de Artículo (K10) */
 function ocGrupoCompraDef(o){
   const p=BD.prov(o.prov);
   if(p&&p.tipo==="Internacional")return "IMP";
-  if(o.items.length && o.items.every(i=>BD.esServicio(i.art)))return "SRV";
-  const cnt={}; o.items.forEach(i=>{const g=(BD.art(i.art)||{}).grupoCompra; if(g)cnt[g]=(cnt[g]||0)+1});
+  const cnt={}; o.items.forEach(i=>{const g=BD.grupoCompra(i.art); if(g)cnt[g]=(cnt[g]||0)+1});
   return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||"MP1";
 }
 function ocOrg(o){ return o.orgCompra||"SB"; }

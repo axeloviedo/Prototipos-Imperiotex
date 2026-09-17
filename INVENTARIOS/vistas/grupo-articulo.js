@@ -23,6 +23,7 @@ Vistas.pantallas(String.raw`
           <div class="field"><label>Asignación de código</label>
             <select id="gru-asig"><option>Interna</option><option>Externa</option></select></div>
           <div class="field"><div class="check" style="margin-top:22px"><input type="checkbox" id="gru-inv" checked> Inventariable <span class="hint">(los artículos del grupo manejan stock)</span></div></div>
+          <div class="field"><label>Grupo de compras <span class="hint">(lo heredan todos los artículos del grupo)</span></label><select id="gru-gc"></select></div>
         </div>
         <p class="hint" style="margin-top:8px">El prefijo arma el código del artículo. La asignación define si el sistema autogenera (Interna) o el usuario ingresa un código único (Externa).</p>
       </div>

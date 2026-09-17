@@ -20,7 +20,7 @@ const CM10 = {
       UI.campo('Validez de la cotización (días)', '<input id="cf-dv" type="number" min="1" max="90" value="' + c.diasValidez + '"' + dis + '>') +
       UI.campo('Plazo para anular una venta (días)', '<input id="cf-da" type="number" min="0" max="30" value="' + c.diasAnulacion + '"' + dis + '>', { hint: 'Se congela en cada venta al registrarla; pasado el plazo se corrige con una devolución' }) +
       UI.campo('Almacén para devoluciones en mal estado', '<select id="cf-alm"' + dis + '>' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), c.almMalEstado) + '</select>') +
-      '<div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="cf-pmin"' + (c.verificarPrecioMin ? ' checked' : '') + dis + '> Verificar el precio mínimo en toda la empresa</label><span class="hint">El mismo parámetro de GI-CFG «Precios de venta»</span></div>' +
+      UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo)' }) +
       '</div></div>';
 
     const cat = (tipo, lista) => '<div style="flex:1;min-width:280px"><div class="sec">Categorías de ' + tipo.toLowerCase() + '</div>' +
@@ -48,7 +48,7 @@ const CM10 = {
     return html;
   },
   guardar() {
-    const x = { igv: UI.v('cf-igv'), tc: UI.v('cf-tc'), diasValidez: UI.v('cf-dv'), diasAnulacion: UI.v('cf-da'), almMalEstado: UI.v('cf-alm'), verificarPrecioMin: UI.chk('cf-pmin') };
+    const x = { igv: UI.v('cf-igv'), tc: UI.v('cf-tc'), diasValidez: UI.v('cf-dv'), diasAnulacion: UI.v('cf-da'), almMalEstado: UI.v('cf-alm') };
     if (App.accion(() => Cfg.guardar(x), 'Parámetros guardados')) App.refrescar();
   },
   agregarCat(tipo) { if (App.accion(() => Cfg.agregarCat(tipo, UI.v('cat-' + tipo)), 'Categoría agregada')) App.refrescar(); },

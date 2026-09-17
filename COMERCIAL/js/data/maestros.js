@@ -5,17 +5,17 @@
 const M = {
   EMPRESAS: ['IMPERIOTEX', 'CATINNA NOW'],
   _c() { return BD.d.maestros.comercial; },
-  /* almacenes donde hay producto para vender: producto terminado, liquidación, online y tiendas de la empresa de Comercial */
+  /* almacenes de la empresa de Comercial: se muestran todos los activos y el usuario elige (L3: sin categoría ni contenido) */
   almacenesVenta() {
     const emp = M._c().empresa || 'SB';
-    return BD.d.maestros.almacenes.filter(a => a.emp === emp && a.estado !== 'Inactivo' && (/Tienda/.test(a.cat || '') || /Productos Terminados|Mercader|Liquidaci/i.test(a.contenido || '')));
+    return BD.d.maestros.almacenes.filter(a => a.emp === emp && a.estado !== 'Inactivo');
   }
 };
 
 /* NOMBRE_EN_M → clave en BD.d.maestros.comercial */
 [['SEDES', 'tiendas'], ['CAJAS', 'cajas'], ['MONEDAS', 'monedas'], ['CONDICIONES', 'condiciones'], ['METODOS', 'metodos'], ['COMPROBANTES', 'comprobantes'],
  ['SERIES', 'series'], ['DOC_REFERENCIAL', 'docReferencial'], ['SUSTENTO_DEV', 'sustentoDev'], ['TIPOS_DEV', 'tiposDev'], ['LUGARES_ENTREGA', 'lugaresEntrega'],
- ['AGENCIAS', 'agencias'], ['MOTIVOS_ANULACION', 'motivosAnulacion'], ['STOCK_CTRL', 'stockCtrl'], ['AFECTACION', 'afectacion'], ['TIPOS_DOC', 'tiposDoc'],
+ ['AGENCIAS', 'agencias'], ['MOTIVOS_ANULACION', 'motivosAnulacion'], ['AFECTACION', 'afectacion'], ['TIPOS_DOC', 'tiposDoc'],
  ['TIPOS_CLIENTE', 'tiposCliente'], ['UBIGEOS', 'ubigeos'], ['USUARIOS', 'usuarios'], ['PERFILES', 'perfiles'], ['SEQ_INICIAL', 'seqInicial']
 ].forEach(x => Object.defineProperty(M, x[0], { get: () => M._c()[x[1]], enumerable: true }));
 Object.defineProperty(M, 'ALMACENES', { get: () => M.almacenesVenta(), enumerable: true });
