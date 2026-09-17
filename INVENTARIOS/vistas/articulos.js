@@ -23,7 +23,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="art-count"></span></div>
     </div>
-    <p class="hint">Maestro de la base compartida: 101 materias primas y 17 servicios de la plantilla, más los avíos y la familia ZULEIKA (piezas PPT-0001..0004, crudo PPT-0005..0008, lavado PPT-0009..0012 y producto final PT-0001..0004). Cada nombre es único. Para crear artículos parecidos use <b>Duplicar</b>.</p>
+    <p class="hint">Maestro de la base compartida: 101 materias primas y 17 servicios de la plantilla, más los avíos y la familia ZULEIKA (piezas cortadas PPT-0001..0002 y crudo PPT-0003..0004 por talla, lavado PPT-0005..0008 por color y talla, y producto final PT-0001..0004). Cada nombre es único. Para crear artículos parecidos use <b>Duplicar</b>.</p>
   </section>
 
   <!-- ==================================================== GI-02 · Artículo Formulario -->
