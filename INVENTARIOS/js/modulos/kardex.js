@@ -31,7 +31,7 @@ function renderKardex(){
   const cont=document.getElementById('kdx-tablas');
   if(!claves.length){cont.innerHTML='<div class="card" style="text-align:center;color:var(--texto-sec)">'+(art?'Sin movimientos de '+Fmt.e(artEtiqueta(art))+(alm?' en '+alm:'')+'.':'Sin movimientos en la base: registre un ingreso (GI-09) o reciba una Orden de Compra.')+'</div>';return}
   cont.innerHTML=claves.slice(0,60).map(k=>{
-    const [a,l]=k.split('|'), A=BD.art(a)||{}, AL=BD.alm(l)||{}, val=AL.kardexValorizado!==false;
+    const [a,l]=k.split('|'), A=BD.art(a)||{}, AL=BD.alm(l)||{}, val=AL.kardexValorizado!==false, conLote=Stock.conLote(a);
     let prom=0, saldoPrev=0, filas='';
     Stock.kardex(a,l).forEach(r=>{
       /* costo promedio vigente después del movimiento */
@@ -41,10 +41,11 @@ function renderKardex(){
       if(d&&n<d)return; if(h&&n>h)return; if(fg&&m.grupoMov!==fg)return; if(ft&&m.tipoMov!==ft)return;
       filas+='<tr><td>'+r.fecha+'</td><td>'+Fmt.e(r.det||m.tipoMovNom||r.tipo)+'<br><span class="hint">'+(m.tipoMov||'')+(m.modulo?' · '+m.modulo:'')+'</span></td>'+
         '<td><button class="btn-link" onclick="abrirMov(\''+r.id+'\')">'+r.id+'</button></td><td>'+docLink(r.ndoc)+'</td><td>'+Fmt.e(m.usuario||'')+'</td>'+
+        (conLote?'<td class="hint">'+Fmt.e(r.lote||'-')+'</td>':'')+
         '<td style="text-align:right">'+(r.ent?Fmt.n(r.ent):'')+'</td><td style="text-align:right">'+(r.sal?Fmt.n(r.sal):'')+'</td><td style="text-align:right;font-weight:600">'+Fmt.n(r.saldo)+'</td>'+
         (val?'<td style="text-align:right">'+Fmt.m(r.costo)+'</td><td style="text-align:right">'+Fmt.m(prom)+'</td><td style="text-align:right">'+Fmt.m(r.saldo*prom)+'</td>':'')+'</tr>';
     });
-    const cab='<tr><th>Fecha</th><th>Detalle del movimiento</th><th>ID</th><th>Documento</th><th>Usuario</th><th style="text-align:right">Entrada</th><th style="text-align:right">Salida</th><th style="text-align:right">Existencias</th>'+
+    const cab='<tr><th>Fecha</th><th>Detalle del movimiento</th><th>ID</th><th>Documento</th><th>Usuario</th>'+(conLote?'<th>Lote</th>':'')+'<th style="text-align:right">Entrada</th><th style="text-align:right">Salida</th><th style="text-align:right">Existencias</th>'+
       (val?'<th style="text-align:right">Costo mov. S/.</th><th style="text-align:right">Costo prom. S/.</th><th style="text-align:right">Saldo valorizado S/.</th>':'')+'</tr>';
     return '<div style="margin:12px 0 8px"><b style="font-size:14px">'+a+' · '+Fmt.e(A.nom||'')+'</b> <span class="hint">· '+Fmt.e(almEtiqueta(l))+' · '+(A.u||'')+(val?'':' · solo cantidades (sin Kardex valorizado)')+' · Actual '+Fmt.n(Stock.act(l,a))+' · Comprometido '+Fmt.n(Stock.comp(l,a))+'</span></div>'+
       '<div class="tbl-wrap"><table class="grid"><thead>'+cab+'</thead><tbody>'+(filas||'<tr><td colspan="11" class="hint" style="text-align:center;padding:10px">Sin movimientos con los filtros de fecha o tipo</td></tr>')+'</tbody></table></div>';

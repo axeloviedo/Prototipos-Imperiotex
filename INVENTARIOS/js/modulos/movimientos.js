@@ -60,11 +60,12 @@ function renderDetalleMov(){
   document.getElementById('d8-docs').innerHTML='<b style="font-size:13px">Documentos relacionados</b>'+(rel.length?'<div class="formgrid" style="margin-top:10px">'+rel.map(r=>'<div class="field"><label>'+r[0]+'</label><div style="padding:6px 0">'+r[1]+'</div></div>').join('')+'</div>':'<p class="hint" style="margin-top:6px">Movimiento manual sin documento vinculado.</p>');
   /* líneas */
   const trf=m.tipo==='Transferencia';
-  document.getElementById('d8-tabla').innerHTML='<thead><tr><th style="width:40px">#</th><th>Código</th><th>Nombre</th><th>UM</th>'+(trf?'<th>Almacén</th>':'')+'<th style="text-align:right">Cantidad</th><th style="text-align:right">Costo S/.</th><th style="text-align:right">Valor S/.</th><th style="text-align:right">Saldo después</th></tr></thead><tbody>'+
+  const conLote=m.lineas.some(l=>l.lote);
+  document.getElementById('d8-tabla').innerHTML='<thead><tr><th style="width:40px">#</th><th>Código</th><th>Nombre</th><th>UM</th>'+(trf?'<th>Almacén</th>':'')+(conLote?'<th>Lote</th>':'')+'<th style="text-align:right">Cantidad</th><th style="text-align:right">Costo S/.</th><th style="text-align:right">Valor S/.</th><th style="text-align:right">Saldo después</th></tr></thead><tbody>'+
     m.lineas.map((l,i)=>'<tr><td>'+(i+1)+'</td><td><button class="btn-link" onclick="verKardex(\''+l.art+'\',\''+l.alm+'\')">'+l.art+'</button></td><td>'+Fmt.e(BD.nomArt(l.art))+'</td><td>'+BD.u(l.art)+'</td>'+
-      (trf?'<td>'+l.alm+' '+(l.signo>0?badge('Entra','var(--confirmado)'):badge('Sale','var(--cancelada)'))+'</td>':'')+
+      (trf?'<td>'+l.alm+' '+(l.signo>0?badge('Entra','var(--confirmado)'):badge('Sale','var(--cancelada)'))+'</td>':'')+(conLote?'<td class="hint">'+Fmt.e(l.lote||'-')+'</td>':'')+
       '<td style="text-align:right">'+(l.signo<0?'−':'')+Fmt.n(l.cant)+'</td><td style="text-align:right">'+Fmt.m(l.costo)+'</td><td style="text-align:right">'+Fmt.m(l.valor)+'</td><td style="text-align:right">'+Fmt.n(l.saldo)+'</td></tr>').join('')+
-    '</tbody><tfoot><tr><td colspan="'+(trf?7:6)+'" style="text-align:right;font-weight:600">Valor total</td><td style="text-align:right;font-weight:700">S/. '+Fmt.m(m.valor)+'</td><td></td></tr></tfoot>';
+    '</tbody><tfoot><tr><td colspan="'+((trf?7:6)+(conLote?1:0))+'" style="text-align:right;font-weight:600">Valor total</td><td style="text-align:right;font-weight:700">S/. '+Fmt.m(m.valor)+'</td><td></td></tr></tfoot>';
   document.getElementById('d8-gre').style.display=(m.tipo!=='Ingreso'&&!(BD.d.gres||[]).some(g=>g.mov===m.id))?'inline-block':'none';
 }
 RENDER.gi08=renderDetalleMov;

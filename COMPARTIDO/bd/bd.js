@@ -82,7 +82,7 @@ const BD = {
       seq: {},
       maestros: BD.maestrosIniciales(),
       stock: [], movs: [],
-      sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [],
+      sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], lotes: [],
       config: { nombreRef: 'N° Referencia' }
     };
     /* colecciones propias de un área (p. ej. clientes y ventas de Comercial) declaradas en su archivo de datos */

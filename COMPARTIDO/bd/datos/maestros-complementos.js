@@ -42,8 +42,9 @@ const BD_COMPLEMENTOS = (() => {
   /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto
      (MP-0071, MP-0052, MP-0054 y MP-0009 ya no los usan las listas propuestas; se conservan en el maestro) */
   const ajustesArticulos = {
-    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
-    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
+    /* las telas se manejan por lote (I-7): cada ingreso crea su lote L<año>-<artículo>-<correlativo> */
+    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', stockMin: 50, ctrl: 'Lote', aConfirmar: true },
+    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', stockMin: 50, ctrl: 'Lote', aConfirmar: true },
     'MP-0052': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0054': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0055': { produccion: true, precioCompra: 8.90, costo: 8.90, provDef: 'PROV-0002', aConfirmar: true },

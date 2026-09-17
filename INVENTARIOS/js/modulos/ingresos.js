@@ -3,11 +3,19 @@
 
 /* ===== Tabla de líneas compartida =====
    est = {lineas:[{art, cant, costo, max?}]}; op = {tbody, thead, tfoot, alm (código para mostrar stock), costo:true|'ro'|false, disp:true, estVar:'nombre global'} */
+/* Lote de la línea (I-7): solo artículos con control «Lote»; vacío = sale el lote más antiguo */
+function selectorLote(l,i,op){
+  if(!Stock.conLote(l.art))return hint('No lleva lote');
+  const lotes=op.alm?Stock.lotes(l.art,op.alm):[];
+  if(!lotes.length)return hint('Sin lotes en el almacén');
+  const opts=lotes.map(x=>'<option value="'+x.id+'"'+(l.lote===x.id?' selected':'')+'>'+x.id+' · '+Fmt.n(x.saldos[op.alm])+'</option>').join('');
+  return '<select onchange="'+op.estVar+'.lineas['+i+'].lote=this.value;'+op.render+'()"><option value="">Más antiguo primero</option>'+opts+'</select>';
+}
 function tablaLineas(est,op){
   const conCosto=!!op.costo, ro=op.costo==='ro';
   document.getElementById(op.thead).innerHTML='<tr><th style="width:36px">#</th><th style="width:100px">Código</th><th>Nombre</th><th style="width:60px">UM</th>'+
     (op.disp?'<th style="width:110px;text-align:right">'+(op.dispLbl||'Disponible')+'</th>':'')+(op.max?'<th style="width:100px;text-align:right">Pendiente</th>':'')+
-    '<th style="width:120px;text-align:right">Cantidad</th>'+(conCosto?'<th style="width:120px;text-align:right">Costo unit. S/.</th><th style="width:110px;text-align:right">Valor S/.</th>':'')+'<th style="width:70px"></th></tr>';
+    '<th style="width:120px;text-align:right">Cantidad</th>'+(op.lote?'<th style="width:190px">Lote</th>':'')+(conCosto?'<th style="width:120px;text-align:right">Costo unit. S/.</th><th style="width:110px;text-align:right">Valor S/.</th>':'')+'<th style="width:70px"></th></tr>';
   let tq=0, tv=0;
   document.getElementById(op.tbody).innerHTML=est.lineas.map((l,i)=>{
     const u=BD.u(l.art), d=op.alm?Stock.disp(op.alm,l.art):0, v=BD.r2((Number(l.cant)||0)*(Number(l.costo)||0));
@@ -16,6 +24,7 @@ function tablaLineas(est,op){
     return '<tr'+(falta?' style="background:#FEF2F2"':'')+'><td>'+(i+1)+'</td><td>'+l.art+'</td><td>'+Fmt.e(BD.nomArt(l.art))+(falta?' <span class="hint" style="color:var(--cancelada)">supera el disponible</span>':'')+'</td><td>'+u+'</td>'+
       (op.disp?'<td style="text-align:right">'+(op.alm?Fmt.n(d):hint('-'))+'</td>':'')+(op.max?'<td style="text-align:right">'+Fmt.n(l.max)+'</td>':'')+
       '<td><input value="'+l.cant+'" style="text-align:right" onchange="'+op.estVar+'.lineas['+i+'].cant=parseFloat(this.value)||0;'+op.render+'()"></td>'+
+      (op.lote?'<td>'+selectorLote(l,i,op)+'</td>':'')+
       (conCosto?'<td>'+(ro?'<div style="text-align:right">'+Fmt.m(l.costo)+'</div>':'<input value="'+l.costo+'" style="text-align:right" onchange="'+op.estVar+'.lineas['+i+'].costo=parseFloat(this.value)||0;'+op.render+'()">')+'</td><td style="text-align:right">'+Fmt.m(v)+'</td>':'')+
       '<td><button class="btn-link" onclick="'+op.estVar+'.lineas.splice('+i+',1);'+op.render+'()">Quitar</button></td></tr>';
   }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:16px">Sin artículos: use "+ Agregar artículo"</td></tr>';
