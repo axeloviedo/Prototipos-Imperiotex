@@ -8,7 +8,7 @@
 const BD = {
   KEY: 'imperiotex.bd',
   KEY_ESCENARIO: 'imperiotex.bd.escenario',
-  VERSION: 3,
+  VERSION: 4,
   ESCENARIOS: { maestros: 'Solo maestros (empezar de cero)', operacion: 'Con operación (movimientos y saldos)' },
   d: null,
   /* texto del usuario activo que firma movimientos e historiales: cada módulo lo fija al iniciar */

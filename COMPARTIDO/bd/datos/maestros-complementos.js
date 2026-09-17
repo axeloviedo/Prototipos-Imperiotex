@@ -1,8 +1,9 @@
 /* COMPARTIDO · maestros que NO vienen en las plantillas del usuario y el prototipo necesita.
    Todo lo de aquí lleva origen: 'complemento'. Lo marcado aConfirmar: true es un dato inventado que el usuario debe validar
    (p. ej. RUC de proveedores de servicios o costos estándar).
-   Familia de trabajo: PANTALON WIDE LEG ZULEIKA en 2 colores (AZUL, NEGRO) × 2 tallas (28, 30):
-     PIEZAS CORTADAS (PPT-0001..0004) → CRUDO (PPT-0005..0008) → LAVADO, tercerizado (PPT-0009..0012) → PRODUCTO FINAL (PT-0001..0004). */
+   Familia de trabajo: PANTALON WIDE LEG ZULEIKA en 2 colores (AZUL, NEGRO) × 2 tallas (28, 30).
+   El color nace en el lavado: piezas cortadas y crudo van solo por talla (un mismo denim da varios colores) y sirven para cualquier color:
+     PIEZAS CORTADAS (PPT-0001..0002) → CRUDO (PPT-0003..0004) → LAVADO por color, tercerizado (PPT-0005..0008) → PRODUCTO FINAL (PT-0001..0004). */
 const BD_COMPLEMENTOS = (() => {
   const C = 'complemento';
 
@@ -38,7 +39,8 @@ const BD_COMPLEMENTOS = (() => {
      figura en ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx */
   const almacenes = ['SB', 'CN'].map(emp => ({ emp, cod: emp + '-ZARATE-PP', nom: 'Almacén Zárate Producto en Proceso', sede: 'Zárate', estado: 'Activo', kardexValorizado: false, transito: false, obs: 'Piezas cortadas, crudos y lavados en planta (solo cantidades en contabilidad)', origen: C }));
 
-  /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto */
+  /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto
+     (MP-0071, MP-0052, MP-0054 y MP-0009 ya no los usan las listas propuestas; se conservan en el maestro) */
   const ajustesArticulos = {
     'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
     'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
@@ -63,19 +65,26 @@ const BD_COMPLEMENTOS = (() => {
     mp('MP-0107', 'BOLSA BRILLO 30X40', 'BOLSA BRILLO', 0.12)
   ];
 
+  /* tela, hilos y cierre únicos para todos los colores: se usan antes del lavado, donde todavía no hay color */
+  const TELA = 'MP-0070', HILOS = ['MP-0055', 'MP-0058'], CIERRE = 'MP-0003';
   const COLORES = [
-    { c: 'AZUL', tela: 'MP-0070', hilos: ['MP-0055', 'MP-0058'], cierre: 'MP-0003', precio: 119.90, min: 79.00 },
-    { c: 'NEGRO', tela: 'MP-0071', hilos: ['MP-0052', 'MP-0054'], cierre: 'MP-0009', precio: 124.90, min: 82.00 }
+    { c: 'AZUL', receta: 'Lavado stone medio según la receta adjunta', precio: 119.90, min: 79.00 },
+    { c: 'NEGRO', receta: 'Lavado negro fijado según la receta adjunta', precio: 124.90, min: 82.00 }
   ];
   const TALLAS = [{ t: '28', metros: 1.40, tallita: 'MP-0042' }, { t: '30', metros: 1.46, tallita: 'MP-0043' }];
   const pad = n => String(n).padStart(4, '0');
   const combos = [];
   COLORES.forEach(co => TALLAS.forEach(ta => combos.push({ co, ta })));
 
-  const ETAPAS = [
-    { et: 'PIEZAS CORTADAS', base: 1 }, { et: 'CRUDO', base: 5 }, { et: 'LAVADO', base: 9 }
-  ];
+  /* productos en proceso sin color hasta el lavado: clave en zuleika.ppt = etapa + talla (lavado: etapa + color + talla) */
   const zuleika = { pt: {}, ppt: {} };
+  const ppt = (clave, nom, et, attrs) => {
+    const cod = 'PPT-' + pad(Object.keys(zuleika.ppt).length + 1);
+    zuleika.ppt[clave] = cod;
+    articulos.push({ cod, nom, desc: 'Pantalón Zuleika en proceso: ' + et.toLowerCase(), grupo: 'PPT', cat: 'PANTALON EN PROCESO', subcat: et, u: 'UND', ctrl: 'Nada',
+      inv: true, compra: false, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
+      attrs: Object.assign(attrs, { Acabado: et, Material: 'DENIM CONFORT', Género: 'DAMA' }), origen: C });
+  };
   combos.forEach(({ co, ta }, i) => {
     const pt = 'PT-' + pad(i + 1);
     zuleika.pt[co.c + ta.t] = pt;
@@ -83,16 +92,11 @@ const BD_COMPLEMENTOS = (() => {
       inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
       attrs: { Color: co.c, Talla: ta.t, Acabado: 'TERMINADO', Material: 'DENIM CONFORT', Género: 'DAMA' },
       precioVenta: co.precio, precioMin: co.min, uVenta: 'UND', dctoMin: 0, dctoMax: 15, stockMin: ta.t === '28' ? 15 : 10, origen: C });
-    ETAPAS.forEach(e => {
-      const cod = 'PPT-' + pad(e.base + i);
-      zuleika.ppt[e.et + co.c + ta.t] = cod;
-      articulos.push({ cod, nom: 'PANTALON WIDE LEG ZULEIKA ' + e.et + ' COLOR ' + co.c + ' TALLA ' + ta.t, desc: 'Pantalón Zuleika en proceso: ' + e.et.toLowerCase(), grupo: 'PPT', cat: 'PANTALON EN PROCESO', subcat: e.et, u: 'UND', ctrl: 'Nada',
-        inv: true, compra: false, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
-        attrs: { Color: co.c, Talla: ta.t, Acabado: e.et, Material: 'DENIM CONFORT', Género: 'DAMA' }, origen: C });
-    });
   });
+  ['PIEZAS CORTADAS', 'CRUDO'].forEach(et => TALLAS.forEach(ta => ppt(et + ta.t, 'PANTALON WIDE LEG ZULEIKA ' + et + ' TALLA ' + ta.t, et, { Talla: ta.t })));
+  combos.forEach(({ co, ta }) => ppt('LAVADO' + co.c + ta.t, 'PANTALON WIDE LEG ZULEIKA LAVADO COLOR ' + co.c + ' TALLA ' + ta.t, 'LAVADO', { Color: co.c, Talla: ta.t }));
 
-  /* artículos «… FALLADO» de crudo y lavado (decisión J2: producto fallado = salida del artículo + ingreso del fallado al mismo costo) */
+  /* artículos «… FALLADO» de crudo (por talla) y lavado (por color y talla) (decisión J2: producto fallado = salida del artículo + ingreso del fallado al mismo costo) */
   articulos.filter(a => a.grupo === 'PPT' && (a.subcat === 'CRUDO' || a.subcat === 'LAVADO')).forEach(a => articulos.push(Object.assign({}, a,
     { cod: a.cod + 'F', nom: a.nom + ' FALLADO', desc: a.desc + ' (fallado)', produccion: false, attrs: Object.assign({}, a.attrs, { Estado: 'FALLADO' }) })));
 
@@ -169,20 +173,19 @@ const BD_COMPLEMENTOS = (() => {
   combos.forEach(({ co, ta }) => {
     const k = co.c + ta.t;
     nuevaLdm(zuleika.ppt['LAVADO' + k], 'Zuleika lavado ' + co.c.toLowerCase() + ' talla ' + ta.t, 'Lavado industrial (servicio de terceros)', [
-      A(zuleika.ppt['CRUDO' + k], 1, TRANSITO, 'Manual'), R('SRV-0001', 1, 'Notificación'), T(co.c === 'AZUL' ? 'Lavado stone medio según la receta adjunta' : 'Lavado negro fijado según la receta adjunta')]);
+      A(zuleika.ppt['CRUDO' + ta.t], 1, TRANSITO, 'Manual'), R('SRV-0001', 1, 'Notificación'), T(co.receta)]);
   });
-  combos.forEach(({ co, ta }) => {
-    const k = co.c + ta.t;
-    nuevaLdm(zuleika.ppt['CRUDO' + k], 'Zuleika crudo ' + co.c.toLowerCase() + ' talla ' + ta.t, 'Confección del pantalón sin lavar', [
-      A(zuleika.ppt['PIEZAS CORTADAS' + k], 1, PP_ALM, 'Manual'),
-      A(co.hilos[0], 0.05, MP_ALM, 'Notificación'), A(co.hilos[1], 0.05, MP_ALM, 'Notificación'),
-      A(co.cierre, 1, MP_ALM, 'Notificación'), A(ta.tallita, 1, MP_ALM, 'Notificación'),
+  /* crudo y piezas cortadas: una lista por talla, sirven para cualquier color */
+  TALLAS.forEach(ta => {
+    nuevaLdm(zuleika.ppt['CRUDO' + ta.t], 'Zuleika crudo talla ' + ta.t, 'Confección del pantalón sin lavar', [
+      A(zuleika.ppt['PIEZAS CORTADAS' + ta.t], 1, PP_ALM, 'Manual'),
+      A(HILOS[0], 0.05, MP_ALM, 'Notificación'), A(HILOS[1], 0.05, MP_ALM, 'Notificación'),
+      A(CIERRE, 1, MP_ALM, 'Notificación'), A(ta.tallita, 1, MP_ALM, 'Notificación'),
       R('REC-0004', 0.35), R('REC-0005', 0.30, 'Notificación'), T('Presillas y ojales antes de empaquetar el lote')]);
   });
-  combos.forEach(({ co, ta }) => {
-    const k = co.c + ta.t;
-    nuevaLdm(zuleika.ppt['PIEZAS CORTADAS' + k], 'Zuleika piezas cortadas ' + co.c.toLowerCase() + ' talla ' + ta.t, 'Tendido y corte según el tizado', [
-      A(co.tela, ta.metros, MP_ALM, 'Manual'), R('REC-0001', 0.02), R('REC-0002', 0.10), R('REC-0003', 0.05, 'Notificación'),
+  TALLAS.forEach(ta => {
+    nuevaLdm(zuleika.ppt['PIEZAS CORTADAS' + ta.t], 'Zuleika piezas cortadas talla ' + ta.t, 'Tendido y corte según el tizado', [
+      A(TELA, ta.metros, MP_ALM, 'Manual'), R('REC-0001', 0.02), R('REC-0002', 0.10), R('REC-0003', 0.05, 'Notificación'),
       T('Cortar según el tizado adjunto; codificar los paquetes con la referencia de la orden')]);
   });
   /* alternativa: terminado azul talla 28 sin parche */
