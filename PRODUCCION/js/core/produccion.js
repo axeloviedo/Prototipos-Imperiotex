@@ -329,6 +329,7 @@ const Prod = {
   },
   /* (c) envío al proveedor: transferencia de lo que la fase consume en el almacén de tránsito + GRE «Traslado de bienes para transformación» */
   enviarProveedor(of, d) {
+    d = d || {};
     if (of.estado !== 'Liberado') throw new Error('Libere la orden antes de enviar');
     const cant = UI.r4(d.cant);
     if (!(cant > 0)) throw new Error('Indique la cantidad a enviar');
@@ -358,14 +359,60 @@ const Prod = {
       }
       env.sts.push(r.trf.id);
       env.movs.push(r.mov.id);
+      const lin = g.items.map(x => ({ art: x.m.cod, cant: x.cant }));
+      if (d.sinGuia) { (d.rutas = d.rutas || []).push({ origen: g.origen, destino: g.destino, mov: r.mov.id, of: of.id, lineas: lin }); return; }
       const gre = Docs.gre.crear({ motivo: 'Traslado de bienes para transformación', origen: g.origen, destino: g.destino, prov, mov: r.mov.id, of: of.id,
-        lineas: g.items.map(x => ({ art: x.m.cod, cant: x.cant })), obs: 'Envío ' + env.n + ' de ' + of.id + ' · ' + r.trf.id });
+        lineas: lin, obs: 'Envío ' + env.n + ' de ' + of.id + ' · ' + r.trf.id });
       env.guias.push(gre.id);
     });
     env.guia = env.guias.join(', ');
     of.envios.push(env);
-    Prod._hist(of, 'Envío al proveedor ' + env.n, UI.n(cant, 0) + ' ' + M.u(of.art) + ' · ' + env.sts.join(', ') + ' · ' + env.movs.join(', ') + ' · GRE ' + env.guia);
+    Prod._hist(of, 'Envío al proveedor ' + env.n, UI.n(cant, 0) + ' ' + M.u(of.art) + ' · ' + env.sts.join(', ') + ' · ' + env.movs.join(', ') + (env.guia ? ' · GRE ' + env.guia : ' · guía pendiente'));
     return env;
+  },
+  /* órdenes que se pueden enviar junto con ésta: liberadas, con material en tránsito pendiente de enviar y el mismo proveedor de servicio */
+  enviablesCon(of) {
+    const prov = Prod.provServicio(of);
+    return BD.d.ofs.filter(o => o.id !== of.id && o.estado === 'Liberado' && Prod.lineasTercero(o).length && Prod.provServicio(o) === prov &&
+      UI.r4(o.cant - (o.envios || []).reduce((a, e) => a + e.cant, 0)) > 0);
+  },
+  /* lo que saldría de cada almacén si se envían varias órdenes juntas: {almacén|artículo: cantidad} */
+  _necesidadEnvio(lista) {
+    const req = {};
+    lista.forEach(x => Prod.lineasTercero(x.of).forEach(m => {
+      const origen = m.almPropio || Prod.almStock(m.cod) || Prod.almRecibo(m.cod), k = origen + '|' + m.cod;
+      req[k] = UI.r4((req[k] || 0) + m.cons * UI.r4(x.cant));
+    }));
+    return req;
+  },
+  /* envío consolidado (P-2): varias órdenes del mismo proveedor en UNA guía por ruta. lista = [{of, cant}] */
+  enviarConsolidado(lista, d) {
+    d = d || {};
+    const envios = (lista || []).filter(x => x.of && UI.r4(x.cant) > 0);
+    if (!envios.length) throw new Error('Elija al menos una orden y su cantidad');
+    const prov = Prod.provServicio(envios[0].of);
+    envios.forEach(x => { if (Prod.provServicio(x.of) !== prov) throw new Error('Todas las órdenes deben tener el mismo proveedor de servicio'); });
+    /* se revisa el stock de todas juntas ANTES de mover nada: si falta, no se envía ninguna */
+    const req = Prod._necesidadEnvio(envios), faltan = [];
+    Object.keys(req).forEach(k => {
+      const x = k.split('|'), hay = Stock.act(x[0], x[1]);
+      if (hay + 0.00005 < req[k]) faltan.push(M.nomArt(x[1]) + ' en ' + x[0] + ' (hay ' + UI.n(hay) + ', faltan ' + UI.n(UI.r4(req[k] - hay)) + ')');
+    });
+    if (faltan.length) throw new Error('No se puede enviar el conjunto: ' + faltan.join('; '));
+    const acumulado = { rutas: [], sinGuia: true, fecha: d.fecha };
+    const hechos = envios.map(x => ({ of: x.of, env: Prod.enviarProveedor(x.of, { cant: x.cant, fecha: d.fecha, sinGuia: true, rutas: acumulado.rutas }) }));
+    /* una guía por ruta origen → destino, con las líneas de todas las órdenes */
+    const porRuta = {};
+    acumulado.rutas.forEach(r => { const k = r.origen + '|' + r.destino; (porRuta[k] = porRuta[k] || { origen: r.origen, destino: r.destino, movs: [], ofs: [], lineas: [] }); const g = porRuta[k];
+      g.movs.push(r.mov); if (g.ofs.indexOf(r.of) < 0) g.ofs.push(r.of);
+      r.lineas.forEach(l => { const y = g.lineas.find(z => z.art === l.art); if (y) y.cant = UI.r4(y.cant + l.cant); else g.lineas.push({ art: l.art, cant: l.cant }); }); });
+    const guias = Object.values(porRuta).map(g => Docs.gre.crear({ motivo: 'Traslado de bienes para transformación', origen: g.origen, destino: g.destino, prov, movs: g.movs, ofs: g.ofs,
+      lineas: g.lineas, fecha: d.fecha, obs: 'Envío consolidado de ' + g.ofs.join(', ') }).id);
+    hechos.forEach(h => {
+      h.env.guias = guias.slice(); h.env.guia = guias.join(', '); h.env.consolidado = hechos.map(y => y.of.id);
+      Prod._hist(h.of, 'Guía del envío ' + h.env.n, 'GRE ' + h.env.guia + ' · consolidada con ' + hechos.filter(y => y.of.id !== h.of.id).map(y => y.of.id).join(', '));
+    });
+    return { envios: hechos, guias };
   },
 
   /* ---------- consumo ---------- */

@@ -464,8 +464,10 @@ const Docs = (() => {
     crear(d) {
       exigir(gre.MOTIVOS.includes(d.motivo), 'Elija el motivo de traslado');
       exigir(BD.alm(d.origen), 'Almacén de origen no válido');
+      /* una guía puede cubrir varios movimientos y varias órdenes (envío consolidado, P-2) */
+      const movs = (d.movs || [d.mov]).filter(Boolean), ofs = (d.ofs || [d.of]).filter(Boolean);
       const x = { id: BD.sig('gre', 'T001-', 6), emp: BD.empresaDe(d.origen), fecha: d.fecha || BD.ahora(), motivo: d.motivo, origen: d.origen, destino: d.destino || '', prov: d.prov || '',
-        transportista: d.transportista || '', mov: d.mov || '', of: d.of || '', estado: 'Aceptada SUNAT', obs: d.obs || '', lineas: (d.lineas || []).map(l => ({ art: l.art, cant: BD.r4(l.cant) })), hist: [] };
+        transportista: d.transportista || '', mov: movs[0] || '', movs, ofs, of: ofs[0] || '', estado: 'Aceptada SUNAT', obs: d.obs || '', lineas: (d.lineas || []).map(l => ({ art: l.art, cant: BD.r4(l.cant) })), hist: [] };
       BD.d.gres.unshift(x);
       BD.hist(x, 'Emitida', d.motivo);
       g(); return x;

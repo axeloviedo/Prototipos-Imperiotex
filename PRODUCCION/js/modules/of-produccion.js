@@ -162,7 +162,7 @@ const PRENV = {
     UI.modal({
       titulo: 'Guía de remisión ' + g.id, lg: true,
       cuerpo: '<div class="formgrid c3">' + UI.dato('Motivo', UI.esc(g.motivo), { estilo: 'grid-column:span 2' }) + UI.dato('Estado', UI.esc(g.estado)) + UI.dato('Fecha', g.fecha) +
-        UI.dato('Origen → destino', UI.esc(g.origen + ' → ' + g.destino)) + UI.dato('Proveedor', UI.esc(g.prov ? M.provNom(g.prov) : '—')) + UI.dato('Movimiento', UI.esc(g.mov)) + UI.dato('Orden', UI.esc(g.of)) + UI.dato('Observación', UI.esc(g.obs)) + '</div>' +
+        UI.dato('Origen → destino', UI.esc(g.origen + ' → ' + g.destino)) + UI.dato('Proveedor', UI.esc(g.prov ? M.provNom(g.prov) : '—')) + UI.dato('Movimiento', UI.esc((g.movs || [g.mov]).join(', '))) + UI.dato('Orden', UI.esc((g.ofs || [g.of]).join(', '))) + UI.dato('Observación', UI.esc(g.obs)) + '</div>' +
         '<div class="sec" style="margin-top:12px">Bienes trasladados</div>' + UI.tabla(['Código', 'Artículo', ['Cantidad', 'num']], g.lineas.map(l => '<tr><td>' + l.art + '</td><td>' + UI.esc(M.nomArt(l.art)) + '</td><td class="num">' + UI.q(l.cant, M.u(l.art)) + '</td></tr>')) +
         '<p class="hint">Se consulta también en Inventarios (GI-14).</p>'
     });
@@ -176,10 +176,27 @@ const PRENV = {
         UI.campo('Cantidad a producir que se envía', '<input id="env-cant" type="number" min="0" step="any" value="' + Math.max(0, UI.r4(of.cant - enviado)) + '" oninput="PRENV.resumen()">', { req: true }) +
         UI.campo('Fecha', '<input id="env-fecha" type="datetime-local" value="' + UI.dtLocal() + '">') + '</div>' +
         UI.dato('Proveedor', UI.esc(M.provNom(Prod.provServicio(of)) || '—') + '<br><span class="mini">compra del servicio: ' + PRENV.compra(of) + '</span>', { estilo: 'margin-top:8px' }) +
+        PRENV.otras(of) +
         '<div id="env-res" style="margin-top:10px"></div><p class="hint">Solicitud de transferencia directa (tipo TRF-FABRIC: se crea, aprueba y recibe en el acto porque el tránsito es virtual) con guía de remisión «Traslado de bienes para transformación»; se ve en Inventarios (GI-11 / GI-07 / GI-14).</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PRENV.guardar()">Registrar envío</button>'
     });
     PRENV.resumen();
+  },
+  /* otras órdenes del mismo proveedor que se pueden enviar en la misma guía (P-2) */
+  otras(of) {
+    const lista = Prod.enviablesCon(of);
+    if (!lista.length) return '';
+    return '<div class="sec" style="margin-top:12px">Enviar en la misma guía <span class="mini">(mismo proveedor)</span></div>' +
+      UI.tabla([['', '', '36px'], 'Orden', 'Produce', ['Falta enviar', 'num'], ['Cantidad', 'num']], lista.map(o => {
+        const falta = UI.r4(o.cant - (o.envios || []).reduce((a, e) => a + e.cant, 0));
+        return '<tr><td><input type="checkbox" id="env-ck-' + o.id + '" onchange="PRENV.resumen()"></td><td><b>' + o.id + '</b><br><span class="mini">' + UI.esc(Prod.nombreRef()) + ' ' + o.ref + '</span></td>' +
+          '<td>' + o.art + '<br><span class="mini">' + UI.esc(M.nomArt(o.art)) + '</span></td><td class="num">' + UI.q(falta, M.u(o.art)) + '</td>' +
+          '<td class="num"><input class="celda num" id="env-c-' + o.id + '" type="number" min="0" step="any" style="width:100px" value="' + falta + '" oninput="PRENV.resumen()"></td></tr>';
+      })) + '<p class="hint">Cada orden genera su propia transferencia; la guía de remisión es una sola por ruta.</p>';
+  },
+  /* [{of, cant}] de las otras órdenes marcadas */
+  marcadas(of) {
+    return Prod.enviablesCon(of).filter(o => UI.chk('env-ck-' + o.id)).map(o => ({ of: o, cant: UI.f('env-c-' + o.id) }));
   },
   resumen() {
     const of = PR02.of(), box = document.getElementById('env-res'); if (!box) return;
@@ -190,8 +207,11 @@ const PRENV = {
     }));
   },
   guardar() {
-    const of = PR02.of();
-    const r = App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha: UI.dtTexto(UI.v('env-fecha')) }), x => 'Envío ' + x.n + ': ' + x.sts.join(', ') + ' · ' + x.movs.join(', ') + ' · GRE ' + x.guia);
+    const of = PR02.of(), otras = PRENV.marcadas(of), fecha = UI.dtTexto(UI.v('env-fecha'));
+    const r = otras.length
+      ? App.accion(() => Prod.enviarConsolidado([{ of, cant: UI.f('env-cant') }].concat(otras), { fecha }),
+        x => 'Envío de ' + x.envios.length + ' órdenes · GRE ' + x.guias.join(', '))
+      : App.accion(() => Prod.enviarProveedor(of, { cant: UI.f('env-cant'), fecha }), x => 'Envío ' + x.n + ': ' + x.sts.join(', ') + ' · ' + x.movs.join(', ') + ' · GRE ' + x.guia);
     if (r) { UI.cerrar(); PR02.tab = 'emi'; App.refrescar(); }
   }
 };
