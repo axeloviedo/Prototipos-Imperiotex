@@ -358,7 +358,11 @@ const Docs = (() => {
     /* d = {oc, ndoc, fecha, lineas:[{art, cant, pu}], obs}; sin lineas factura lo pendiente de facturar de la OC */
     crear(d) {
       const o = BD.oc(d.oc); exigir(o && !['Borrador', 'Pendiente de Validar', 'Cancelada'].includes(o.est), 'La OC no está aprobada');
-      exigir(String(d.ndoc || '').trim(), 'Indique el número de la factura del proveedor');
+      const ndoc = String(d.ndoc || '').trim();
+      exigir(ndoc, 'Indique el número de la factura del proveedor');
+      /* el número de factura es único por proveedor (C-2) */
+      exigir(!BD.d.facturas.some(x => x.prov === o.prov && String(x.ndoc).trim() === ndoc && x.est !== 'Anulada'),
+        'Ya existe una factura de ' + (BD.prov(o.prov) || {}).nom + ' con el comprobante ' + ndoc);
       const lineas = (d.lineas || o.items.map(i => ({ art: i.art, cant: BD.r4(i.cant - i.facq), pu: i.pu }))).filter(l => Number(l.cant) > 0);
       exigir(lineas.length, 'La OC ya está facturada');
       lineas.forEach(l => { const it = o.items.find(i => i.art === l.art); exigir(it, BD.nomArt(l.art) + ' no está en la OC'); exigir(it.facq + Number(l.cant) <= it.cant + 0.00005, 'No se factura más de lo pedido: ' + BD.nomArt(l.art)); });
