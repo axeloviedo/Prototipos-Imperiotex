@@ -64,7 +64,7 @@ const Prod = {
     if (!alm) throw new Error('Elija el almacén donde entra lo producido de ' + M.nomArt(o.art));
     if (!M.alm(alm)) throw new Error('Almacén no válido: ' + alm);
     const of = {
-      id: BD.sig('of', 'OF-', 6), ref: o.ref, art: o.art, ldm: L ? L.id : '', tipofab: L ? 'Estándar' : 'Especial',
+      id: BD.sig('of', 'OF-', 6), emp: BD.empresaDe(alm), ref: o.ref, art: o.art, ldm: L ? L.id : '', tipofab: L ? 'Estándar' : 'Especial',
       cant, prod: 0, alm, origen: o.origen || 'Manual', sf: o.sf || '',
       estado: 'Planificado', fecha: UI.ahora(), fechaLib: '', fechaCierre: '', fechaFin: o.fechaFin || '', obs: o.obs || '',
       mats: L ? Explosion.materiales(L.id, cant) : [], recs: L ? Explosion.recursos(L.id, cant) : [], textos: L ? Explosion.textos(L.id) : [],

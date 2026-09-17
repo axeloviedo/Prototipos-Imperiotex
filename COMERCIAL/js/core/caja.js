@@ -14,7 +14,7 @@ const Caja = {
     if (Caja.abierta(c.sede, c.mon)) throw new Error(c.nom + ' ya está abierta');
     const m = Number(inicial);
     if (inicial === '' || inicial == null || isNaN(m) || m < 0) throw new Error('El monto inicial debe ser cero o mayor');
-    const s = { id: Store.sig('caja', 'CAJ-', 6), caja: c.cod, nom: c.nom, sede: c.sede, mon: c.mon, inicial: UI.r2(m), estado: 'Abierta', abre: { f: UI.ahora(), u: u.nom }, obs: obs || '', cierre: null };
+    const s = { id: Store.sig('caja', 'CAJ-', 6), emp: BD.empresaDe(Doc.sedeAlm(c)), caja: c.cod, nom: c.nom, sede: c.sede, mon: c.mon, inicial: UI.r2(m), estado: 'Abierta', abre: { f: UI.ahora(), u: u.nom }, obs: obs || '', cierre: null };
     Store.d.sesiones.unshift(s);
     return s;
   },
@@ -72,7 +72,7 @@ const Caja = {
   movimiento(s, x) {
     Store.exigir('crear_caja', 'registrar ingresos o egresos');
     Caja._abierta(s); Caja._deSuTienda(s);
-    const mv = Object.assign({ id: Store.sig('cmov', 'MC-', 6), sesion: s.id, tipo: x.tipo, met: 'EFE', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado' }, Caja._datosMov(s, x));
+    const mv = Object.assign({ id: Store.sig('cmov', 'MC-', 6), emp: s.emp, sesion: s.id, tipo: x.tipo, met: 'EFE', fecha: UI.ahora(), usuario: Store.usuario().nom, estado: 'Procesado' }, Caja._datosMov(s, x));
     Store.d.cmovs.unshift(mv);
     return mv;
   },

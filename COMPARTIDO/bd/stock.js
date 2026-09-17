@@ -62,7 +62,7 @@ const Stock = {
     const tm = Stock._tipoMov(tipo, o);
     const mov = {
       tipoMov: tm.cod, grupoMov: tm.grupo, tipoMovNom: tm.nom,
-      id: BD.sig(serie[0], serie[1], 6), tipo, det: o.det, concepto: o.concepto || Stock.CONCEPTO[o.det] || '', fecha: o.fecha || BD.ahora(), usuario: o.usuario || BD.usuario,
+      id: BD.sig(serie[0], serie[1], 6), emp: BD.empresaDe(o.alm), tipo, det: o.det, concepto: o.concepto || Stock.CONCEPTO[o.det] || '', fecha: o.fecha || BD.ahora(), usuario: o.usuario || BD.usuario,
       modulo: o.modulo || '', est: tipo === 'Transferencia' ? 'Completada' : 'Confirmado', alm: o.alm, od: o.od, ndoc: o.ndoc || '', doc: o.doc || '', obs: o.obs || '', lineas: [], valor: 0
     };
     BD.d.movs.unshift(mov);

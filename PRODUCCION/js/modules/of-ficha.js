@@ -34,6 +34,7 @@ const PR02 = {
       (plan ? UI.campo('Cantidad', PR02.sel('<input type="number" min="0" step="any" value="' + of.cant + '" onchange="PR02.cantidad(this.value)">')) : UI.dato('Cantidad', UI.q(of.cant, M.u(of.art)))) +
       UI.dato('Recibido', UI.n(of.prod, 0) + ' de ' + UI.n(of.cant, 0) + '<br>' + UI.barra(of.prod, of.cant)) +
       UI.dato('Entra en', of.alm + ' · ' + UI.esc(M.almNom(of.alm))) +
+      UI.dato('Empresa', UI.esc(BD.empNom(of.emp || BD.empresaDe(of.alm)))) +
       (ed ? UI.campo('Lista de materiales (opcional)', PR02.sel('<select onchange="PR02.ldm(this.value)">' + UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), of.ldm) + '</select>'), { hint: 'Al elegir una lista se copian sus líneas' })
         : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) : 'Sin lista')) +
       UI.dato('Origen', of.sf ? 'Solicitud <button class="btn-link" onclick="App.go(\'pr03d\',{id:\'' + of.sf + '\'})">' + of.sf + '</button>' : 'Creada en Producción') +

@@ -85,6 +85,7 @@ function grupoNom(cod){const g=M().grupos.find(x=>x.cod===cod);return g?g.nom:(c
 function empresaAbrev(){const s=document.getElementById('selEmpresa');const e=M().empresas.find(x=>x.nom===(s?s.value:'IMPERIOTEX'));return e?e.abrev:'SB'}
 function cambiarEmpresa(e){
   document.getElementById('logoEmp').textContent = e==="IMPERIOTEX" ? "IMPERIOTEX · SARA BQ" : "CATINNA NOW";
+  BD.empresa = empresaAbrev();
   toast("Empresa activa: "+e+" · los almacenes se filtran por empresa");
   if(typeof refrescarTodo==='function')refrescarTodo();
 }

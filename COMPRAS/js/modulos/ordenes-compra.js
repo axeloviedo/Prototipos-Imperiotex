@@ -296,7 +296,7 @@ function guardarBorradorOC(silencio){
   const o=coTry(()=>OCid?Docs.oc.guardar(OCid,d):Docs.oc.crear(d));
   if(!o)return false;
   /* orgCompra y grupoCompra no los copia Docs.oc.crear/guardar: se asignan en el documento de la base (propuesta para el núcleo) */
-  const x=BD.oc(o.id); x.orgCompra=OC.orgCompra||"SB"; x.grupoCompra=OC.grupoCompra||ocGrupoCompraDef(x); BD.guardar();
+  const x=BD.oc(o.id); x.orgCompra=OC.orgCompra||"SB"; x.emp=x.orgCompra; x.grupoCompra=OC.grupoCompra||ocGrupoCompraDef(x); BD.guardar();
   const nueva=!OCid; OCid=o.id;
   if(!silencio)toast((nueva?"OC creada en Borrador: ":"Borrador guardado: ")+o.id+(OC.of&&!BD.of(OC.of)?" · aviso: la orden "+OC.of+" no existe en la base":""));
   abrirOC(o.id); coRefrescar();

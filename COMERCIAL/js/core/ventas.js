@@ -201,7 +201,7 @@ const Cot = {
     const r = Cot.revisar(d);
     if (r.e.length) throw new Error(r.e[0]);
     const c = Doc.snapCliente(JSON.parse(JSON.stringify(d)));
-    Object.assign(c, { id: Store.sig('cot', 'COT-' + Store.anio() + '-', 6), fecha: UI.ahora(), estado: 'Vigente', venta: null, usuario: Store.usuario().nom, sedeNom: Store.sede(d.sede).nom, hist: [] });
+    Object.assign(c, { id: Store.sig('cot', 'COT-' + Store.anio() + '-', 6), emp: BD.empresaDe(Doc.sedeAlm(d)), fecha: UI.ahora(), estado: 'Vigente', venta: null, usuario: Store.usuario().nom, sedeNom: Store.sede(d.sede).nom, hist: [] });
     Precios.doc(c);
     Store.hist(c, 'Creada', r.w.length ? 'Avisos: ' + r.w.join(' · ') : '');
     Store.d.cots.unshift(c);
@@ -362,7 +362,7 @@ const Ventas = {
     const v = Doc.snapCliente(JSON.parse(JSON.stringify(d)));
     const serie = M.SERIES[d.sede][d.comp];
     Object.assign(v, {
-      id: Store.sig('ven', 'VEN-' + Store.anio() + '-', 6), compNum: Store.sig('comp_' + serie, serie + '-', 6),
+      id: Store.sig('ven', 'VEN-' + Store.anio() + '-', 6), emp: BD.empresaDe(Doc.sedeAlm(d)), compNum: Store.sig('comp_' + serie, serie + '-', 6),
       fecha: UI.ahora(), sedeNom: sede.nom, usuario: u.nom, estado: 'Registrada', salida: null, movs: [], reembolsos: [], hist: []
     });
     v.plazoAnular = UI.sumarDias(v.fecha, Store.cfg().diasAnulacion).slice(0, 10);
@@ -567,7 +567,7 @@ const Dev = {
     if (v.estado !== 'Registrada') throw new Error('Solo se devuelve una venta Registrada (' + v.id + ' está ' + v.estado + ')');
     if (!v.salida) throw new Error('La venta ' + v.id + ' aún no tiene salida de stock (sigue comprometido hasta que el pago confirmado cubra el total): no hay nada que devolver; si ya no va, anúlela');
     if (!Dev.candidatas(v).length) throw new Error('La venta no tiene productos: los servicios no se devuelven');
-    const d = Object.assign({ id: Store.sig('dev', 'DEV-' + Store.anio() + '-', 6), fecha: UI.ahora(), venta: v.id, sede: v.sede, sedeNom: v.sedeNom, cliente: v.cliente, mon: v.mon, estado: 'Pendiente', usuario: Store.usuario().nom, movs: [], reembolso: null, hist: [] }, Dev._armar(v, x));
+    const d = Object.assign({ id: Store.sig('dev', 'DEV-' + Store.anio() + '-', 6), emp: v.emp || BD.empresaDe(Doc.sedeAlm(v)), fecha: UI.ahora(), venta: v.id, sede: v.sede, sedeNom: v.sedeNom, cliente: v.cliente, mon: v.mon, estado: 'Pendiente', usuario: Store.usuario().nom, movs: [], reembolso: null, hist: [] }, Dev._armar(v, x));
     Store.hist(d, 'Registrada', UI.n(d.lineas.reduce((t, l) => t + l.cant, 0), 0) + ' unidad(es) · ' + UI.m(d.total, d.mon));
     Store.d.devs.unshift(d);
     Store.hist(v, 'Devolución registrada', d.id + ' (Pendiente)');

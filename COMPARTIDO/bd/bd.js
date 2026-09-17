@@ -13,6 +13,8 @@ const BD = {
   d: null,
   /* texto del usuario activo que firma movimientos e historiales: cada módulo lo fija al iniciar */
   usuario: 'Usuario del prototipo',
+  /* empresa activa (abreviatura del maestro de empresas): todo documento nace con la empresa de su almacén o con ésta (P-3) */
+  empresa: 'SB',
   /* fecha fija opcional (la usa el generador de escenarios); si no, la del sistema o UI.reloj */
   reloj: null,
   _oyentes: [],
@@ -142,6 +144,10 @@ const BD = {
   u(cod) { const a = BD.art(cod) || BD.rec(cod); return a ? a.u : ''; },
   alm(cod) { return BD.d.maestros.almacenes.find(a => a.cod === cod); },
   almNom(cod) { const a = BD.alm(cod); return a ? a.nom : cod; },
+  emp(abrev) { return BD.d.maestros.empresas.find(e => e.abrev === (abrev || BD.empresa)); },
+  empNom(abrev) { const e = BD.emp(abrev); return e ? e.nom : (abrev || ''); },
+  /* empresa de un documento: la de su almacén; si no tiene, la activa (P-3) */
+  empresaDe(alm) { return (BD.alm(alm) || {}).emp || BD.empresa; },
   um(cod) { return BD.d.maestros.unidades.find(u => u.cod === cod); },
   prov(cod) { return BD.d.maestros.proveedores.find(p => p.cod === cod); },
   provNom(cod) { const p = BD.prov(cod); return p ? p.nom : cod; },
