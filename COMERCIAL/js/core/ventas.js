@@ -284,7 +284,7 @@ const Ventas = {
   borrador(sede) {
     const u = Store.usuario();
     return {
-      sede: sede || u.sede, fecha: UI.hoy(), cli: '', asesor: u.cod, mon: 'PEN', cond: 'CONTADO', comp: 'BV',
+      sede: sede || u.sede, fecha: UI.hoy(), cli: '', asesor: u.cod, mon: 'PEN', cond: 'CONTADO', comp: 'BV', entregar: false,
       ref: { tipo: '', serie: '', num: '' },
       entrega: { lugar: 'RECOJO', fecha: UI.hoy(), dir: '', ubigeo: '', agencia: '', encNom: '', encDoc: '', encTel: '' },
       obs: '', cot: null, lineas: [], pagos: []
@@ -377,6 +377,7 @@ const Ventas = {
     Store.hist(v, 'Registrada', comp.nom + ' ' + v.compNum + (d.cot ? ' · desde ' + d.cot : '') + (nComp ? ' · stock comprometido en ' + nComp + ' línea(s) hasta que el pago confirmado cubra el total' : '') + (r.w.length ? ' · avisos: ' + r.w.join(' · ') : ''));
     Store.d.ventas.unshift(v);
     Ventas._salidaSiPagada(v); /* p. ej. un documento de total cero (solo obsequios) */
+    if (!v.salida && d.entregar && Ventas.aCredito(v) && Ventas.tieneStock(v)) Ventas.entregar(v);
     return { venta: v, avisos: r.w };
   },
 
@@ -410,6 +411,19 @@ const Ventas = {
   _salidaSiPagada(v, pagoId) {
     if (!v || v.estado !== 'Registrada' || v.salida) return null;
     if (Ventas.confirmado(v) + 0.01 < v.total) return null;
+    return Ventas._salida(v, pagoId, 'pago confirmado');
+  },
+  /* entrega del stock de una venta al crédito antes de cobrarla (CM-6): la decide el usuario al registrar o desde la ficha */
+  entregar(v) {
+    Store.exigir('crear_venta', 'entregar una venta al crédito');
+    if (!v || v.estado !== 'Registrada') throw new Error('Solo se entrega una venta Registrada');
+    if (v.salida) throw new Error('La venta ' + v.id + ' ya tiene su salida de stock');
+    if (!Ventas.aCredito(v)) throw new Error('La venta ' + v.id + ' es al contado: el stock sale cuando el pago confirmado cubre el total');
+    if (!Ventas.tieneStock(v)) throw new Error('La venta ' + v.id + ' no tiene productos que entregar');
+    return Ventas._salida(v, null, 'entrega a crédito');
+  },
+  aCredito(v) { const c = M.cond(v && v.cond); return !!c && c.cod !== 'CONTADO'; },
+  _salida(v, pagoId, motivo) {
     const u = Store.usuario(), comp = M.comp(v.comp);
     const det = (v.cliente && v.cliente.tipo) === 'MAYORISTA' ? 'Salida - Venta al por mayor' : 'Salida - Venta al por menor';
     const falta = Ventas.faltaParaSalir(v);
@@ -417,14 +431,14 @@ const Ventas = {
     const porAlm = Ventas._porAlmacen(v), movs = [];
     Object.keys(porAlm).forEach(alm => {
       const lin = porAlm[alm];
-      const r = Stock.salida({ tipoMov: 'SAL-VENTA', det, alm, destino: 'Cliente · ' + v.cliente.nom, ndoc: v.id, doc: 'Venta', modulo: 'Comercial', obs: comp.nom + ' ' + v.compNum + ' · pago confirmado', lineas: Ventas._lineasSalida(lin) });
+      const r = Stock.salida({ tipoMov: 'SAL-VENTA', det, alm, destino: 'Cliente · ' + v.cliente.nom, ndoc: v.id, doc: 'Venta', modulo: 'Comercial', obs: comp.nom + ' ' + v.compNum + ' · ' + motivo, lineas: Ventas._lineasSalida(lin) });
       if (!r.ok) throw new Error(r.error);
       const mov = r.mov;
       lin.forEach(l => { const ml = mov.lineas.find(x => x.art === l.art); l.costo = UI.r4((ml ? ml.costo : 0) * l.factor); l.comp = 0; });
       v.movs.push(mov.id); movs.push(mov.id);
     });
-    v.salida = { f: UI.ahora(), u: u.nom, pago: pagoId || null, movs };
-    if (movs.length) Store.hist(v, 'Salida de stock', 'Pago confirmado completo: ' + movs.join(', ') + ' (baja el Actual y se libera lo comprometido)');
+    v.salida = { f: UI.ahora(), u: u.nom, pago: pagoId || null, motivo, movs };
+    if (movs.length) Store.hist(v, 'Salida de stock', (motivo === 'pago confirmado' ? 'Pago confirmado completo' : 'Entrega a crédito (antes de cobrar)') + ': ' + movs.join(', ') + ' (baja el Actual y se libera lo comprometido)');
     return v.salida;
   },
 

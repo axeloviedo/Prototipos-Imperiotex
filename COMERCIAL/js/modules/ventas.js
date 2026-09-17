@@ -132,6 +132,7 @@ const CM02F = {
           : UI.dato('Se recoge en', UI.esc(sede.nom + ' · ' + sede.dir), { estilo: 'grid-column:span 2' })) +
         (lugar.agencia ? UI.campo('Agencia', sel('ent', 'agencia', M.AGENCIAS, en.agencia, 'Seleccionar…'), { req: true }) : '') +
         (!lugar.propio ? UI.campo('Recibe · nombre', inp('ent', 'encNom', en.encNom), { req: true }) + UI.campo('Recibe · documento', inp('ent', 'encDoc', en.encDoc), { req: true }) + UI.campo('Recibe · teléfono', inp('ent', 'encTel', en.encTel), { req: true }) : '') +
+        (cond && cond.cod !== 'CONTADO' ? UI.campo('Entrega del stock', '<label class="mini"><input type="checkbox" ' + (d.entregar ? 'checked' : '') + ' onchange="CM02F.entregaAhora(this.checked)"> Entregar ahora, sin esperar el cobro</label>', { estilo: 'grid-column:span 2', hint: 'Venta al crédito: si no se marca, el stock queda comprometido hasta que el pago confirmado cubra el total' }) : '') +
         '</div><p class="hint" style="margin-top:8px">Al registrar, la venta <b>compromete</b> el stock; la salida de almacén (GI-10) se registra cuando el pago confirmado (validado en caja) cubre el total. La guía de remisión, si el despacho la necesita, se emite en GI-15 con motivo Venta.</p></div>';
     }
 
@@ -179,6 +180,8 @@ const CM02F = {
     });
   },
   ent(campo, val) { CM02F.d.entrega[campo] = val; App.refrescar(); },
+  /* venta al crédito: entregar el stock al registrar, sin esperar el cobro (CM-6) */
+  entregaAhora(v) { CM02F.d.entregar = !!v; App.refrescar(); },
   ref(campo, val) { CM02F.d.ref[campo] = val; App.refrescar(); },
   nuevoPago() {
     const d = CM02F.d, pag = d.pagos.reduce((t, x) => t + (Number(x.monto) || 0), 0);
@@ -231,6 +234,7 @@ const CM02V = {
     if (v.estado === 'Registrada' && deuda > 0.004 && (Store.puede('crear_venta') || Store.puede('crear_caja'))) b.push('<button class="btn btn-primary" onclick="PAGOUI.abrir(CM02V.v())">+ Pago</button>');
     if (v.estado === 'Registrada' && v.salida && Dev.candidatas(v).length && Store.puede('crear_devolucion_venta')) b.push('<button class="btn btn-secondary" onclick="App.go(\'cm03f\',{venta:\'' + v.id + '\',nuevo:Date.now()})">↩ Devolución</button>');
     b.push('<button class="btn btn-secondary" onclick="DOCUI.imprimir(\'Venta\',CM02V.v())">⎙ PDF</button>');
+    if (v.estado === 'Registrada' && !v.salida && Ventas.aCredito(v) && Ventas.tieneStock(v) && Store.puede('crear_venta')) b.push('<button class="btn btn-secondary" onclick="CM02V.entregar()">Entregar</button>');
     if (v.estado === 'Registrada' && Store.puede('anular_venta')) b.push('<button class="btn btn-danger" onclick="CM02V.anular()">Anular</button>');
     b.push('<button class="btn btn-secondary" onclick="App.go(\'cm02\')">Volver</button>');
     const tabs = [['det', 'Detalle'], ['pag', 'Pagos (' + v.pagos.length + ')'], ['dev', 'Devoluciones (' + devs.length + ')'], ['mov', 'Movimientos de stock (' + movs.length + ')'], ['hist', 'Historial']];
@@ -304,6 +308,11 @@ const CM02V = {
   rechazar(id) {
     UI.motivo('Rechazar pago ' + id, '<p>El pago queda Anulado y el saldo vuelve a estar pendiente. No mueve stock: la venta sigue con su stock comprometido.</p>', null,
       mot => { if (App.accion(() => Ventas.rechazarPago(CM02V.v(), id, mot), 'Pago rechazado')) { UI.cerrar(); App.refrescar(); } }, 'Rechazar', 'CL-11');
+  },
+  entregar() {
+    const v = CM02V.v();
+    UI.confirmar('Entregar ' + v.id, 'Sale el stock de la venta al crédito antes de cobrarla: baja el Actual del almacén y libera lo comprometido. Después solo se puede corregir con una devolución o anulando dentro del plazo.',
+      () => { if (App.accion(() => Ventas.entregar(v), v.id + ' entregada: stock fuera del almacén')) App.refrescar(); }, 'Entregar', 'CL-08');
   },
   anular() {
     const v = CM02V.v();
