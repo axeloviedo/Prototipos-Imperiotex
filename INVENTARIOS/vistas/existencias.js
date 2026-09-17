@@ -33,7 +33,7 @@ Vistas.pantallas(String.raw`
     <div class="card" style="display:flex;gap:22px;align-items:center;font-size:12.5px;flex-wrap:wrap">
       <b>Semáforo:</b>
       <span class="dotled"><span class="dot" style="background:var(--stock-ok)"></span> Normal (sobre el mínimo)</span>
-      <span class="dotled"><span class="dot" style="background:var(--stock-bajo)"></span> Por agotarse (disponible ≤ mínimo del almacén, GI-02 Planificación)</span>
+      <span class="dotled"><span class="dot" style="background:var(--stock-bajo)"></span> Por agotarse (disponible del almacén ≤ stock mínimo del artículo, GI-02 Planificación)</span>
       <span class="dotled"><span class="dot" style="background:var(--stock-cero)"></span> Agotado (disponible ≤ 0)</span>
       <span class="hint">Disponible = Actual − Comprometido. El Comprometido lo dejan las Solicitudes de Fabricación aprobadas, las órdenes de fabricación y las ventas pendientes. El stock lo mueven solo los movimientos (GI-07) de todos los módulos.</span>
     </div>

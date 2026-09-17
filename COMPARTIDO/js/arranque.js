@@ -21,7 +21,7 @@ function pantallaEnEdicion(){
 function pintarCampana(){
   const cont=document.getElementById('bell-items'); if(!cont)return;
   const it=[];
-  mLog('minimos').forEach(m=>{const d=Stock.disp(m.alm,m.art);if(d<=m.cant)it.push({c:d<=0?'var(--stock-cero)':'var(--stock-bajo)',t:(d<=0?'Stock agotado: ':'Por agotarse: ')+BD.nomArt(m.art)+' - '+m.alm,s:'Disponible '+Fmt.n(d)+' · mínimo '+m.cant,a:"verKardex('"+m.art+"','"+m.alm+"')"})});
+  (typeof alertasMinimo==='function'?alertasMinimo():[]).forEach(m=>{const d=m.disp;it.push({c:d<=0?'var(--stock-cero)':'var(--stock-bajo)',t:(d<=0?'Stock agotado: ':'Por agotarse: ')+BD.nomArt(m.art)+' - '+m.alm,s:'Disponible '+Fmt.n(d)+' · mínimo '+m.cant,a:"verKardex('"+m.art+"','"+m.alm+"')"})});
   const n1=BD.d.sfs.filter(s=>s.est==='Pendiente Aprobar').length; if(n1)it.push({c:'var(--pendiente)',t:n1+' Solicitud(es) de Fabricación por aprobar',s:'GI-21',a:"go('gi21')"});
   const n2=BD.d.sols.filter(s=>s.estado==='Pendiente').length; if(n2)it.push({c:'var(--pendiente)',t:n2+' Solicitud(es) de Materiales por aprobar',s:'GI-13',a:"go('gi13')"});
   const n3=(BD.d.trfs||[]).filter(s=>s.estado==='Aprobada'||s.estado==='Parcial').length; if(n3)it.push({c:'var(--aprobada)',t:n3+' Transferencia(s) pendiente(s) de recibir en destino',s:'GI-11',a:"go('gi07')"});

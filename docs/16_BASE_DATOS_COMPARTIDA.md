@@ -77,7 +77,7 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 ```
 { cod, nom, desc, grupo:'MP'|'SRV'|'PPT'|'PT'|'MERC', cat, subcat, u (UM inventario), ctrl:'Nada'|'Lote'|'Serie', vence?,
   inv (maneja stock), compra, venta, produccion, igv:'Gravado'|'Exonerado'|'Inafecto', estado:'Activo'|'Inactivo',
-  costo (costo inicial de referencia), precioCompra?, uCompra? (una, referencial), provDef?,
+  stockMin? (stock mínimo único: se compara con el disponible de cada almacén, L9), costo (costo inicial de referencia), precioCompra?, uCompra? (una, referencial), provDef?,
   attrs? {Color, Talla, Acabado, Material, Género},
   precioVenta?, precioMin?, verifMin?, uVenta? (una, referencial: L5), dctoMin?, dctoMax?,   ← pestaña Venta
   origen:'plantilla'|'complemento'|..., aConfirmar? }

@@ -1,7 +1,7 @@
 /* INVENTARIOS · GI-01 Artículos y GI-02 ficha del artículo (diseño V9, decisión L1) sobre BD.d.maestros.articulos (contrato §3.2).
-   Mínimos por almacén (pestaña Planificación) en BD.d.maestros.minimos (datos/maestros-logistica.js). */
+   Stock mínimo único del artículo (pestaña Planificación) en stockMin: se compara con el disponible de cada almacén (L9). */
 let ART_ACTUAL=null;                  /* código del artículo abierto ('' = nuevo) */
-let ART_BCS=[], ART_MIN=[], ART_ATR=[]; /* borradores de la ficha: se escriben en la base al Guardar */
+let ART_BCS=[], ART_ATR=[];            /* borradores de la ficha: se escriben en la base al Guardar */
 
 /* ===== GI-01 ===== */
 function fillArtFilters(){
@@ -145,16 +145,6 @@ function verEtiqueta(i){
   openModal('m-etq');
 }
 
-/* ===== GI-02 · planificación (mínimos) ===== */
-function renderPlan(){
-  const u=document.getElementById('sel-um-inv').value;
-  document.getElementById('plan-body').innerHTML=ART_MIN.map((m,i)=>'<tr><td><select onchange="ART_MIN['+i+'].alm=this.value" style="width:100%">'+opcionesAlm(m.alm)+'</select></td>'+
-    '<td><input value="'+m.cant+'" style="text-align:right" oninput="ART_MIN['+i+'].cant=parseFloat(this.value)||0"></td><td><input class="um-inv-mirror" value="'+u+'" readonly></td>'+
-    '<td><button class="btn-link" onclick="ART_MIN.splice('+i+',1);renderPlan()">Eliminar</button></td></tr>').join('')||
-    '<tr><td colspan="4" style="text-align:center;color:var(--texto-sec);padding:12px">Sin mínimos definidos</td></tr>';
-}
-function addPlanRow(){ART_MIN.push({alm:"",cant:0});renderPlan()}
-
 /* ===== GI-02 · atributos (tabla editable como V9; se guardan como {atributo: valor}) ===== */
 function renderAtributos(){
   const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px';
@@ -213,11 +203,11 @@ function openArticleForm(cod){
   document.getElementById('chk-manu').disabled=ldms.length>0;
   document.getElementById('hint-manu').textContent=ldms.length?'(tiene lista de materiales: no se puede desmarcar)':'(el artículo puede ser el producto final de una Lista de Materiales)';
   document.getElementById('art-ldms').innerHTML=ldms.length?ldms.map(l=>'<div style="padding:3px 0"><button class="btn-link" onclick="loadLDM(\''+l.id+'\')">'+l.id+'</button> · '+Fmt.e(l.nom)+' '+(l.pred?badge('Predeterminada','var(--aprobado-sol)'):hint('Alternativa'))+'</div>').join(''):hint('Sin lista de materiales: no es fabricable.');
-  /* barras, mínimos, atributos */
+  set('inp-stockmin',a?a.stockMin:'');
+  /* barras y atributos */
   ART_BCS=((a&&a.bcs)||[]).map(b=>Object.assign({},b));
-  ART_MIN=a?mLog('minimos').filter(m=>m.art===a.cod).map(m=>({alm:m.alm,cant:m.cant})):[];
   ART_ATR=Object.entries((a&&a.attrs)||{});
-  renderBarcodes(); renderPlan(); renderAtributos();
+  renderBarcodes(); renderAtributos();
   document.getElementById('gi02-b-dup').style.display=a?'inline-block':'none';
   document.getElementById('gi02-b-des').style.display=a&&a.estado==='Activo'?'inline-block':'none';
   refreshTitle(); syncUMInv();
@@ -234,7 +224,7 @@ function guardarArticulo(){
   if(!cod){toast("Indique el código del artículo");return}
   if(M().articulos.some(a=>a.cod!==ART_ACTUAL&&a.nom.toUpperCase()===nom)){toast("Ya existe un artículo con ese nombre: el nombre es único");return}
   if(!ART_ACTUAL&&BD.art(cod)){toast("El código "+cod+" ya existe");return}
-  if(ART_MIN.some(m=>!m.alm)){toast("Elija el almacén de cada mínimo o quite la fila");return}
+  const smin=numOVacio('inp-stockmin'); if((smin||0)<0){toast("El stock mínimo debe ser cero o mayor");return}
   const u=v('sel-um-inv'), uv=v('sel-um-venta'), uc=v('sel-um-compra');
   for(const [x,txt] of [[uv,'venta'],[uc,'compra']])
     if(faltaConversion(x,u)){toast("No existe la conversión "+x+" → "+u+" (UM de "+txt+"): créela en Configuraciones → Conversiones");return}
@@ -252,11 +242,10 @@ function guardarArticulo(){
   });
   [['precioVenta','inp-pventa'],['precioMin','inp-pmin'],['dctoMin','inp-dmin'],['dctoMax','inp-dmax']].forEach(([k,id])=>{const n=numOVacio(id); if(n===undefined)delete a[k]; else a[k]=n;});
   const prov=v('sel-prov'); if(prov)a.provDef=prov; else delete a.provDef;
+  if(smin>0)a.stockMin=smin; else delete a.stockMin;
   if(!a.vence)delete a.vence;
   if(!Object.keys(a.attrs).length)delete a.attrs;
   if(!ART_ACTUAL)M().articulos.push(a);
-  const mins=mLog('minimos'); for(let i=mins.length-1;i>=0;i--)if(mins[i].art===a.cod)mins.splice(i,1);
-  ART_MIN.filter(m=>m.cant>0).forEach(m=>mins.push({art:a.cod,alm:m.alm,cant:m.cant}));
   BD.guardar();
   toast("Artículo "+a.cod+" guardado en la base compartida");
   go('gi01');

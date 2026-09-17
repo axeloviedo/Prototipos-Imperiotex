@@ -18,7 +18,7 @@ function renderDash(){
   document.getElementById('kpi-alm').textContent=alms.length;
   document.getElementById('kpi-alm-sub').textContent="de "+M().almacenes.filter(a=>a.emp===emp&&a.estado==='Activo').length+" almacenes activos ("+emp+")";
   document.getElementById('kpi-art').textContent=M().articulos.filter(a=>a.estado==="Activo"&&a.inv!==false).length;
-  document.getElementById('kpi-alertas').textContent=mLog('minimos').filter(m=>semaforo(m.alm,m.art,Stock.disp(m.alm,m.art))!=='ok').length;
+  document.getElementById('kpi-alertas').textContent=alertasMinimo().length;
   const max=Math.max(1,...Object.values(G).filter(x=>!x.und).map(x=>x.v));
   const maxU=Math.max(1,G.PPT.v);
   document.getElementById('chart-grupos').innerHTML=Object.values(G).map(x=>{

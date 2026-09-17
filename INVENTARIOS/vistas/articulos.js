@@ -87,13 +87,11 @@ Vistas.pantallas(String.raw`
 
       <!-- Planificación de Stock -->
       <div class="tabpane" id="pane-plan">
-        <b style="font-size:13px">Stock mínimo por almacén</b>
-        <p class="hint" style="margin-top:4px">Origen de las alertas por agotarse / agotado. La unidad es siempre la Unidad de Medida de Inventario del artículo.</p>
-        <table class="grid subtable" style="margin-top:10px">
-          <thead><tr><th>Almacén</th><th>Cantidad mínima</th><th>Unidad (Inventario)</th><th style="width:70px"></th></tr></thead>
-          <tbody id="plan-body"></tbody>
-        </table>
-        <button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="addPlanRow()">+ Agregar mínimo</button>
+        <div class="formgrid">
+          <div class="field"><label>Stock mínimo <span class="hint">(único para el artículo)</span></label><input id="inp-stockmin" style="text-align:right" placeholder="0 = sin mínimo"></div>
+          <div class="field"><label>Unidad (Inventario)</label><input class="um-inv-mirror" readonly></div>
+        </div>
+        <p class="hint" style="margin-top:8px">Origen de las alertas por agotarse / agotado: se compara con el disponible de <b>cada almacén</b> donde está el artículo. La unidad es siempre la Unidad de Medida de Inventario del artículo.</p>
       </div>
 
       <!-- Inventario -->

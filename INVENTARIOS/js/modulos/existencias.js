@@ -10,7 +10,10 @@ function stockPedido(){
   }));
   return p;
 }
-function minimoDe(alm,art){const m=mLog('minimos').find(x=>x.alm===alm&&x.art===art);return m?m.cant:0}
+/* stock mínimo único del artículo (L9): el mismo valor se compara con el disponible de cada almacén */
+function minimoDe(alm,art){return (BD.art(art)||{}).stockMin||0}
+/* filas almacén × artículo con mínimo y disponible ≤ mínimo (alertas del panel y de la campana) */
+function alertasMinimo(){const emp=empresaAbrev();return BD.d.stock.filter(s=>minimoDe(s.alm,s.art)&&((BD.alm(s.alm)||{}).emp||emp)===emp).map(s=>({alm:s.alm,art:s.art,cant:minimoDe(s.alm,s.art),disp:BD.r4(s.act-s.comp)})).filter(x=>x.disp<=x.cant)}
 function semaforo(alm,art,disp){if(disp<=0)return 'cero';const mn=minimoDe(alm,art);return mn&&disp<=mn?'bajo':'ok'}
 const SEM_COLOR={ok:"var(--stock-ok)",bajo:"var(--stock-bajo)",cero:"var(--stock-cero)"};
 const SEM_TXT={ok:"Normal",bajo:"Por agotarse",cero:"Agotado"};
@@ -37,7 +40,6 @@ function filasStock(){
   const ped=stockPedido(), filas={}, emp=empresaAbrev();
   BD.d.stock.forEach(s=>{ if(s.act||s.comp||s.ped) filas[s.alm+'|'+s.art]={alm:s.alm,art:s.art,act:s.act,comp:s.comp,costo:s.costo}; });
   Object.keys(ped).forEach(k=>{ if(!filas[k]){const x=k.split('|'); if(x[0])filas[k]={alm:x[0],art:x[1],act:0,comp:0,costo:Stock.costo(x[0],x[1])};} });
-  mLog('minimos').forEach(m=>{const k=m.alm+'|'+m.art; if(!filas[k])filas[k]={alm:m.alm,art:m.art,act:0,comp:0,costo:Stock.costo(m.alm,m.art)};});
   return Object.values(filas).map(r=>{
     const a=BD.art(r.art)||{}, al=BD.alm(r.alm)||{};
     r.ped=ped[r.alm+'|'+r.art]||0; r.disp=BD.r4(r.act-r.comp); r.sem=semaforo(r.alm,r.art,r.disp); r.a=a; r.al=al;

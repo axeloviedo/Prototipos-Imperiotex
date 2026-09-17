@@ -40,8 +40,8 @@ const BD_COMPLEMENTOS = (() => {
 
   /* Datos que faltan en artículos de la plantilla que usa Zuleika: costo de referencia y proveedor por defecto */
   const ajustesArticulos = {
-    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', aConfirmar: true },
-    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', aConfirmar: true },
+    'MP-0070': { produccion: true, precioCompra: 19.10, costo: 19.10, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
+    'MP-0071': { produccion: true, precioCompra: 19.40, costo: 19.40, provDef: 'PROV-0001', stockMin: 50, aConfirmar: true },
     'MP-0052': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0054': { produccion: true, precioCompra: 8.50, costo: 8.50, provDef: 'PROV-0002', aConfirmar: true },
     'MP-0055': { produccion: true, precioCompra: 8.90, costo: 8.90, provDef: 'PROV-0002', aConfirmar: true },
@@ -55,8 +55,8 @@ const BD_COMPLEMENTOS = (() => {
   const mp = (cod, nom, subcat, precio) => ({ cod, nom, desc: nom, grupo: 'MP', cat: 'AVIOS DE ACABADOS PRINCIPALES', subcat, u: 'UND', ctrl: 'Nada', inv: true, compra: true, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', precioCompra: precio, costo: precio, uCompra: 'UND', provDef: 'PROV-0002', origen: C, aConfirmar: true });
   const articulos = [
     /* avíos de acabado de Zuleika: la plantilla trae las sub categorías pero no los artículos */
-    mp('MP-0102', 'BOTON METALICO 17MM PLATA ENVEJECIDA', 'BOTON', 0.35),
-    mp('MP-0103', 'REMACHE METALICO 9MM PLATA ENVEJECIDA', 'BOTON', 0.12),
+    Object.assign(mp('MP-0102', 'BOTON METALICO 17MM PLATA ENVEJECIDA', 'BOTON', 0.35), { stockMin: 100 }),
+    Object.assign(mp('MP-0103', 'REMACHE METALICO 9MM PLATA ENVEJECIDA', 'BOTON', 0.12), { stockMin: 600 }),
     mp('MP-0104', 'PARCHE CUERO SINTETICO SARA BQ', 'CUEROS', 0.60),
     mp('MP-0105', 'ETIQUETA PANTALON SARA BQ', 'ETIQUETA PANTALON', 0.18),
     mp('MP-0106', 'HANG TAG SARA DENIM', 'HANG TAG', 0.25),
@@ -82,7 +82,7 @@ const BD_COMPLEMENTOS = (() => {
     articulos.push({ cod: pt, nom: 'PANTALON WIDE LEG ZULEIKA TALLA ' + ta.t + ' COLOR ' + co.c, desc: 'Pantalón wide leg Zuleika terminado', grupo: 'PT', cat: 'PANTALON', subcat: 'WIDE LEG', u: 'UND', ctrl: 'Nada',
       inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
       attrs: { Color: co.c, Talla: ta.t, Acabado: 'TERMINADO', Material: 'DENIM CONFORT', Género: 'DAMA' },
-      precioVenta: co.precio, precioMin: co.min, uVenta: 'UND', dctoMin: 0, dctoMax: 15, origen: C });
+      precioVenta: co.precio, precioMin: co.min, uVenta: 'UND', dctoMin: 0, dctoMax: 15, stockMin: ta.t === '28' ? 15 : 10, origen: C });
     ETAPAS.forEach(e => {
       const cod = 'PPT-' + pad(e.base + i);
       zuleika.ppt[e.et + co.c + ta.t] = cod;

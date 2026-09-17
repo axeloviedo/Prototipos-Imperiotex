@@ -15,8 +15,8 @@ Selector **Datos** de la barra superior (`BDSelector`):
 
 | Pantalla | Lee / escribe | Notas |
 |---|---|---|
-| GI-00 Panel | `BD.d.stock`, `movs`, `sfs`, `sols`, `ocs`, `trfs`, `maestros.minimos` | Valor por grupo, alertas por mínimo, pendientes y últimos movimientos. Campana con los mismos avisos. |
-| GI-01/02 Artículos | `maestros.articulos` | **Diseño V9 (L1)**: General (grupo no editable al crear, categoría, sub categoría, nombre, descripción, estado, inventariable/vende/compra) · Inventario (UM, control Nada/Lote/Serie con formato, «vence», códigos de barra `bcs`) · Planificación (`maestros.minimos`) · Venta (precio sugerido, una UM de venta, verificar precio mínimo `verifMin` con la global de Configuración General, precio mínimo, descuento mín./máx.) · Compra (proveedor, UM de compra, grupo de compras del Grupo, último y promedio de las facturas) · Impuestos · Producción («apto», bloqueado si tiene lista de materiales) · Atributos (tabla editable). UM de venta/compra con conversión obligatoria (L5). Duplicar sin códigos de barras. GI-01 sin columna Stock. |
+| GI-00 Panel | `BD.d.stock`, `movs`, `sfs`, `sols`, `ocs`, `trfs`, `articulos.stockMin` | Valor por grupo, alertas por mínimo (almacén × artículo, L9), pendientes y últimos movimientos. Campana con los mismos avisos. |
+| GI-01/02 Artículos | `maestros.articulos` | **Diseño V9 (L1)**: General (grupo no editable al crear, categoría, sub categoría, nombre, descripción, estado, inventariable/vende/compra) · Inventario (UM, control Nada/Lote/Serie con formato, «vence», códigos de barra `bcs`) · Planificación (stock mínimo único `stockMin`, L9) · Venta (precio sugerido, una UM de venta, verificar precio mínimo `verifMin` con la global de Configuración General, precio mínimo, descuento mín./máx.) · Compra (proveedor, UM de compra, grupo de compras del Grupo, último y promedio de las facturas) · Impuestos · Producción («apto», bloqueado si tiene lista de materiales) · Atributos (tabla editable). UM de venta/compra con conversión obligatoria (L5). Duplicar sin códigos de barras. GI-01 sin columna Stock. |
 | GI-03/04 Almacenes | `maestros.almacenes` | Empresa, código **manual**, nombre, sede, estado, observaciones, indicadores en tránsito y Kardex valorizado, roles (`roles`, pendiente L4). Sin categoría, físico/virtual ni contenido (L3). Filtra por la empresa activa. No se desactiva con stock. |
 | GI-05 Existencias | `stock` | Actual, Comprometido, **Pedido** (`stock.ped`: OC y transferencias aprobadas), Disponible = Actual − Comprometido, costo promedio, valorizado, semáforo por mínimo. CSV. |
 | GI-06 Kardex | `Stock.kardex` | Una tabla por artículo × almacén; filtros de artículo, almacén, grupo y tipo de movimiento y fechas; costo promedio recalculado; almacenes sin Kardex valorizado solo cantidades. |
@@ -60,4 +60,4 @@ Hash: `#gi23=SF-000001`, `#gi13=SOL-000001`, `#gi08=ING-000001`, `#gi11=ST-00000
 
 ## 6. Datos propios (`COMPARTIDO/bd/datos/maestros-logistica.js`)
 
-`configLogistica` (sin campos de usuario, L8), `conceptosFinanzas` (28), `finanzasGrupo`, `seriesInternas`, `seriesGRE`, `minimos`, `transportistas`, `ubigeos`; colección `notasInternas`.
+`configLogistica` (sin campos de usuario, L8), `conceptosFinanzas` (28), `finanzasGrupo`, `seriesInternas`, `seriesGRE`, `transportistas`, `ubigeos`; colección `notasInternas`.
