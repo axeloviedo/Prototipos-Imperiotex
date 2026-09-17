@@ -62,12 +62,11 @@ La combinación (articulo, um, sede, tipo_cliente, moneda) es única. Resolució
 
 | Campo | Notas | Doc actual |
 |---|---|---|
-| es_venta, um_venta | GI-02 | `units[]` |
+| es_venta, um_venta | GI-02 · una UM referencial; se vende en cualquier UM con conversión a la de inventario (L5) | `units[]` |
 | precio_sugerido | PEN por UM de inventario | `price_general` |
-| precio_minimo, verificar_minimo | GI-02 + parámetro de empresa | — |
+| precio_minimo, verificar_minimo | GI-02 + parámetro de empresa de Inventarios (Configuración General) | — |
 | descuento_min_pct, descuento_max_pct | Rango del descuento por línea | `min_discount`, `max_discount` |
 | afectacion_igv | Gravado / Exonerado / Inafecto | `tax_selected` |
-| control_stock_venta | Bloquear / Avisar / No verificar | `disponibilidad` 2 / 3 / 1 |
 
 > Productos y servicios son **el mismo maestro**: un servicio es un artículo no inventariable (grupo SERVICIOS).
 

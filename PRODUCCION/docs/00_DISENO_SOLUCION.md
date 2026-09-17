@@ -103,7 +103,7 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 
 ## 8.2 Sin pantalla de configuración (revisión 2026-09-16)
 
-- Se retiró **PR-13 Configuración**. El «almacén donde entra lo producido por defecto» no es una configuración: sale del **almacén del artículo** (GI-02) o, si no tiene, del de su lista de materiales.
+- Se retiró **PR-13 Configuración**. El «almacén donde entra lo producido» no es una configuración ni un dato del artículo (L1): se propone el de la Solicitud de Fabricación o el que usan las listas de materiales para tomar el artículo; **nunca se asume SB-CENTRAL** (L7). Si no hay propuesta, al crear la orden (PR-01 nueva, PR-03 crear órdenes) se elige en la columna «Entra en» y, si falta, avisa y no crea la orden. Tercerizar muestra todos los almacenes y exige que el elegido esté marcado «en tránsito».
 - El **nombre de la referencia** (N° Referencia, Lote, Campaña…) sí es editable, pero es **solo una etiqueta de texto por empresa**: se cambia con **✎ Nombre del campo** en PR-04 Referencias. En el desarrollo basta un parámetro de texto; no requiere un módulo ni una pantalla de configuración.
 
 ## 8.3 Solicitudes de Fabricación compartidas

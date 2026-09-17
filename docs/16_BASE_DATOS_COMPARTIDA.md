@@ -50,12 +50,11 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 |---|---|---|
 | `empresas` | `{cod:'SB01', nom:'IMPERIOTEX', marca, abrev:'SB'}` | plantilla almacenes |
 | `sedes` | `{cod:'G', nom:'Gamarra', dir, contenido}` | plantilla almacenes |
-| `almacenes` | `{emp:'SB', cod:'SB-CENTRAL', nom, cat:'Común'\|'Transición'\|'Tienda'\|'Tienda Liquidación', sede, fisico, contenido, estado, kardexValorizado, transito, obs, origen}` | plantilla + `SB-ZARATE-PP` / `CN-ZARATE-PP` (almacén de producto en proceso, K5) |
+| `almacenes` | `{emp:'SB', cod:'SB-CENTRAL', nom, sede, estado, kardexValorizado, transito, obs, roles?, origen}` — sin categoría, físico/virtual ni contenido (L3); `roles` pendiente (L4) | plantilla + `SB-ZARATE-PP` / `CN-ZARATE-PP` (almacén de producto en proceso, K5) |
 | `unidades` | `{cod:'UND', nom}` | plantilla + HORA, DÍA |
 | `conversiones` | `{de:'DOC', a:'UND', factor:12}` | complemento |
-| `grupos` | `{cod:'MP'\|'SRV'\|'PPT'\|'PT'\|'MERC', nom, prefijo, asignacion, inv}` | complemento |
-| `categorias` / `subcategorias` | `{cod, nom, cv, grupo}` / `{cat, nom}` | plantillas + PANTALON |
-| `clasesValoracion` | `{cod:'CV-01', nom}` | plantilla |
+| `grupos` | `{cod:'MP'\|'SRV'\|'PPT'\|'PT'\|'MERC', nom, prefijo, asignacion, inv, grupoCompra?}` — el grupo de compras lo heredan sus artículos (`BD.grupoCompra(art)`, K10) | complemento |
+| `categorias` / `subcategorias` | `{cod, nom, grupo}` / `{cat, nom}` | plantillas + PANTALON |
 | `atributos` | `{nom:'Color', vals:[...]}` | plantilla + valores |
 | `tiposCodigoBarra` | `'GTIN / EAN'` … | plantilla |
 | `articulos` | ver 3.2 | 101 MP + 17 SRV de plantilla; 6 avíos MP-0102..0107 y 16 ZULEIKA de complemento |
@@ -67,7 +66,7 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `gruposProveedor` | `{cod:'TEL'\|'AVI'\|'SRV'\|'GEN', nom, desc}` — el `grupo` del proveedor es este código | plantilla proveedores (Excel) |
 | `condicionesPago` | `{nom:'Crédito 30 días', dias}` | plantilla proveedores |
 | `organizacionesCompra` | `{cod:'SB'\|'CN', centro, nom}` | estructura organizativa |
-| `gruposCompra` | `{cod:'MP1'\|'SRV'\|'IMP'\|'EE1'\|'MSC'\|'SG1', nom}` — cada artículo de compra lleva `grupoCompra` | estructura organizativa |
+| `gruposCompra` | `{cod:'MP1'\|'SRV'\|'IMP'\|'EE1'\|'MSC'\|'SG1', nom}` — se asigna en el Grupo de Artículo (K10) | estructura organizativa |
 | `gruposMovimiento` | `{cod:'ING'\|'SAL'\|'TRF', nom, desc}` — sin Ajustes (J1) | Word actualizado |
 | `tiposMovimiento` | `{cod:'ING-COMPRA', grupo:'ING', nom, desc}` — 21 tipos (K6) | Word actualizado |
 
@@ -76,17 +75,17 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 ### 3.2 Artículo
 
 ```
-{ cod, nom, desc, grupo:'MP'|'SRV'|'PPT'|'PT'|'MERC', cat, subcat, u (UM inventario), ctrl:'Nada'|'Lote'|'Serie', cv,
+{ cod, nom, desc, grupo:'MP'|'SRV'|'PPT'|'PT'|'MERC', cat, subcat, u (UM inventario), ctrl:'Nada'|'Lote'|'Serie', vence?,
   inv (maneja stock), compra, venta, produccion, igv:'Gravado'|'Exonerado'|'Inafecto', estado:'Activo'|'Inactivo',
-  alm? (almacén por defecto: donde entra lo producido), costo (costo inicial de referencia), precioCompra?, uCompra?, provDef?,
+  costo (costo inicial de referencia), precioCompra?, uCompra? (una, referencial), provDef?,
   attrs? {Color, Talla, Acabado, Material, Género},
-  precioVenta?, precioMin?, uVenta? [..], dctoMin?, dctoMax?, stockCtrl? 'Bloquear'|'Avisar'|'No verificar',   ← pestaña Venta
+  precioVenta?, precioMin?, verifMin?, uVenta? (una, referencial: L5), dctoMin?, dctoMax?,   ← pestaña Venta
   origen:'plantilla'|'complemento'|..., aConfirmar? }
 ```
 
 **Familia ZULEIKA** (2 colores × 2 tallas):
 
-| Etapa | Códigos | Almacén por defecto | Lista |
+| Etapa | Códigos | Entra en (lo elige Producción, L7) | Lista |
 |---|---|---|---|
 | Piezas cortadas | PPT-0001 azul 28 · 0002 azul 30 · 0003 negro 28 · 0004 negro 30 | SB-ZARATE-PP | LDM-0013..0016: tela MP-0070 (azul) / MP-0071 (negro) 1,40 / 1,46 MT (Manual, SB-ZARATE-MP) + patronista, operario y máquina de corte |
 | Crudo | PPT-0005..0008 | SB-ZARATE-PP | LDM-0009..0012: piezas (Manual, SB-ZARATE-PP) + 2 hilos 0,05, cierre YKK, tallita (Notificación, SB-ZARATE-MP) + costurera y máquina |
