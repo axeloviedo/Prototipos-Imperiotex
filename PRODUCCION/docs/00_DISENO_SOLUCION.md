@@ -8,7 +8,7 @@
 - `M` (maestros) solo **lee** `BD.d.maestros`; se editan aquí **recursos, tipos de recurso y operarios** (PR-11/PR-12). Las listas de materiales se editan en Inventarios (GI-17).
 - `Stock`, `Explosion` y `Docs` son los compartidos. Producción agrega a `Explosion` `necesidades` y `refs` (dependen de sus órdenes).
 - **Dos escenarios de datos**, elegidos en la barra superior (**Datos: Solo maestros | Con operación · ↺ Reiniciar**, reinicia los cuatro módulos): **Solo maestros** = maestros completos sin stock, movimientos ni documentos (empezar de cero) · **Con operación** = maestros más la operación que registra `Demo.historia()` (§9) junto con las historias de los otros módulos. Si otro módulo guarda en otra pestaña, la pantalla se refresca.
-- Familia de trabajo **ZULEIKA**: piezas PPT-0001..0004 → crudo PPT-0005..0008 → lavado tercerizado PPT-0009..0012 (crudo en SB-TRANSITO + servicio SRV-0001) → terminado PT-0001..0004 en SB-CENTRAL. Materia prima en SB-ZARATE-MP, en proceso en SB-ZARATE-PP.
+- Familia de trabajo **ZULEIKA**: piezas cortadas PPT-0001..0002 y crudo PPT-0003..0004 solo por talla (el color nace en el lavado, K9) → lavado tercerizado por color y talla PPT-0005..0008 (crudo en SB-TRANSITO + servicio SRV-0001) → terminado PT-0001..0004 en SB-CENTRAL. Materia prima en SB-ZARATE-MP, en proceso en SB-ZARATE-PP.
 - **Tipos de movimiento que usa Producción** (maestro `tiposMovimiento`):
 
 | Operación | Movimiento | Tipo |
@@ -116,5 +116,6 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 - Los datos ya no se crean al abrir Producción: vienen del escenario elegido. `Demo.historia()` parte de «Solo maestros» y registra, solo con `Docs.*`, `Stock.*` y `Prod.*` y fechas de julio 2026 (`BD.reloj`), la operación con la que se genera `escenario-operacion.js`. No toca el DOM.
 - **Compra de materia prima**: dos OC de bienes (PROV-0001 telas, PROV-0002 avíos) → V°B° → aprobación → ingreso en SB-CENTRAL-MP → factura; abastecimiento a SB-ZARATE-MP **en dos pasos** (Solicitud de Transferencia TRF-INTERNO: creada y aprobada el 04/07, recepción confirmada el 05/07) con GRE.
 - **SF-000001** (PT-0001 × 40, PT-0002 × 30): **Fabricada**. Piezas, crudo, lavado tercerizado completo (SOL → OC de servicio → envío con GRE → retorno → conformidad → factura, una con S/ 3,00 de diferencia) y terminado en SB-CENTRAL.
+- **Crudo sin color**: una orden manual adelanta 10 crudos T28 (con sus piezas cortadas); la SF-000002 los usa y su orden de crudo T28 es solo por 20.
 - **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 enviado a la lavandería con OC aprobada; lavado T30 con el servicio pedido (SOL pendiente en Logística).
 - **SF-000003** (PT-0001..0004 × 20): **aprobada sin órdenes**, con su materia prima comprometida.
