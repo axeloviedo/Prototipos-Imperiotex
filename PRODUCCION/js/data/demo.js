@@ -10,6 +10,8 @@
    4) SF de los cuatro PT aprobada sin órdenes (su materia prima queda comprometida). */
 const Demo = {
   USUARIOS: { comercial: 'Comercial 01', logistica: 'USER02 · Logística', compras: 'USER03 · Compras', gerencia: 'Gerencia General', produccion: 'USER05 · Producción' },
+  /* almacén donde entran las órdenes de producto en proceso de la historia (lo elige Producción) */
+  _almsProceso() { const r = {}; BD.d.maestros.articulos.filter(a => a.grupo === 'PPT').forEach(a => { r[a.cod] = 'SB-ZARATE-PP'; }); return r; },
   _en(fecha, quien) { BD.reloj = fecha; BD.usuario = Demo.USUARIOS[quien] || quien; },
   _sumar(fecha, dias, hora) { return UI.sumarDias(fecha, dias, hora); },
 
@@ -110,7 +112,7 @@ const Demo = {
     const sf1 = Demo._sf('02/07/2026 10:00', '02/07/2026 15:30', '03/07/2026 09:00',
       { mes: 'Jul 2026', almDestino: 'SB-CENTRAL', fechaReq: '25/07/2026', obs: 'Campaña de julio: Zuleika azul', lineas: AZUL });
     Demo._en('06/07/2026 09:30', 'produccion');
-    const c1 = Prod.generarDesdeSF(sf1.id); BD.guardar();
+    const c1 = Prod.generarDesdeSF(sf1.id, null, Demo._almsProceso()); BD.guardar();
     const f1 = art => c1.find(o => o.art === art);
     Demo._producir(f1('PPT-0001'), '07/07/2026 08:00', { reales: { m0: 57 }, cerrar: true });
     Prod.adjuntar(f1('PPT-0001'), 'tizado_zuleika_azul_T28.pdf', 'Tizado para 40 unidades');
@@ -133,7 +135,7 @@ const Demo = {
     const sf2 = Demo._sf('08/07/2026 11:00', '09/07/2026 10:00', '09/07/2026 12:00',
       { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '05/08/2026', obs: 'Reposición Zuleika negro', lineas: NEGRO });
     Demo._en('13/07/2026 09:15', 'produccion');
-    const c2 = Prod.generarDesdeSF(sf2.id); BD.guardar();
+    const c2 = Prod.generarDesdeSF(sf2.id, null, Demo._almsProceso()); BD.guardar();
     const f2 = art => c2.find(o => o.art === art);
     Demo._producir(f2('PPT-0003'), '14/07/2026 08:00', { cerrar: true });
     Demo._producir(f2('PPT-0004'), '14/07/2026 13:30', { cerrar: true });

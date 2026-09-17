@@ -23,10 +23,10 @@ const BUS = {
     const lista = Store.arts().filter(a => Store.activo(a) && (!g || a.grupo === g) &&
       (!q || (a.cod + ' ' + a.nom + ' ' + Object.keys(a.attrs || {}).map(k => a.attrs[k]).join(' ')).toLowerCase().includes(q)));
     document.getElementById('bus-body').innerHTML = UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio', 'num'], ['Disponible ' + alm, 'num'], ['Disponible total', 'num'], ['', '', '90px']], lista.map(a => {
-      const um = (a.uVenta && a.uVenta[0]) || a.u, r = Precios.resolver(a.cod, um, d.sede, tipo, d.mon);
+      const um = Precios.umVenta(a.cod), r = Precios.resolver(a.cod, um, d.sede, tipo, d.mon);
       const attrs = Object.keys(a.attrs || {}).map(k => k + ': ' + a.attrs[k]).join(' · ');
       const en = d.lineas.filter(l => l.art === a.cod).length;
-      return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + '</td><td>' + (a.uVenta || [a.u]).join(', ') + '</td>' +
+      return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + '</td><td>' + (a.uVenta || a.u) + '</td>' +
         '<td class="num">' + (r ? '<b>' + UI.m(r.precio, d.mon) + '</b><br><span class="mini">' + r.origen + '</span>' : '<span class="err-t">Sin precio en ' + d.mon + '</span>') + '</td>' +
         '<td class="num">' + (a.inv ? UI.n(Stock.disp(alm, a.cod), 0) : '—') + '</td><td class="num">' + (a.inv ? UI.n(Stock.totalDisp(a.cod), 0) : 'Servicio') + '</td>' +
         '<td><button class="btn btn-primary btn-sm" onclick="BUS.agregar(\'' + a.cod + '\')">' + (en ? '+ Otra vez' : 'Agregar') + '</button></td></tr>';

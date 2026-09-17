@@ -25,10 +25,10 @@ const DOCUI = {
     const ed = !!o.editable && !o.bloqueadas, ro = !!o.soloLectura;
     const inp = (i, campo, val, w) => '<input class="celda num" type="number" min="0" step="any" value="' + val + '" style="width:' + w + 'px" onchange="' + ctx + '.cambiar(' + i + ',\'' + campo + '\',this.value)">';
     const filas = d.lineas.map((l, i) => {
-      const a = Store.art(l.art) || { uVenta: [l.um], inv: !!l.alm, u: l.um };
+      const a = Store.art(l.art) || { inv: !!l.alm, u: l.um }, ums = Store.art(l.art) ? Precios.unidades(l.art) : [l.um];
       const rev = ro ? { e: [], w: [] } : Doc.revisarLinea(d, l, o.modo);
       const msgs = rev.e.map(x => '<span class="err-t">✕ ' + UI.esc(x) + '</span>').concat(rev.w.map(x => '<span class="warn-t">⚠ ' + UI.esc(x) + '</span>'));
-      const um = ed && a.uVenta.length > 1 ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'um\',this.value)">' + UI.opts(a.uVenta, l.um) + '</select>'
+      const um = ed && ums.length > 1 ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'um\',this.value)">' + UI.opts(ums, l.um) + '</select>'
         : l.um + (l.factor > 1 ? '<br><span class="mini">= ' + l.factor + ' ' + a.u + '</span>' : '');
       const alm = !a.inv ? '<span class="mini">Servicio</span>' : ed ? '<select class="celda" onchange="' + ctx + '.cambiar(' + i + ',\'alm\',this.value)">' +
         UI.opts(M.ALMACENES.filter(x => x.cod !== Store.cfg().almMalEstado).map(x => ({ v: x.cod, t: x.cod })), l.alm) + '</select>' : '<span class="mini">' + l.alm + '</span>';
