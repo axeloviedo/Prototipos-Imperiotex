@@ -36,7 +36,7 @@ Cada módulo, al arrancar: `BD.iniciar('USER05 · Producción')` (fija el usuari
 
 ```
 { version, escenario: 'maestros'|'operacion', creado, seq: {serie: siguiente},
-  maestros: {...}, stock: [], movs: [], sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], config: {nombreRef},
+  maestros: {...}, stock: [], movs: [], lotes: [], sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], config: {nombreRef},
   ...colecciones propias de un área (declaradas en BD_LOGISTICA / BD_COMERCIAL) }
 ```
 
@@ -97,7 +97,9 @@ Al crear órdenes, Producción junta en una sola orden de crudo (y de piezas cor
 ### 3.3 Stock y movimientos
 
 - `stock`: `{alm, art, act, comp, ped, costo}` — Actual, Comprometido y Pedido (T1). Disponible = `act − comp` (el Pedido es informativo). Costo promedio ponderado por almacén. `Stock.pedido(alm, art, cant, signo)`, `Stock.ped(alm, art)`.
-- `movs`: `{id:'ING-000001'|'SAL-…'|'TRF-…', tipo:'Ingreso'|'Salida'|'Transferencia', det, concepto, fecha, usuario, modulo, est, alm, destino?, od, ndoc, doc, obs, valor, lineas:[{art, cant, costo, valor, alm, signo:+1|-1, saldo}]}`.
+- `movs`: `{id:'ING-000001'|'SAL-…'|'TRF-…', emp, tipo:'Ingreso'|'Salida'|'Transferencia', det, concepto, fecha, usuario, modulo, est, alm, destino?, od, ndoc, doc, obs, valor, lineas:[{art, cant, costo, valor, alm, signo:+1|-1, saldo, lote?}]}`.
+- `lotes` (N7): `{id:'L2026-MP-0070-0001', art, emp, fecha, vence, origen, saldos:{almacén: cantidad}}`. Solo de artículos con control «Lote»: cada **ingreso** crea su lote; salidas, emisiones y transferencias consumen el lote elegido o **el más antiguo**. El costo sigue siendo el promedio del almacén: el lote es trazabilidad. `Stock.conLote(art)`, `Stock.lotes(art, alm)`, `Stock.lote(id)`, `Stock.saldoLote(id, alm)`.
+- **Empresa** (N3): cada movimiento y cada documento nace con `emp`, la empresa de su almacén (`BD.empresaDe(alm)`) o, si no tiene almacén, la empresa activa `BD.empresa`, que fija el selector de la barra superior.
 - Cada movimiento lleva `tipoMov` (código de `tiposMovimiento`), `grupoMov` y `tipoMovNom`. Se pasa en `o.tipoMov`; si falta se usa ING-INICIAL / SAL-USOPROD / TRF-INTERNO. **No existe el grupo Ajuste (J1)**: regularizar es ING-REGULARIZ o SAL-REGULARIZ con motivo y observación; producto fallado es SAL-FALLADO + ING-FALLADO (J2).
 - Tipos por paso: compra recibida **ING-COMPRA** (extranjero **ING-IMPORT**) · recepción no conforme **ING-OBSERV** · emisión a producción **SAL-USOPROD** · consumo de material en poder del proveedor **SAL-MAQUILA** · recibo de producción **ING-PROD** · envío al servicio tercerizado **TRF-FABRIC** · abastecimiento o traslado entre sedes **TRF-INTERNO** · reposición a tienda **TRF-REPTIENDA** · entre tiendas **TRF-ENTRETIENDA** · a liquidación **TRF-LIQUID** · venta **SAL-VENTA** · devolución de cliente **ING-DEVCLI** · devolución a proveedor **SAL-DEVPROV** · reposición del proveedor **ING-CAMBIO** · cancelación de servicio **ING-CANCEL** · carga inicial **ING-INICIAL**.
 - **Solo `Stock` modifica** `stock` y `movs`: `Stock.ingreso`, `Stock.salida`, `Stock.transferencia` devuelven `{ok, mov}` o `{ok:false, error}`. `Stock.comprometer/liberar/comprometerLineas`, `Stock.kardex(art, alm)`, `Stock.saldoA(art, alm, fecha)`, `Stock.disp/act/comp/costo/totalDisp`. `Stock` **no guarda**: el que llama ejecuta `BD.guardar()`.
@@ -155,7 +157,7 @@ Correlativos compartidos (`BD.sig`): `sf, sol, oc, fac, gre, ing, sal, trf, of, 
 - Producción: todas (PR-01 … PR-12).
 - Comercial: todas; el stock y los artículos de venta salen de la base.
 
-**Fuera de este alcance** (siguen con sus datos de ejemplo, marcadas «Datos de ejemplo · no conectado a la base»): GI-18 rotación, GI-19 series, CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino, CO-15 sugerido.
+**Fuera de este alcance** (siguen con sus datos de ejemplo, marcadas «Datos de ejemplo · no conectado a la base»): CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino y CO-15 sugerido, que se conectan en la revisión N9. GI-18 rotación y GI-19 series ya trabajan sobre la base (N8).
 
 ## 6. Reglas
 

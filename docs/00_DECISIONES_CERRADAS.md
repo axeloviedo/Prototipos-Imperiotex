@@ -163,8 +163,32 @@
 
 ---
 
+## N · Revisión de pendientes (2026-09-17)
+
+> Respuestas del usuario a la revisión de pendientes de todos los `.md`. Lo aplicado está en la rama `feat/pendientes-prototipo`.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| N1 | **Cantidades: 4 decimales guardados, 2 visibles** | Toda cantidad se guarda redondeada a 4 decimales y se muestra con **2 decimales como máximo** en los cuatro módulos. No se limita el número de decimales por unidad de medida. |
+| N2 | **El número de factura es único por proveedor** | Lo valida el núcleo (`Docs.fac.crear`), no solo la pantalla. Una factura anulada libera su número. |
+| N3 | **Todos los documentos llevan empresa** | SF, SOL, OC, factura, ST, GRE, movimiento, orden de fabricación, cotización, venta, devolución y caja guardan `emp`: la empresa de su almacén y, si no tiene, la empresa activa (`BD.empresa`). En la OC coincide con su organización de compras (K10). |
+| N4 | **Venta al crédito: la entrega es opcional** | Revisa R1.b. Al registrar una venta al crédito el usuario puede marcar **«Entregar ahora»** y el stock sale sin esperar el cobro; si no la marca, el stock queda comprometido hasta que el pago confirmado cubra el total, como el contado. También se puede entregar después desde la ficha de la venta. |
+| N5 | **Envío consolidado al proveedor** | Varias órdenes del mismo proveedor de servicio se envían juntas: cada una genera su transferencia y todas comparten **una sola guía de remisión por ruta**. El stock de todas se revisa antes de mover nada. |
+| N6 | **Faltante del servicio tercerizado** | Al cerrar una orden con envíos, lo enviado que no retornó queda registrado como **faltante abierto** en la orden. Al facturar esa OC, Compras **avisa** (no bloquea): el reclamo va por su propio flujo (CO-11). |
+| N7 | **Lotes: uno por ingreso, solo con control «Lote»** | Solo los artículos con control «Lote». Cada ingreso crea el lote **`L<año>-<código de artículo>-<correlativo>`** y guarda su saldo por almacén. Al salir o transferir el lote es **opcional**: si no se elige, sale el más antiguo. El costo sigue siendo el promedio del almacén: el lote es trazabilidad. Las telas MP-0070 y MP-0071 quedan con control Lote como caso de prueba. |
+| N8 | **Rotación y series sobre la base** | GI-18 calcula stock, valor y días sin movimiento de `BD.d.stock` y `BD.d.movs`. GI-19 muestra el correlativo real de cada serie interna y cuántos documentos lleva emitidos. Dejan de ser datos de ejemplo. |
+| N9 | **Reclamos, notas de crédito, costos de destino y sugerido: a la base** | CO-11, CO-12, CO-14 y CO-15 dejan de ser datos de ejemplo y trabajan sobre la base compartida. |
+| N10 | **Descartado: cabecera de la LDM con Tipo y Almacén** | No hay tipos de lista y el almacén se elige por línea de material. Cierra ⚠️-3. |
+| N11 | **Descartado: aprobación de listas de materiales** | No hay estado Borrador/Aprobada en la LDM. |
+| N12 | **Mejoras futuras, no ahora** | Permisos por almacén por rol (L4), filtro de terminados por «se fabrica», lote mínimo o múltiplo de fabricación si planta lo necesita, y lote/vencimiento pedidos a mano en producción. |
+| N13 | **Sin cambio** | El código de proveedor del prototipo (mayor + 1) está bien; los costos, precios y proveedores de servicio inventados están bien como datos de prueba, pero el **proceso** del servicio tercerizado debe quedar documentado; el cobro entra a la caja de la tienda de la venta; los tipos de cliente del prototipo se mantienen. |
+
+---
+
 ## Descartado explícitamente
 
+- Cabecera de la lista de materiales con Tipo (Venta/Producción) y Almacén (N10).
+- Estado Borrador / Aprobada en la lista de materiales (N11).
 - Clase de valoración en el artículo o la categoría (L2).
 - Categoría, físico/virtual y contenido del almacén (L3).
 - Control de stock al vender por artículo (L6) y almacén por defecto del artículo (L1).
