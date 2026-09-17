@@ -66,7 +66,6 @@ def articulos(archivo, grupo):
             'cod': cod, 'nom': nom, 'desc': r[idx['Descripción']], 'grupo': grupo,
             'cat': r[idx['Categoría']], 'subcat': r[idx['Sub categoría']],
             'u': u, 'ctrl': r[idx['Control de inventario (*)']] or 'Nada',
-            'cv': r[idx['Valorización (auto)']] or ('CV-09' if grupo == 'SRV' else ''),
             'inv': grupo != 'SRV', 'compra': True, 'venta': False,
             'produccion': r[idx['Apto para producción']] == 'Sí',
             'igv': IGV_CORTO.get(r[idx['Afectación IGV (*)']], r[idx['Afectación IGV (*)']] or 'Gravado'),
@@ -79,8 +78,6 @@ def articulos(archivo, grupo):
             a['uCompra'] = r[idx['UM de compra']].upper()
         if r[idx['Proveedor por defecto']]:
             a['provDefNom'] = r[idx['Proveedor por defecto']]
-        if not a['cv'] and grupo == 'MP':
-            a['cv'] = 'CV-01' if a['cat'] == 'TELAS' else 'CV-02'
         out.append(a)
     return out
 
@@ -94,7 +91,8 @@ cfg_srv = bloques_config('PLANTILLA_Articulos_SERVICIOS.xlsx')
 
 def categorias(cfg, grupo):
     clave = [k for k in cfg if k.startswith('CATEGORÍAS')][0]
-    return [{'cod': r[0], 'nom': r[1], 'cv': r[2] if len(r) > 2 else '', 'grupo': grupo} for r in cfg[clave] if r[0] != 'CODIGO']
+    # sin clase de valoración (L2): la cuenta contable vive en el Grupo de Artículo, pestaña Finanzas
+    return [{'cod': r[0], 'nom': r[1], 'grupo': grupo} for r in cfg[clave] if r[0] != 'CODIGO']
 
 
 def subcategorias(cfg):
@@ -126,8 +124,6 @@ def lista_simple(cfg, prefijo, cab):
 unidades_pl = lista_simple(cfg_mp, 'UNIDADES', 'UNIDAD')
 atributos = lista_simple(cfg_mp, 'ATRIBUTOS', 'ATRIBUTO')
 tipos_barra = lista_simple(cfg_mp, 'TIPOS DE CÓDIGO', 'TIPO')
-clave_cv = [k for k in cfg_mp if k.startswith('CLASES DE VALORIZACIÓN')][0]
-clases_val = [{'cod': r[0], 'nom': r[1]} for r in cfg_mp[clave_cv] if r[0] != 'Código']
 
 # ---------------- almacenes ----------------
 cfg_alm = bloques_config('PLANTILLA_Almacenes_GI.xlsx')
@@ -137,7 +133,8 @@ for r in rs[1:]:
     if not r[1]:
         continue
     almacenes.append({
-        'emp': r[0], 'cod': r[1], 'nom': r[2], 'cat': r[3], 'sede': r[4], 'fisico': r[5], 'contenido': r[6],
+        # sin categoría, físico/virtual ni contenido (L3); la categoría «Transición» del Excel se vuelve el indicador en tránsito
+        'emp': r[0], 'cod': r[1], 'nom': r[2], 'sede': r[4],
         'estado': r[7] or 'Activo', 'kardexValorizado': r[8] == 'Sí', 'transito': r[3] == 'Transición', 'obs': r[9], 'origen': 'plantilla'
     })
 empresas = [{'cod': r[0], 'nom': r[1], 'marca': r[2], 'abrev': r[3]} for r in cfg_alm['EMPRESAS'] if r[0] != 'Código']
@@ -220,7 +217,7 @@ datos = {
     'fuente': 'docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO',
     'estructura': 'ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP.docx',
     'empresas': empresas, 'sedes': sedes, 'almacenes': almacenes,
-    'unidades': unidades_pl, 'atributos': atributos, 'tiposCodigoBarra': tipos_barra, 'clasesValoracion': clases_val,
+    'unidades': unidades_pl, 'atributos': atributos, 'tiposCodigoBarra': tipos_barra,
     'categorias': cats, 'subcategorias': subcats,
     'articulos': mp + srv, 'proveedores': proveedores, 'gruposProveedor': grupos_prov, 'condicionesPago': condiciones,
     **estructura

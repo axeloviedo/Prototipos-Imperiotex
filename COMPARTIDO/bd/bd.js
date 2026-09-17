@@ -8,7 +8,7 @@
 const BD = {
   KEY: 'imperiotex.bd',
   KEY_ESCENARIO: 'imperiotex.bd.escenario',
-  VERSION: 1,
+  VERSION: 2,
   ESCENARIOS: { maestros: 'Solo maestros (empezar de cero)', operacion: 'Con operación (movimientos y saldos)' },
   d: null,
   /* texto del usuario activo que firma movimientos e historiales: cada módulo lo fija al iniciar */
@@ -95,11 +95,6 @@ const BD = {
   maestrosIniciales() {
     const P = BD_PLANTILLAS, C = BD_COMPLEMENTOS;
     const articulos = P.articulos.map(a => Object.assign({ costo: a.precioCompra || 0 }, a, C.ajustesArticulos[a.cod] || {})).concat(C.articulos);
-    /* grupo de compras (estructura organizativa): servicios SRV, envases y embalajes EE1, el resto de materia prima MP1 */
-    articulos.forEach(a => {
-      if (!a.compra || a.grupoCompra) return;
-      a.grupoCompra = a.grupo === 'SRV' ? 'SRV' : ['HANG TAG', 'BOLSA BRILLO'].includes(a.subcat) ? 'EE1' : 'MP1';
-    });
     const m = BD.copia({
       empresas: P.empresas,
       sedes: P.sedes,
@@ -109,7 +104,6 @@ const BD = {
       grupos: C.grupos,
       categorias: P.categorias.concat(C.categorias),
       subcategorias: P.subcategorias.concat(C.subcategorias),
-      clasesValoracion: P.clasesValoracion,
       atributos: P.atributos.map(nom => ({ nom, vals: C.atributoValores[nom] || [] })),
       tiposCodigoBarra: P.tiposCodigoBarra,
       articulos,
@@ -159,6 +153,8 @@ const BD = {
   ldmsDe(art) { return BD.d.maestros.ldms.filter(l => l.art === art).sort((a, b) => (b.pred ? 1 : 0) - (a.pred ? 1 : 0)); },
   ldmPred(art) { return BD.ldmsDe(art)[0] || null; },
   fabricable(cod) { return BD.ldmsDe(cod).length > 0; },
+  /* grupo de compras del artículo: lo define su Grupo de Artículo (K10) */
+  grupoCompra(cod) { const a = BD.art(cod), g = a && BD.d.maestros.grupos.find(x => x.cod === a.grupo); return (g && g.grupoCompra) || ''; },
   attr(cod, nom) { const a = BD.art(cod); return a && a.attrs ? (a.attrs[nom] || '') : ''; },
 
   /* ---------- lectura de documentos ---------- */

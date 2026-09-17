@@ -242,7 +242,7 @@ const Docs = (() => {
         items, recepciones: [], facturas: [], hist: []
       };
       o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
-      if (!o.grupoCompra) o.grupoCompra = p.tipo === 'Internacional' ? 'IMP' : o.tipo === 'Servicio' ? 'SRV' : ((BD.art(items[0].art) || {}).grupoCompra || 'MP1');
+      if (!o.grupoCompra) o.grupoCompra = p.tipo === 'Internacional' ? 'IMP' : o.tipo === 'Servicio' ? 'SRV' : (BD.grupoCompra(items[0].art) || 'MP1');
       BD.d.ocs.unshift(o);
       BD.hist(o, 'Creada en borrador', (o.sol ? 'desde ' + o.sol : 'OC directa') + (o.of ? ' · ' + o.of : ''));
       g(); return o;

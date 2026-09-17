@@ -5,8 +5,7 @@
 const BD_LOGISTICA = (() => {
   /* GI-CFG · Configuración General de la empresa */
   const configLogistica = {
-    precioMinGlobal: true, nombreEtiqueta: 'N° Referencia', imprimirRef: true, lotesModo: 'manual',
-    camposUsuario: [{ lbl: 'Línea comercial', apl: 'Artículos', filtro: true }, { lbl: 'Campaña', apl: 'Artículos', filtro: true }]
+    precioMinGlobal: true, nombreEtiqueta: 'N° Referencia', imprimirRef: true, lotesModo: 'manual'
   };
   /* Pestaña Finanzas del Grupo de Artículo: 28 conceptos contables (referencia SAP B1) */
   const conceptosFinanzas = [
