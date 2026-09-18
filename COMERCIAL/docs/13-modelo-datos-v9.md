@@ -44,19 +44,39 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 
 > Sin condición de pago: solo contado.
 
-### Lista de precios (wallet)
+### Listas de precios y ofertas
+
+> 2026-09-18: se carga **por lista** y no por artículo (decisiones LP1–LP5 en `12-prototipo-diseno.md` §12). Colección `BD.d.listasPrecio`.
+
+**lista_precio**
 
 | Campo | Tipo | Notas | Doc actual |
 |---|---|---|---|
-| id | PK | | `wallet.id` |
-| articulo | FK → Artículo | | `product_id` / `service_id` |
-| um | FK → UM | Unidad de **venta** (UND, DOC…) | `unit_id` |
-| sede | FK → Sede, nulo | Nulo = todas las tiendas | `sucursale_id` |
-| tipo_cliente | FK, nulo | Nulo = todos | `client_segment_id` |
+| codigo | PK | `LP-01` | — |
+| nombre | texto, único | | — |
 | moneda | enum | PEN / USD | `coin_id` |
-| precio | decimal | Incluye IGV | `coin_price_multiple` |
+| sede | FK → Sede (maestro compartido), nulo | Nulo = todas. El documento usa la sede de su tienda | `sucursale_id` |
+| tipo_cliente | FK, nulo | Segmento; nulo = todos | `client_segment_id` |
+| valida_desde · valida_hasta | fecha, nulo | Con fechas es una **oferta**; hasta nulo = sin fin | — |
+| precio_obligatorio | bool | Solo ofertas: se aplica aunque sea más cara (LP10) | — |
+| activa | bool | | — |
+| creada_por · creada_en | usuario · fecha | | — |
+| cancelada_por · cancelada_en · motivo_cancelacion | usuario · fecha · texto, nulos | **No se borra: se cancela** (LP6) | — |
 
-La combinación (articulo, um, sede, tipo_cliente, moneda) es única. Resolución: sede+tipo → sede → tipo → general → `articulo.precio_sugerido` (solo PEN). *Equivale a una lista de precios de SAP B1 (`OPLN`/`ITM1`) con niveles.*
+**lista_precio_historial** · lista, accion, detalle (anterior → nuevo), usuario, fecha. Toda modificación de la lista y sus filas (LP6).
+
+**lista_precio_fila** · una por (lista, articulo, um) o por (lista, grupo)
+
+| Campo | Tipo | Notas | Doc actual |
+|---|---|---|---|
+| lista | FK → lista_precio | | — |
+| articulo | FK → Artículo, nulo | | `product_id` / `service_id` |
+| grupo | FK → Grupo de artículo, nulo | Solo con % | — |
+| um | FK → UM, nulo | Nulo = todas las unidades (solo con %) | `unit_id` |
+| precio | decimal, nulo | Incluye IGV. Precio **o** %: uno de los dos es obligatorio (LP7) | `price_general` |
+| pct_descuento | decimal, nulo | Sobre el precio de la lista menos específica (o de lista, en una oferta) | — |
+
+Resolución (motor en fases, `12-prototipo-diseno.md` §12.1): precio base (sede+tipo → sede → tipo → general → `articulo.precio_sugerido`, solo PEN) → ofertas vigentes → **mejor precio** (salvo precio obligatorio) → **piso** = `articulo.precio_minimo` (o > 0). La línea del documento guarda `precio`, `origen`, `lista`, `oferta`, `precio_lista` y la evidencia `calculo` (base, ofertas encontradas, ganadora, mínimo, ajuste).
 
 ### Artículo: datos de venta (pestaña Venta de GI-02)
 
@@ -86,9 +106,9 @@ La combinación (articulo, um, sede, tipo_cliente, moneda) es única. Resolució
 
 ## 3. Documentos
 
-Cabecera común (cotización, orden y venta): `sede`, `vendedor`, `usuario`, **`fecha_creacion`** (la pone el sistema), `cliente` + `cliente_snap` (documento, nombre, tipo), `moneda`, `op_gravada`, `op_exonerada`, `igv`, `total`, `tasa_igv`, `observacion` (obligatoria si hay obsequios), `historial[]`.
+Cabecera común (cotización, orden y venta): `sede`, `vendedor`, `usuario`, **`fecha_creacion`** (la pone el sistema), `cliente` + `cliente_snap` (documento, nombre, tipo), `moneda`, `op_gravada`, `op_exonerada`, `igv`, `total`, `tasa_igv`, `observacion`, `historial[]`.
 
-Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* + `descripcion_personalizada` (solo servicios), `um`, `factor` (DOC = 12), `almacen` (solo inventariables), `cantidad`, `precio`, `origen_precio`, `descuento_unitario`, `obsequio`, `base`, `igv`, `total`.
+Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* + `descripcion_personalizada` (solo servicios), `um`, `factor` (DOC = 12), `almacen` (solo inventariables), `cantidad`, `precio`, `origen_precio`, `descuento_unitario`, `base`, `igv`, `total`.
 
 ### Cotización · *SAP B1 `OQUT`, objeto 23*
 
@@ -192,7 +212,7 @@ Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a l
 
 > No tiene estados: registrar = ingreso de stock y dinero por devolver.
 
-**Revisión 2026-09-18 (cambios, `12-prototipo-diseno.md` §13):**
+**Revisión 2026-09-18 (cambios, `12-prototipo-diseno.md` §14):**
 
 | Campo | Notas |
 |---|---|

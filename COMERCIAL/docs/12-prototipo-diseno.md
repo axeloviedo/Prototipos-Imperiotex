@@ -5,7 +5,7 @@
 > El modelo de datos está en `13-modelo-datos-v9.md`, los contratos funcionales en `14-contratos-funcionales.md` y los códigos de pantallas y modales (CL-xx) en `15-codigos-pantallas.md`.
 > **Base de datos compartida (2026-09-16):** Comercial trabaja sobre `BD.d` (clave `imperiotex.bd`), con el mismo stock, movimientos y artículos que Inventarios, Compras y Producción. Ver §11.
 > **Revisión 2026-09-16:** ver §10 «Decisiones cerradas de la revisión 2026-09-16». Se aplican sobre el código que está en el repo (Cotización → Venta → Devolución, con pagos por validar en caja y sin orden de venta cargada). Donde choquen con K1–K17, manda §10.
-> **Cambios y devoluciones (2026-09-18):** ver §13. Un cambio es una devolución con «Se lleva»; el dinero queda como **saldo a favor** del cliente y paga la venta nueva. Revisa K10.
+> **Cambios y devoluciones (2026-09-18):** ver §14. Un cambio es una devolución con «Se lleva»; el dinero queda como **saldo a favor** del cliente y paga la venta nueva. Revisa K10.
 > **Tercera versión (2026-09-15), simplificada a pedido del usuario:** «debe ser más simple, tal como lo hace SAP B1». Reemplaza la versión anterior, en la que la venta tenía estados de orden y de entrega, el comprobante iba aparte y los pagos se validaban.
 
 ---
@@ -33,7 +33,7 @@ Cotización  ──Copiar a──▶  Orden de venta  ──Copiar a──▶  V
 no mueve stock             compromete stock               Pendiente de pago → Pagada                 cobro completo = sale el stock
                            (se atiende por partes)        │
                                                           └──▶ Cambio / devolución (vuelve el stock; el dinero queda como saldo a favor
-                                                               y paga lo que se lleva: venta nueva con «Saldo a favor», §13)
+                                                               y paga lo que se lleva: venta nueva con «Saldo a favor», §14)
 En el mostrador: Venta directa, sin cotización ni orden.
 ```
 
@@ -54,10 +54,10 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 | K7 | **Cobro completo = sale el stock** | Cuando el pago queda completo, se genera una **Salida** de GI-10 por almacén («Venta al por menor» o «al por mayor», concepto **21**). Baja el Actual, libera lo comprometido y guarda el costo. No existe un botón «Entregar» ni pagos por validar. |
 | K8 | **Registrar cobro = cobrado** | Todo cobro entra a la **caja abierta de la tienda** en la moneda de la venta con estado **Cobrado**. Se puede cobrar al registrar la venta (uno o varios medios) o después desde la venta o la caja. Cada cobro es ≤ saldo. Mientras la venta sigue Pendiente de pago, un cobro se puede **anular** (`editar_caja`, caja abierta). |
 | K9 | **Anular la venta** | Solo `anular_venta` y sin devoluciones. **Pendiente de pago:** libera lo comprometido. **Pagada:** dentro del plazo (3 días, congelado en la venta) vuelve el stock con un Ingreso. Si venía de una orden, las cantidades **vuelven a quedar pendientes** en ella (se reabre si estaba cerrada). Lo cobrado queda **por devolver** en caja. |
-| K10 | **Devolución de una venta Pagada** *(revisada 2026-09-18 por CD1–CD9, §13: el dinero queda como saldo a favor y el cambio se registra en la misma devolución)* | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
+| K10 | **Devolución de una venta Pagada** *(revisada 2026-09-18 por CD1–CD9, §14: el dinero queda como saldo a favor y el cambio se registra en la misma devolución)* | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
 | K11 | **Un documento para productos y servicios** | La línea es un artículo: si no es inventariable (grupo SERVICIOS) no lleva almacén ni stock y admite descripción personalizada. |
 | K12 | **Sin stock no se vende** *(L6, 2026-09-16)* | Ya no hay control de stock por artículo. En la cotización solo avisa (no reserva stock). La orden y la venta directa **siempre** impiden pasar del Disponible. Al completar el cobro se revisa el Actual. |
-| K13 | **Listas de precios en cascada** | Artículo + unidad de venta + moneda, con tienda y tipo de cliente opcionales. Orden: tienda y tipo → tienda → tipo → general → precio sugerido de GI-02 (solo PEN). IGV incluido. Descuento en rango, precio mínimo y obsequio con motivo. Si al cambiar la moneda falta un precio, **se revierte**. |
+| K13 | ~~Listas de precios en cascada por artículo~~ **Reemplazada el 2026-09-18 por LP1–LP5 (§12)** | Ahora se crea la **lista** (moneda; sede y segmento de cliente opcionales; con fechas = **oferta**) y se le agregan artículos o grupos con precio fijo o % de descuento. Se mantienen: IGV incluido, orden sede y segmento → sede → segmento → general → precio sugerido (solo PEN), descuento manual en rango, precio mínimo y la **reversión** si falta precio en la moneda. |
 | K14 | **La caja es de la tienda** | Una caja abierta por tienda y moneda. Pestañas **Por cobrar**, **Cobros**, **Ingresos y egresos** y **Devoluciones de dinero**. Cierre con **conteo ciego**: el esperado solo lo ve el supervisor y la diferencia aparece al confirmar. Los movimientos no se borran: se anulan. |
 | K15 | **Fecha de creación** | Todos los listados y fichas dicen «Fecha de creación». La fecha la pone el sistema: no se registra con fecha pasada. |
 | K16 | **Permisos por acción** | `ver_*`, `crear_*`, `anular_venta`, `crear_devolucion_venta`, `crear_caja`, `editar_caja`, `asignar_vendedor`, `editar_precios`, `configurar_comercial`. Se exigen en las reglas, no solo ocultando botones. Perfiles de la demo: Vendedor, Cajero y Supervisor comercial. |
@@ -73,7 +73,7 @@ Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, es
 |---|---|---|
 | CL-01 · CL-02 | Cotizaciones · ficha | Listado, nueva, edición línea por línea, clonar, anular, PDF y **Convertir en venta** |
 | CL-05 · CL-07 · CL-09 | Ventas · nueva venta · ficha | Listado con saldo y estado del stock, **Desde cotización** y **+ Nueva venta**. Formulario con comprobante y pagos. Ficha: Pago, Devolución (solo con salida), Anular y PDF, con las pestañas Detalle, Pagos, Devoluciones, Movimientos de stock e Historial |
-| CL-13 · CL-15 | Cambios y devoluciones · ficha | Listado con tipo (Cambio / Devolución) y dinero; ficha en dos columnas **Devuelve** / **Se lleva** con la diferencia en vivo; **Aceptar** (CL-16) ingresa el stock, abona el saldo a favor y registra la venta del cambio (§13) |
+| CL-13 · CL-15 | Cambios y devoluciones · ficha | Listado con tipo (Cambio / Devolución) y dinero; ficha en dos columnas **Devuelve** / **Se lleva** con la diferencia en vivo; **Aceptar** (CL-16) ingresa el stock, abona el saldo a favor y registra la venta del cambio (§14) |
 | CL-18 | Caja de la tienda | Abrir, cobros (validar o rechazar), por cobrar, ingresos y egresos, devolver dinero, reporte del día, cerrar |
 | CL-28 | Historial de cajas | Detalle, PDF y Excel |
 | CL-30 | Solicitudes de Fabricación | **Misma pantalla GI-21 / GI-22 / GI-23 de Inventarios** (documentos SF-000001): crear, editar, enviar, V°B°, aprobar, rechazar |
@@ -81,7 +81,7 @@ Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, es
 | CL-32 | Existencias y movimientos | Stock de **todas las tiendas de la empresa** (Actual, Comprometido con lo de ventas pendientes, Disponible, Pedido). Movimientos y Kardex **solo de los almacenes de su sede** (R7) |
 | CL-47 | Recepción de mercadería | Las Solicitudes de Transferencia que llegan a su sede: **Por recibir** / **Recibidas**, y **Recibir mercadería** (CL-48, total o incompleta). Misma ST y misma operación que GI-11 (R7) |
 | CL-34 · CL-35 | Clientes · ficha | Listado, ficha (ventas, cotizaciones, devoluciones) y alta rápida |
-| CL-40 | Listas de precios | Filas por nivel, simulador de la cascada |
+| CL-40 · CL-50 | Listas de precios y ofertas · detalle | Listado de listas y ofertas y **Probar precio**; al hacer clic en una lista su detalle (artículos o grupos con precio fijo o %) se abre en el **modal CL-50** (§12) |
 | CL-43 | Artículos de venta | Precio sugerido, mínimo, descuento, IGV, control de stock |
 | CL-45 | Configuración | Parámetros, categorías de caja, tiendas/cajas/series, medios de pago, perfiles y permisos |
 
@@ -105,7 +105,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | Cerrar / cancelar orden | Comprometido − (lo pendiente) | — |
 | Anular venta Pendiente de pago | Comprometido − (vuelve a la orden si venía de una) | Lo cobrado, por devolver |
 | Anular venta Pagada (en plazo) | **Ingreso** «Devoluciones de Clientes»: Actual + | Lo cobrado, por devolver |
-| Aceptar devolución o cambio (§13) | **Ingreso** GI-09 (mal estado → liquidación); lo que se lleva: venta nueva que compromete y sale al quedar pagada | Crédito → **saldo a favor** (o por devolver en caja, CD8); la venta nueva se paga con saldo; la diferencia, Por validar en caja |
+| Aceptar devolución o cambio (§14) | **Ingreso** GI-09 (mal estado → liquidación); lo que se lleva: venta nueva que compromete y sale al quedar pagada | Crédito → **saldo a favor** (o por devolver en caja, CD8); la venta nueva se paga con saldo; la diferencia, Por validar en caja |
 | Devolver dinero | — | Movimiento tipo Devolución |
 
 | Paso entre documentos | Regla (`js/core/ventas.js`) |
@@ -142,13 +142,13 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | F1 editar ventas guardadas | ⛔ No: se corrige anulando o devolviendo (como el backend) |
 | F2 agregar pagos | ✅ «Cobrar» en la venta y en caja |
 | F3 revalidar stock | ✅ Al crear la orden, al registrar la venta directa y al completar el cobro |
-| F12 obsequio con motivo | ✅ |
+| F12 obsequio con motivo | ~~✅~~ Retirado el 2026-09-18: ya no hay obsequio (§13) |
 | F13 entrega | ✅ En la orden de venta |
 | C1 nombres confusos | ✅ Un solo estado de cobro: «Cobrado» |
 | C2, C5, C6 validación de pagos | No aplica: registrar el cobro ya es cobrado (K8) |
 | C4 devolución ≠ egreso | ✅ Movimiento tipo Devolución |
 | C7 moneda de la devolución | ✅ En la caja de la misma moneda |
-| R1 cambio | ✅ Una devolución con «Se lleva»: al aceptarla se registra la venta nueva pagada con el saldo a favor (§13) |
+| R1 cambio | ✅ Una devolución con «Se lleva»: al aceptarla se registra la venta nueva pagada con el saldo a favor (§14) |
 | R2 máximo con varias devoluciones | ✅ |
 | D3 / R4 anular devolución | No: la devolución tiene efecto al registrarse |
 | Q1 validez de cotización | ✅ Marca de vencida, no se copia |
@@ -175,7 +175,7 @@ Escenario (versión anterior a la base compartida; la historia vigente está en 
 - **Ayer, Tienda Gamarra 1.** Cuatro ventas directas cobradas en efectivo, POS y transferencia, un egreso y un cierre con S/ 2.00 de faltante.
 - **Hoy, Tienda Gamarra 1:**
   - Una venta pagada y anulada, con el dinero devuelto.
-  - Cambios y devoluciones con saldo a favor (§13.1).
+  - Cambios y devoluciones con saldo a favor (§14.1).
   - Una factura de servicios **Pendiente de pago**.
   - Una venta con Yape a cuenta que sigue **Pendiente de pago**, con el stock comprometido.
   - Una **orden de venta** en la que un mayorista separa 4 casacas.
@@ -281,7 +281,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
   - Se abren las cajas.
   - Venta anulada (libera lo comprometido).
   - Pago parcial validado de la mayorista (sigue comprometida).
-  - Cambios y devoluciones con el flujo de §13: cambio sin diferencia, cambio con diferencia en Yape, cambio del mayorista que deja S/ 88.00 a favor, devolución a saldo a favor y uso de ese saldo en una compra mayor (casos de §13.1).
+  - Cambios y devoluciones con el flujo de §14: cambio sin diferencia, cambio con diferencia en Yape, cambio del mayorista que deja S/ 88.00 a favor, devolución a saldo a favor y uso de ese saldo en una compra mayor (casos de §14.1).
   - Factura de servicios.
   - Devolución pendiente en mal estado.
   - Venta mixta con Yape por validar (comprometida).
@@ -297,7 +297,102 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 
 ---
 
-## 13. Cambios y devoluciones con saldo a favor (2026-09-18)
+## 12. Listas de precios y ofertas (2026-09-18)
+
+> Pedido del usuario: «trabajar por sedes, opcionalmente por segmento de cliente, por moneda, grupo de artículo y unidad, **creando una lista y agregando artículos**; las ofertas, igual, agregando la validez y un % de descuento o un precio; en una sola vista, más fácil». Referencia: precios múltiples por artículo de `multiservicios-erp-small` (`edit-product` → wallets y `getWalletPrice`), que se cargan artículo por artículo; aquí se cargan **por lista**.
+> Reemplaza a K13. Una versión «como SAP B1» (lista base × factor, redondeos, lista en la ficha del cliente, descuentos por periodo y cantidad en pantallas aparte) se hizo en la rama `feat/comercial-cambios-promociones`, se **descartó** por compleja y la rama se eliminó (2026-09-18).
+
+| # | Decisión | Detalle |
+|---|---|---|
+| LP1 | **La lista se crea y se le agregan artículos** | Cabecera: nombre, **moneda**, **sede** (del maestro compartido: Gamarra, Galería «Ya», Damero…; vacío = todas), **segmento de cliente** (el tipo de cliente; vacío = todos) y **Activa**. Filas: artículo + **unidad** con **precio fijo** o **% de descuento** (uno u otro), o un **grupo de artículos** entero con %. «Agregar artículos» por grupo o búsqueda, varios a la vez, con un precio o % para todos (opcional). Un precio en la unidad de inventario sirve para las mayores (× conversión); un % puede valer para «Todas» las unidades. |
+| LP2 | **El documento no elige lista** | La cotización y la venta toman el precio según la **sede** de su tienda (TDA-01 → YA), el **segmento** del cliente y su **moneda**: sede y segmento → sede → segmento → general → precio sugerido de GI-02 (solo PEN). El % de una lista se aplica sobre la siguiente menos específica. Sin precio en la moneda, el cambio de moneda se revierte (no se convierte). |
+| LP3 | **Oferta = lista con fechas** | Mismo formulario con **Desde** (obligatoria) y **Hasta** (vacío = sin fin): Programada · Vigente · Vencida. Su % se aplica sobre el **precio base** del cliente. ~~Mientras está vigente manda sobre las listas~~ → desde el 2026-09-18 se aplica solo si **mejora** el precio (LP10). |
+| LP4 | **La oferta no se suma al descuento manual** | La línea con oferta no admite descuento manual (no se revisa el rango del descuento). Un precio escrito a mano quita la oferta. ~~No revisa el precio mínimo~~ → **el precio mínimo se aplica siempre** (LP8). |
+| LP5 | **El precio queda en la base compartida** | Las listas viven en `BD.d.listasPrecio` (base compartida, se guardan al editar). Cada línea de cotización y venta guarda `precio`, `origen` (de dónde sale: «Mayorista», «Oferta Primavera −20 %», «Precio sugerido del artículo», «Precio modificado a mano»), `lista` y, si hubo oferta, `oferta {cod, nom, pct, forzado}` y `precioLista`; además `calculo` con la **evidencia**: precio base y su lista, ofertas encontradas con su precio, la ganadora, el mínimo y si se ajustó. Cambiar o cancelar una lista no toca lo ya cotizado o vendido; la venta desde cotización respeta el precio cotizado. |
+| LP6 | **Una lista u oferta no se borra: se cancela** *(2026-09-18)* | «Cancelar lista / oferta» pide **motivo** y guarda **quién** la canceló y **cuándo** (`cancelada {u, f, motivo}`). Queda en el listado con estado **Cancelada**, deja de aplicarse y ya no se modifica. Para dejar de usarla un tiempo se desmarca «Activa». Toda la vida de la lista queda en su **historial** (creada, datos modificados con valor anterior → nuevo, artículos o grupos agregados, precio o % cambiado, artículo retirado con el valor que tenía, cancelada), con usuario y fecha. |
+| LP7 | **Todo artículo lleva precio fijo o % de descuento** *(2026-09-18)* | No se agrega un artículo sin precio ni %, ni se puede dejar una fila en 0: la lista **no se guarda** con precio 0 y descuento 0. Al agregar varios artículos el precio o % es obligatorio (uno de los dos) y vale para todos; después se cambia artículo por artículo. Un grupo entra siempre con %. |
+| LP8 | **Piso: el precio mínimo del artículo, siempre** *(2026-09-18)* | Ninguna lista, oferta ni descuento deja el precio debajo del **precio mínimo** del artículo (S/ por unidad de inventario × conversión de la unidad; en US$ con el tipo de cambio), tenga o no marcado «Verificar el precio mínimo». Al guardar, un **precio fijo** debajo del mínimo se rechaza; un **%** que al calcular queda debajo **se ajusta al mínimo** («… · ajustado al precio mínimo»). Si el mínimo es **0**, el piso es **mayor que cero**: ningún precio de lista u oferta puede ser 0 o negativo (el precio fijo debe ser > 0, el % < 100, y una oferta que daría 0.00 no cuenta). El obsequio de la línea sigue aparte (motivo, K13). |
+| LP9 | **Sin ambigüedad entre listas** *(2026-09-18)* | Dos listas de precios (sin fechas) **activas** del **mismo nivel** (misma moneda, sede y segmento) no pueden tener el mismo artículo, el mismo grupo, ni un artículo y el grupo al que pertenece: se rechaza con «Conflicto de precios: … ya tiene precio en «…»». Se revisa al agregar artículos o grupos y al cambiar la moneda, sede, segmento o «Activa» de una lista. Así nunca decide el orden de creación. Las ofertas pueden cruzarse: las resuelve LP10. |
+| LP10 | **Mejor precio entre base y ofertas; «Precio obligatorio»** *(2026-09-18)* | Se reúnen **todas** las ofertas vigentes que aplican (la especificidad solo decide si aplican, no quién gana) y gana el **menor precio** entre el precio base y esas ofertas: una oferta **no empeora** el precio. Una oferta con el check **«Precio obligatorio»** se aplica aunque sea más cara (liquidación, precio único); si hay varias obligatorias, la de menor precio. El piso LP8 vale también para ella. |
+| LP11 | **El precio de las listas es REFERENCIAL** *(2026-09-18)* | El motor **propone** el precio; en la cotización y en la venta directa el vendedor **puede cambiarlo** en la línea, más alto o más bajo. La línea queda «Precio modificado a mano» y guarda la **referencia** `precioRef {precio, origen, lista, oferta}` (lo que proponía el motor) junto al cálculo, como evidencia de cuánto se apartó. El precio a mano lo controlan el **precio mínimo, siempre** (LP12) y el rango del descuento manual. Cambiar la moneda **no pisa** el precio a mano: se convierte con el tipo de cambio. La venta desde una cotización respeta el precio cotizado (sus líneas no se editan): **confirmado por el usuario** — lo normal es que al convertir una cotización no se edite el precio. |
+| LP12 | **Nunca se vende debajo del precio mínimo** *(2026-09-18)* | En Comercial el precio mínimo del artículo se exige **siempre**, sin depender de «Verificar el precio mínimo» (Configuración General de Inventarios o del artículo): ni lista, ni oferta (LP8), ni precio a mano, ni descuento manual dejan el **neto** debajo del mínimo. Sin mínimo (0), el neto debe ser mayor que cero, sin excepciones (el obsequio se retiró, §13). En CL-43/CL-44 el mínimo se muestra como «se exige siempre». |
+
+**Datos de ejemplo (a confirmar):** LP-01 Precios generales S/ · LP-02 Precios generales US$ · LP-03 Mayorista (UND y docena) · LP-04 Exportación (US$) · LP-05 Galería Damero (sede DAM) · LP-06 Mayorista Galería Ya (sede YA + MAYORISTA) · ofertas LP-07 Día del Padre (grupo PT −10 %, vencida), LP-08 Primavera (PT-0003 −20 % solo MINORISTA, setiembre), LP-09 Navidad (grupo PT −15 % y PT-0001 a 99.90, programada). Las ventas de la historia de julio no cambian de precio.
+
+| Qué | Dónde |
+|---|---|
+| Cálculo | `js/core/precios.js` (`Precios.resolver` en fases, `minimo`, `candidatos`, `filaDe`, `estado`) |
+| Mantenimiento | `js/core/config.js` (`Listas.guardar`, `agregarArts`, `agregarGrupo`, `fila`, `quitarFila`, `cancelar`, `conflicto`, `_piso`) |
+| Documento | `js/core/ventas.js` (`Doc.precio`, `Doc.cambiar`, `Doc.revisarLinea`) |
+| Pantalla | `js/modules/listas.js` (CL-40; modales CL-41 datos, CL-42 cancelar, CL-49 agregar artículos, CL-50 detalle, CL-51 agregar grupo) |
+| Pruebas sin navegador | `node COMERCIAL/pruebas/probar-comercial.js` (`casos-precios.js`) |
+
+> 2026-09-18 (pedido del usuario): el detalle de la lista se ve en un **modal** (CL-50), no debajo del listado; y la lista es por **sede** (maestro compartido `BD.d.maestros.sedes`), no por tienda. Una base guardada con una tienda en la lista pasa sola a la sede de esa tienda.
+
+### 12.1 Motor de precios · especificación (2026-09-18)
+
+Acordado con el usuario tras revisar una propuesta externa de «motor en fases» inspirada en SAP B1 (precios especiales → grupos de descuento → periodo y cantidad → lista del cliente; políticas menor, mayor, promedio, suma, multiplicación). **Se adopta** la separación en fases, la regla «una oferta no empeora el precio salvo precio obligatorio», el rechazo de ambigüedades y guardar la explicación en la línea. **No se adopta** (por simplicidad, pedido del usuario): lista asignada a cada cliente (el precio sigue por sede + segmento, LP2), prioridades numéricas y políticas EXCLUSIVO / ACUMULABLE / RECARGO / MAYOR_DESCUENTO (con todas las ofertas sobre el mismo precio base, mejor precio y mayor descuento dan lo mismo; un recargo es otra lista). Si luego hace falta un precio pactado con un cliente, entra como nivel «Precio especial del cliente» por encima de todo.
+
+**Entrada:** artículo, unidad, sede (la de la tienda del documento), segmento (tipo de cliente; sin cliente = ninguno), moneda, fecha (hoy).
+
+```
+1. PRECIO BASE   listas activas, no canceladas, sin fechas, de la moneda, que valen para la sede y el segmento
+                 → la más específica: sede+segmento → sede → segmento → general (LP9: una sola por nivel)
+                 · fila precio fijo: ese precio · fila %: sobre el precio del nivel siguiente
+                 → si ninguna tiene el artículo: precio sugerido de GI-02 × conversión (solo S/)
+2. OFERTAS       todas las ofertas vigentes (Desde ≤ hoy ≤ Hasta) que aplican; cada una con su precio
+                 (fijo, o % sobre el precio base)
+3. RESOLUCIÓN    si hay oferta con «Precio obligatorio» → la de menor precio entre ellas
+                 si no → el menor entre el precio base y las ofertas (la oferta gana solo si es MENOR)
+4. PISO          si el resultado < precio mínimo × conversión → se ajusta al mínimo
+                 con mínimo 0: debe ser > 0; si no hay precio > 0 → «sin precio»
+5. EVIDENCIA     la línea guarda precio, origen, lista, oferta, precioLista y calculo {base, ofertas, gana, minimo, ajusteMin, fecha}
+```
+
+**Fila que se usa dentro de una lista** (en este orden): el artículo en esa unidad → el artículo en su unidad de inventario × conversión → el artículo con % en «Todas» las unidades → el grupo del artículo con %.
+
+| # | Caso | Resultado |
+|---|---|---|
+| C1 | Ninguna lista ni oferta tiene el artículo, en S/ | Precio sugerido de GI-02 × conversión |
+| C2 | Igual, en US$ | **Sin precio**: la línea no se registra; al cambiar la moneda del documento, el cambio se revierte |
+| C3 | Lista de la sede y lista del segmento tienen el artículo | Gana la de la sede (más específica) |
+| C4 | Fila con % en una lista | Se aplica sobre el precio del nivel siguiente (o el sugerido) |
+| C5 | Venta en docena y la lista solo tiene la unidad | Precio de la unidad × 12 |
+| C6 | Oferta con precio **mayor** que el base (Navidad 99.90 vs mayorista 89) | Se queda el base 89; la oferta figura en la evidencia como «no mejora el precio» |
+| C7 | Oferta con precio menor | Gana la oferta |
+| C8 | Varias ofertas (sede −5 % y general −20 %) | Gana la de menor precio (−20 %) |
+| C9 | Oferta con «Precio obligatorio» más cara que el base | Se aplica la oferta |
+| C10 | Resultado debajo del mínimo (mayorista 89 − 15 % = 75.65, mínimo 79) | Se ajusta a 79 · «ajustado al precio mínimo» |
+| C11 | Mínimo 0 y una oferta daría 0.00 | La oferta no cuenta; queda el precio base |
+| C12 | Guardar precio fijo debajo del mínimo | Se rechaza al guardar |
+| C13 | Segunda lista del mismo nivel con el mismo artículo o grupo | Se rechaza al guardar (conflicto) |
+| C14 | Lista inactiva, cancelada; oferta programada o vencida | No participa |
+| C15 | Precio escrito a mano (el precio es **referencial**, LP11) | «Precio modificado a mano»; guarda la referencia del motor; ya no se recalcula (tampoco al cambiar la moneda: se convierte); pierde la oferta; nunca debajo del mínimo (LP12) y dentro del rango de descuento |
+| C16 | Descuento manual en una línea con oferta | No se permite |
+| C17 | Cambio de cliente o unidad | Se recalcula (salvo lo escrito a mano) · cambio de cantidad: no |
+| C18 | Venta desde cotización | Respeta el precio cotizado aunque la oferta ya venció |
+| C19 | ~~Obsequio~~ | Retirado el 2026-09-18 (§13): una línea nunca queda en precio 0 |
+
+### 12.2 Para el desarrollo (listas de precios y ofertas)
+
+- **No hay DELETE** de listas ni ofertas: se **cancelan** con motivo. Guardar en la cabecera `cancelada_por` (usuario), `cancelada_en` (fecha y hora del servidor) y `motivo_cancelacion`; una lista cancelada no se edita ni se reactiva, y el resolvedor de precios la ignora.
+- **Auditoría de cada cambio** (tabla `lista_precio_historial`): lista, acción (creada, datos modificados, artículo agregado / modificado / retirado, grupo agregado, cancelada), detalle con valor anterior → nuevo, usuario y fecha. El retiro de un artículo o grupo no borra evidencia: queda en el historial con el precio o % que tenía (o se implementa como baja lógica de la fila).
+- **Validación en el back**, no solo en la pantalla: cada fila con `precio > 0` **o** `pct_descuento` entre 0 y 100 (exclusivos), nunca los dos ni ninguno; grupo solo con %. Rechazar con 400 cualquier fila con precio 0 y descuento 0.
+- Permiso `editar_precios` para crear, modificar y cancelar; el usuario sale del token, no del cuerpo de la petición.
+- El **motor de precios** vive en el back (un solo servicio `resolverPrecio`), con las fases de §12.1; la pantalla solo lo consulta. Validar en el back LP8 (piso al guardar un precio fijo) y LP9 (conflictos).
+- El precio que devuelve el motor es **referencial** (LP11): la API de venta acepta el precio que envía el vendedor; guarda el de referencia (`reference_price`, `reference_source`) y valida el precio mínimo **siempre** (neto por unidad de inventario, en soles; LP12) y el rango de descuento.
+- Guardar en la línea del documento la **evidencia** del cálculo (`calculo`: base, ofertas encontradas con su precio, ganadora, mínimo y ajuste), no solo el precio final.
+
+## 13. Sin obsequio (2026-09-18)
+
+| # | Decisión | Detalle |
+|---|---|---|
+| OB1 | **Se quita el obsequio** de la cotización y de la venta | Ya no existe la casilla «Obsequio» en la línea ni el campo `obsequio`. Toda línea lleva precio y pasa por las reglas de precio: precio en la moneda, rango del descuento manual y **precio mínimo siempre (LP12), sin excepciones**. La observación vuelve a ser opcional. El comprobante impreso y los CSV de detalle ya no tienen la columna Obsequio. |
+| OB2 | Por qué | El obsequio saltaba el precio mínimo sin permiso ni tope (bastaba escribir algo en la observación), una venta al contado de solo obsequios no se podía registrar, y ante SUNAT sería una **operación gratuita** con su propio tratamiento de IGV. Si el negocio vuelve a necesitar regalos, se diseñará aparte (permiso, motivo por línea, operación gratuita). |
+
+---
+
+## 14. Cambios y devoluciones con saldo a favor (2026-09-18)
 
 > Caso: una venta ya pagada y con salida de stock necesita un cambio de prenda (talla, color o modelo). El negocio dijo **«solo cambios, no devoluciones de dinero»**.
 > Referencia SAP B1: el comprobante no se edita, se corrige con una **nota de crédito**; los cobros originales no se tocan; la nota deja un **saldo a favor** que se aplica a la factura nueva; no existe un documento «Cambio» (es nota de crédito + venta nueva); la baja del comprobante solo aplica a un error del mismo día.
@@ -316,7 +411,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 | CD8 | **Parámetro «Dinero de una devolución»** (CL-45, `cfg.dineroDev`) | **Saldo a favor** (por defecto, «solo cambios») o **Se devuelve en caja** (comportamiento anterior, para otros negocios). Aplica a la devolución sin «Se lleva» y a lo que **sobra** en un cambio; lo que paga la prenda nueva siempre sale del crédito. |
 | CD9 | **Sustento y permisos** | Documento de sustento: **Nota de crédito** (boleta o factura) o **Nota de devolución interna** (nota de venta), propuesto según el comprobante; **su N° se escribe a mano** porque se emite en el sistema de facturación. `editar_devolucion_venta` («Aceptar cambios y devoluciones») también para **Vendedor**, agregado a las bases guardadas con `Store.PERMISOS_NUEVOS`. Anular sigue siendo solo de una Pendiente, con motivo, quién y cuándo. |
 
-### 13.1 Cómo se refleja cada caso (demo «Con operación», 31/07/2026, Tienda #1)
+### 14.1 Cómo se refleja cada caso (demo «Con operación», 31/07/2026, Tienda #1)
 
 | Caso | Documento | Stock | Dinero y caja | Dónde se ve |
 |---|---|---|---|---|
@@ -327,7 +422,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 | 5 · Uso del saldo en una compra mayor (Andrea vuelve: S/ 244.80) | VEN-2026-000011 | Salen PT-0001 y PT-0003 al validar el efectivo | Saldo a favor S/ 119.90 + efectivo S/ 124.90 (validado en caja) | CL-09 › Pagos · CL-35 (Uso) |
 | 6 · Devolución en mal estado Pendiente (factura del mayorista) | DEV-2026-000003 | Aún nada; al aceptar entra y pasa a SB-LIQUID | Al aceptar: a saldo a favor | CL-13 «Pendientes de aceptar» |
 
-### 13.2 Dónde está
+### 14.2 Dónde está
 
 | Qué | Dónde |
 |---|---|
@@ -336,7 +431,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 | Pantallas | `js/modules/devoluciones.js` (CL-13, CL-14, CL-15, CL-16, CL-17) · `ventas.js` (CL-07, CL-09) · `documento.js` (CL-10) · `clientes.js` (CL-35) · `configuracion.js` (CL-45) |
 | Demo y pruebas | `js/data/demo.js` (casos 1–6) · `node COMERCIAL/pruebas/probar-comercial.js` (`casos-cambios.js`: diferencia a favor, en contra, devolución sin «Se lleva», uso del saldo, anulación con saldo, parámetro «caja», todo o nada, mal estado, base guardada antes) |
 
-### 13.3 Para el desarrollo
+### 14.3 Para el desarrollo
 
 - **No hay DELETE**: la devolución Pendiente se **anula** con motivo, quién y cuándo; una aceptada no se anula (ya movió stock y dinero). Los movimientos de saldo a favor no se borran ni se editan: un error se corrige con otro movimiento.
 - **Aceptar es una transacción** en el back: ingreso de stock, traslado a liquidación, abono y uso del saldo, venta nueva y pago de la diferencia, todo o nada (idempotente por `devolucion_id`).

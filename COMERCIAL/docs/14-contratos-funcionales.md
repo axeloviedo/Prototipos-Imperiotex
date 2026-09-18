@@ -38,10 +38,13 @@
 
 | Operación | Ruta sugerida | Permiso | Reglas | Errores |
 |---|---|---|---|---|
-| Listar filas de un artículo | `GET /price-lists?article=` | ver_venta | — | — |
-| Crear / editar fila | `POST /price-lists` · `PUT /price-lists/{id}` | editar_precios | UM de venta del artículo; precio > 0; única (artículo, UM, sede, tipoCliente, moneda) | 400, 409 DUPLICATE |
-| Quitar fila | `DELETE /price-lists/{id}` | editar_precios | Los documentos creados no cambian | 404 |
-| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Cascada sede+tipo → sede → tipo → general → sugerido (solo PEN). Devuelve `{price, source}` | 404 NO-PRICE |
+| Listar listas y ofertas | `GET /price-lists?type=&currency=` | ver_venta | — | — |
+| Crear / editar lista u oferta | `POST /price-lists` · `PUT /price-lists/{code}` | editar_precios | Nombre único; moneda; sede y segmento opcionales; oferta con fecha desde ≤ hasta | 400, 409 DUPLICATE |
+| Agregar artículos o grupo | `POST /price-lists/{code}/rows` | editar_precios | Obligatorio precio > 0 **o** % entre 0 y 100 (nunca 0 y 0, ni los dos); grupo solo con %; única (artículo, UM) o (grupo); lista no cancelada | 400, 409 DUPLICATE, 409 CANCELLED |
+| Cambiar / retirar fila | `PUT` · `DELETE /price-lists/{code}/rows/{id}` | editar_precios | Sin dejar la fila en 0; el retiro queda en el historial con usuario y valor anterior; los documentos creados no cambian | 400, 404, 409 CANCELLED |
+| **Cancelar** lista u oferta (no se borra) | `POST /price-lists/{code}/cancel` `{reason}` | editar_precios | Motivo obligatorio; guarda usuario (del token) y fecha; deja de aplicarse; no se reactiva | 400, 404, 409 CANCELLED |
+| Historial | `GET /price-lists/{code}/history` | ver_venta | Acción, detalle, usuario, fecha | 404 |
+| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Motor en fases (§12.1 del diseño): base → ofertas → mejor precio (salvo precio obligatorio) → piso del precio mínimo; `&date=` opcional. Devuelve `{price, source, list, offer, listPrice, trace: {base, offers[], winner, minimum, adjustedToMinimum}}` | 404 NO-PRICE |
 | Datos de venta del artículo | `PUT /sale-articles/{code}` | editar_precios | precioMínimo ≤ sugerido; dctoMín ≤ dctoMáx ≤ 100 | 400, 422 |
 | Disponibilidad | `GET /stock/availability?article=&warehouse=&quantity=` | ver_existencias | `{onHand, committed, available, control}` desde logística | 503 |
 
@@ -51,7 +54,7 @@
 |---|---|---|---|---|---|
 | Listar | `GET /quotes?q=&status=&site=&createdFrom=&createdTo=` | ver_cotizacion | filtros | `expired` calculado | — |
 | Ver | `GET /quotes/{id}` | ver_cotizacion | — | Con historial y relaciones | 404 |
-| Crear | `POST /quotes` | crear_cotizacion | customerCode, currency, validUntil, sellerCode, notes, lines[{article, unit, warehouse, quantity, price, unitDiscount, gift, description}] | Estado **Abierta**. Cliente activo; ≥ 1 línea; descuento en rango; precio mínimo; obsequio exige notas. La falta de stock va en `warnings[]` | 400, 404 CUSTOMER, 422 PRICE-BELOW-MIN / DISCOUNT-RANGE |
+| Crear | `POST /quotes` | crear_cotizacion | customerCode, currency, validUntil, sellerCode, notes, lines[{article, unit, warehouse, quantity, price, unitDiscount, description}] | Estado **Abierta**. Cliente activo; ≥ 1 línea; descuento en rango; precio mínimo. La falta de stock va en `warnings[]` | 400, 404 CUSTOMER, 422 PRICE-BELOW-MIN / DISCOUNT-RANGE |
 | Editar cabecera | `PATCH /quotes/{id}` | editar_cotizacion | customer, currency, validUntil, seller, notes | Solo Abierta. Cambiar moneda o cliente vuelve a resolver precios; si falta uno no cambia | 409 NOT-EDITABLE, 422 NO-PRICE |
 | Líneas | `POST /quotes/{id}/lines` · `PUT …/lines/{n}` · `DELETE …/lines/{n}` | editar_cotizacion | línea | Una a una; no se quita la última | 409 LAST-LINE, 422 |
 | Clonar | `POST /quotes/{id}/clone` | crear_cotizacion | — | Nueva Abierta con validez desde hoy | 404 |

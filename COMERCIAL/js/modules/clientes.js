@@ -49,7 +49,7 @@ const CM07F = {
     return '<div class="formgrid c3">' +
       UI.campo('Tipo de documento', sel('tdoc', M.TIPOS_DOC.map(t => ({ v: t.cod, t: t.nom })), c.tipoDoc), { req: ed }) +
       UI.campo('N° de documento', inp('doc', c.doc, 'DNI 8 dígitos · RUC 11'), { req: ed, hint: ed ? 'Único por empresa' : '' }) +
-      UI.campo('Tipo de cliente', sel('tipo', M.TIPOS_CLIENTE.map(t => ({ v: t, t })), c.tipo), { req: ed, hint: ed ? 'Define el nivel de la lista de precios' : '' }) +
+      UI.campo('Tipo de cliente', sel('tipo', M.TIPOS_CLIENTE.map(t => ({ v: t, t })), c.tipo), { req: ed, hint: ed ? 'Es el segmento de cliente de las listas de precios y ofertas' : '' }) +
       UI.campo('Nombre o razón social', inp('nom', c.nom), { req: ed, estilo: 'grid-column:span 2' }) +
       UI.campo('Condición de pago habitual', sel('cond', M.CONDICIONES.map(x => ({ v: x.cod, t: x.nom })), c.cond)) +
       UI.campo('Teléfono', inp('tel', c.tel)) + UI.campo('Email', inp('email', c.email)) +

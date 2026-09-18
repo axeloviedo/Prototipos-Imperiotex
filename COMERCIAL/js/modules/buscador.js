@@ -13,7 +13,7 @@ const BUS = {
         UI.campo('Código, nombre o atributo', '<input id="bus-q" placeholder="Ej. ZULEIKA 28, NEGRO, bordado…" oninput="BUS.pintarArt()" style="min-width:280px">') +
         UI.campo('Grupo de Artículo', '<select id="bus-g" onchange="BUS.pintarArt()">' + UI.opts(grupos, '', 'Todos') + '</select>') + '</div>' +
         '<div id="bus-body"></div>' +
-        '<p class="hint">Precio según la lista de precios para ' + (cli ? 'un cliente <b>' + cli.tipo + '</b>' : 'un cliente sin tipo (elija el cliente primero)') + ' en <b>' + UI.esc(sede.nom) + '</b>, en ' + d.mon + '. Disponible = Actual − Comprometido (T1) en el almacén de la tienda; lo comprometido incluye las ventas pendientes de pago.</p>',
+        '<p class="hint">Precio según las listas de precios y ofertas para ' + (cli ? 'un cliente <b>' + cli.tipo + '</b>' : 'un cliente sin tipo (elija el cliente primero)') + ' en <b>' + UI.esc(sede.nom) + '</b>, en ' + d.mon + '. Disponible = Actual − Comprometido (T1) en el almacén de la tienda; lo comprometido incluye las ventas pendientes de pago.</p>',
       pie: '<button class="btn btn-primary" onclick="UI.cerrar()">Listo</button>'
     });
     BUS.pintarArt();

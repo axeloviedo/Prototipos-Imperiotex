@@ -79,8 +79,8 @@ const CM02 = {
       return;
     }
     const filas = [];
-    l.forEach(v => v.lineas.forEach((x, i) => filas.push([v.id, v.compNum, v.fecha, v.cliente.nom, i + 1, x.art, x.nom, x.desc, x.um, x.alm, x.cant, x.comp || 0, x.precio, x.dcto, x.obsequio ? 'Sí' : '', x.subtotal, x.impuesto, x.total, v.mon, v.estado])));
-    UI.csv('ventas-detalle', ['Venta', 'Comprobante', 'Fecha de creación', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Almacén', 'Cantidad', 'Comprometido (UM inventario)', 'Precio', 'Dcto. unit.', 'Obsequio', 'Base', 'IGV', 'Total', 'Moneda', 'Estado'], filas);
+    l.forEach(v => v.lineas.forEach((x, i) => filas.push([v.id, v.compNum, v.fecha, v.cliente.nom, i + 1, x.art, x.nom, x.desc, x.um, x.alm, x.cant, x.comp || 0, x.precio, x.dcto, x.subtotal, x.impuesto, x.total, v.mon, v.estado])));
+    UI.csv('ventas-detalle', ['Venta', 'Comprobante', 'Fecha de creación', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Almacén', 'Cantidad', 'Comprometido (UM inventario)', 'Precio', 'Dcto. unit.', 'Base', 'IGV', 'Total', 'Moneda', 'Estado'], filas);
   }
 };
 App.pantalla('cm02', { titulo: 'Ventas', permiso: 'ver_venta', render: CM02.render, despues: CM02.pintar });
@@ -117,7 +117,7 @@ const CM02F = {
       UI.campo('Condición de pago', sel('cab', 'cond', M.CONDICIONES.map(x => ({ v: x.cod, t: x.nom })), d.cond), { req: true, hint: cond && cond.dias ? 'Vence el ' + UI.sumarDias(d.fecha + ' 00:00', cond.dias).slice(0, 10) : 'Se paga completo al registrar' }) +
       UI.campo('Moneda', sel('cab', 'mon', M.MONEDAS.map(m => ({ v: m.cod, t: m.cod + ' · ' + m.nom })), d.mon), { req: true, hint: 'Si falta precio en esa moneda, el cambio se revierte' }) +
       (Store.puede('asignar_vendedor') ? UI.campo('Vendedor', sel('cab', 'asesor', DOCUI.vendedores(), d.asesor)) : UI.dato('Vendedor', UI.esc(DOCUI.vendedor(d.asesor)))) +
-      UI.campo('Observación', inp('cab', 'obs', d.obs), { estilo: 'grid-column:span 2', hint: 'Obligatoria si hay obsequios' }) + '</div></div>';
+      UI.campo('Observación', inp('cab', 'obs', d.obs), { estilo: 'grid-column:span 2' }) + '</div></div>';
 
     html += DOCUI.cardCliente('CM02F', d, !bloq);
     html += '<div class="card"><div class="sec">Detalle' + (!bloq ? '<div class="spacer"></div><button class="btn btn-secondary btn-sm" onclick="BUS.articulo(CM02F.d, cod => CM02F.agregar(cod))">+ Agregar artículos</button>' : '') + '</div>' +

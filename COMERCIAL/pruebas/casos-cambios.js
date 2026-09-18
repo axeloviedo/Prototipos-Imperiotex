@@ -1,4 +1,4 @@
-/* Cambios y devoluciones con saldo a favor (2026-09-18, decisiones CD1–CD9 de docs/12-prototipo-diseno.md §13).
+/* Cambios y devoluciones con saldo a favor (2026-09-18, decisiones CD1–CD9 de docs/12-prototipo-diseno.md §14).
    Corre después de Demo.historia(): la caja de Tienda #1 en soles queda abierta. Cada prueba crea sus propias ventas. */
 const T = (f, u) => { BD.reloj = f; UI.reloj = f; Store.fijarUsuario(u || 'USER12', false); };
 const fin = () => { BD.reloj = null; UI.reloj = null; Store.fijarUsuario('USER12', false); Store.cfg().dineroDev = 'SALDO'; };

@@ -55,15 +55,18 @@
 | CL-37 | Modal | Nuevo cliente (alta rápida desde un documento) | `CLIQ.abrir` | `js/modules/clientes.js` |
 | CL-38 | Modal | Buscar cliente | `BUS.cliente` | `js/modules/buscador.js` |
 | CL-39 | Modal | Agregar artículos o servicios | `BUS.articulo` | `js/modules/buscador.js` |
-| CL-40 | Pantalla | Listas de precios (cascada y simulador) | `cm08` | `js/modules/listas.js` |
-| CL-41 | Modal | Nuevo o editar precio | `CM08.fila` | `js/modules/listas.js` |
-| CL-42 | Modal | Quitar precio | `CM08.quitar` | `js/modules/listas.js` |
+| CL-40 | Pantalla | Listas de precios y ofertas (listado y Probar precio; el detalle se abre en CL-50) | `cm08` | `js/modules/listas.js` |
+| CL-41 | Modal | Nueva lista, nueva oferta o editar sus datos | `CM08.editar` | `js/modules/listas.js` |
+| CL-42 | Modal | Cancelar lista u oferta (con motivo; queda quién y cuándo; no se borra) | `CM08.cancelar` | `js/modules/listas.js` |
 | CL-43 | Pantalla | Artículos de venta | `cm09` | `js/modules/listas.js` |
 | CL-44 | Modal | Datos de venta del artículo | `CM09.editar` | `js/modules/listas.js` |
 | CL-45 | Pantalla | Configuración comercial (parámetros —incluido «Dinero de una devolución»—, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
 | CL-46 | Modal | Reiniciar todo el prototipo (llama a `BD.reiniciar()` con el escenario actual y recarga; el selector «Datos» de la barra superior es `BDSelector` del núcleo, sin código CL) | `Store.reiniciar` | `js/core/store.js` |
 | CL-47 | Pantalla | Recepción de mercadería (Solicitudes de Transferencia que llegan a su sede: Por recibir / Recibidas) | `cm14` | `js/modules/recepciones.js` |
 | CL-48 | Modal | Recibir mercadería (cantidades que llegaron, total o incompleta; llama a `Docs.trf.recibir`, igual que GI-11) | `CM14.recibir` | `js/modules/recepciones.js` |
+| CL-49 | Modal | Agregar artículos (varios a la vez) o un grupo completo a una lista u oferta | `CM08.agregar` | `js/modules/listas.js` |
+| CL-50 | Modal | Detalle de la lista u oferta: datos, artículos o grupos con precio fijo o %, agregar, retirar, cancelar e historial | `CM08.ver` | `js/modules/listas.js` |
+| CL-51 | Modal | Agregar un grupo de artículos completo con % de descuento | `CM08.agregarGrupo` | `js/modules/listas.js` |
 
 ## Equivalencia con los códigos anteriores
 
@@ -76,15 +79,15 @@
 | CM-05 Historial de cajas | CL-28 |
 | CM-06 Existencias y movimientos | CL-32 |
 | CM-07 Clientes | CL-34 (listado) y CL-35 (ficha) |
-| CM-08 Listas de precios | CL-40 |
+| CM-08 Listas de precios y ofertas | CL-40 |
 | CM-09 Artículos de venta | CL-43 |
 | CM-10 Configuración | CL-45 |
 | CM-11 Solicitudes de Pedido | CL-30 Solicitudes de Fabricación |
 | CM-12 Solicitudes de Materiales | CL-31 |
 | CM-13 Órdenes de venta | Sin código: `js/modules/ordenes.js` es de otra versión y `index.html` no lo carga |
 
-> 2026-09-18 · Cambios y devoluciones con saldo a favor (`12-prototipo-diseno.md` §13): **no se crean códigos nuevos**. CL-13 a CL-16 cambian de contenido (CL-16 pasa de «Finalizar» a «Aceptar») y CL-35 suma la pestaña Saldo a favor. Los códigos CL-49 a CL-51 los usa la rama de listas de precios; si se necesita uno nuevo aquí, se toma desde CL-52.
+> 2026-09-18 · Cambios y devoluciones con saldo a favor (`12-prototipo-diseno.md` §14): **no se crean códigos nuevos**. CL-13 a CL-16 cambian de contenido (CL-16 pasa de «Finalizar» a «Aceptar») y CL-35 suma la pestaña Saldo a favor. Los códigos CL-49 a CL-51 los usa la rama de listas de precios; si se necesita uno nuevo aquí, se toma desde CL-52.
 
 ## Regla para pantallas nuevas
 
-Se toma el siguiente número libre (CL-49, CL-50, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.
+Se toma el siguiente número libre (CL-52, CL-53, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.

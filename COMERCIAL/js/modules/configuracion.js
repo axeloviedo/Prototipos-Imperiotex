@@ -23,7 +23,7 @@ const CM10 = {
       UI.campo('Plazo para anular una venta (días)', '<input id="cf-da" type="number" min="0" max="30" value="' + c.diasAnulacion + '"' + dis + '>', { hint: 'Se congela en cada venta al registrarla; pasado el plazo se corrige con una devolución' }) +
       UI.campo('Almacén para devoluciones en mal estado', '<select id="cf-alm"' + dis + '>' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), c.almMalEstado) + '</select>') +
       UI.campo('Dinero de una devolución', '<select id="cf-ddev"' + dis + '>' + UI.opts([{ v: 'SALDO', t: 'Saldo a favor del cliente (solo cambios)' }, { v: 'CAJA', t: 'Se devuelve en caja' }], c.dineroDev || 'SALDO') + '</select>', { hint: 'También lo que sobra en un cambio. En un cambio, lo devuelto siempre paga primero lo que se lleva' }) +
-      UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo)' }) +
+      UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo). En Comercial el mínimo se exige siempre en listas, ofertas y precio a mano (LP8, LP12)' }) +
       '</div></div>';
 
     const cat = (tipo, lista) => '<div style="flex:1;min-width:280px"><div class="sec">Categorías de ' + tipo.toLowerCase() + '</div>' +

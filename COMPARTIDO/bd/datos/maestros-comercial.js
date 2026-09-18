@@ -1,10 +1,10 @@
 /* COMPARTIDO · datos propios de Comercial: tiendas, cajas, medios de pago, comprobantes y series, condiciones, tipos de cliente,
-   ubigeos, usuarios y perfiles de la demo, clientes, listas de precios y configuración comercial.
+   ubigeos, usuarios y perfiles de la demo, clientes, listas de precios y ofertas, y configuración comercial.
    Formato en docs/16_BASE_DATOS_COMPARTIDA.md §3. Lo mantiene quien trabaja COMERCIAL/.
    - maestros.comercial: catálogos fijos de Comercial (no chocan con las claves comunes: las tiendas no son las «sedes» de la plantilla).
    - maestros.articulos / categorias: servicios que vende Comercial (se AGREGAN a los de la base; prefijo SERV-VTA- para no chocar con SRV-).
      Los productos de venta son los de la base con venta: true (Zuleika PT-0001..0004, pestaña Venta en maestros-complementos.js).
-   - colecciones: lo editable desde Comercial (clientes, listas, configuración) con su valor inicial, y lo transaccional vacío.
+   - colecciones: lo editable desde Comercial (clientes, listas de precios, configuración) con su valor inicial, y lo transaccional vacío.
    Lo marcado aConfirmar: true es un dato inventado que el usuario debe validar. */
 const BD_COMERCIAL = (() => {
   const O = 'comercial';
@@ -86,7 +86,7 @@ const BD_COMERCIAL = (() => {
       /* acceso_logistico_general (usuario logístico: movimientos y recepción de todos los almacenes) no lo tiene ningún perfil de Comercial */
     },
     /* primer número de las series de Comercial en BD.d.seq cuando todavía no existen (los clientes y listas iniciales ya ocupan números) */
-    seqInicial: { cli: 9, lp: 23 }
+    seqInicial: { cli: 9, lpr: 10 }
   };
 
   /* servicios que vende la tienda (no inventariables: sin almacén, stock ni devolución) */
@@ -116,22 +116,29 @@ const BD_COMERCIAL = (() => {
     cli(8, 'DNI', '41236987', 'CARLOS ENRIQUE SALAZAR DÍAZ', 'MINORISTA', '923 551 208', '', '', '150101', 'CONTADO', 'Sin compras recientes', '06/04/2026 10:00', false)
   ];
 
-  /* listas de precios: por artículo + UM + moneda, con tienda y tipo de cliente opcionales (precios con IGV) */
-  const listas = [
-    ['PT-0001', 'UND', '', '', 'PEN', 119.90], ['PT-0001', 'UND', '', 'MAYORISTA', 'PEN', 89.00], ['PT-0001', 'DOC', '', 'MAYORISTA', 'PEN', 1020.00],
-    ['PT-0001', 'UND', 'TDA-02', '', 'PEN', 115.00], ['PT-0001', 'UND', '', '', 'USD', 32.00], ['PT-0001', 'UND', '', 'EXPORTACIÓN', 'USD', 24.50],
-    ['PT-0002', 'UND', '', '', 'PEN', 119.90], ['PT-0002', 'UND', '', 'MAYORISTA', 'PEN', 89.00], ['PT-0002', 'DOC', '', 'MAYORISTA', 'PEN', 1020.00],
-    ['PT-0002', 'UND', '', '', 'USD', 32.00], ['PT-0002', 'UND', '', 'EXPORTACIÓN', 'USD', 24.50],
-    ['PT-0003', 'UND', '', '', 'PEN', 124.90], ['PT-0003', 'UND', '', 'MAYORISTA', 'PEN', 92.00], ['PT-0003', 'DOC', '', 'MAYORISTA', 'PEN', 1060.00], ['PT-0003', 'UND', '', '', 'USD', 33.50],
-    ['PT-0004', 'UND', '', '', 'PEN', 124.90], ['PT-0004', 'UND', '', 'MAYORISTA', 'PEN', 92.00], ['PT-0004', 'UND', 'TDA-01', 'MAYORISTA', 'PEN', 90.00],
-    ['PT-0004', 'DOC', '', 'MAYORISTA', 'PEN', 1060.00],
-    ['SERV-VTA-0001', 'UND', '', '', 'PEN', 15.00], ['SERV-VTA-0002', 'UND', '', '', 'PEN', 10.00], ['SERV-VTA-0003', 'UND', '', '', 'PEN', 25.00]
-  ].map((x, i) => ({ id: 'LP-' + String(i + 1).padStart(4, '0'), art: x[0], um: x[1], sede: x[2], tipo: x[3], mon: x[4], precio: x[5], aConfirmar: true }));
+  /* listas de precios y ofertas (12-prototipo-diseno.md §12): la lista tiene moneda y, opcionales, sede (maestro compartido) y segmento de cliente; con fechas es una oferta.
+     Cada fila: artículo + unidad con precio fijo, o artículo / grupo con % de descuento. Precios con IGV */
+  const LP = (n, nom, mon, sede, tipo, filas, desde, hasta) => ({ cod: 'LP-' + String(n).padStart(2, '0'), nom, mon, sede, tipo, desde: desde || '', hasta: hasta || '', activa: true, filas, aConfirmar: true });
+  const P = (art, um, precio) => ({ art, um, precio }), D = (art, pct, um) => ({ art, um: um || '', pct }), G = (grupo, pct) => ({ grupo, pct });
+  const listasPrecio = [
+    LP(1, 'Precios generales S/', 'PEN', '', '', [P('PT-0001', 'UND', 119.90), P('PT-0002', 'UND', 119.90), P('PT-0003', 'UND', 124.90), P('PT-0004', 'UND', 124.90),
+      P('SERV-VTA-0001', 'UND', 15.00), P('SERV-VTA-0002', 'UND', 10.00), P('SERV-VTA-0003', 'UND', 25.00)]),
+    LP(2, 'Precios generales US$', 'USD', '', '', [P('PT-0001', 'UND', 32.00), P('PT-0002', 'UND', 32.00), P('PT-0003', 'UND', 33.50)]),
+    LP(3, 'Mayorista', 'PEN', '', 'MAYORISTA', [P('PT-0001', 'UND', 89.00), P('PT-0001', 'DOC', 1020.00), P('PT-0002', 'UND', 89.00), P('PT-0002', 'DOC', 1020.00),
+      P('PT-0003', 'UND', 92.00), P('PT-0003', 'DOC', 1060.00), P('PT-0004', 'UND', 92.00), P('PT-0004', 'DOC', 1060.00)]),
+    LP(4, 'Exportación', 'USD', '', 'EXPORTACIÓN', [P('PT-0001', 'UND', 24.50), P('PT-0002', 'UND', 24.50)]),
+    LP(5, 'Galería Damero', 'PEN', 'DAM', '', [P('PT-0001', 'UND', 115.00)]),
+    LP(6, 'Mayorista Galería Ya', 'PEN', 'YA', 'MAYORISTA', [P('PT-0004', 'UND', 90.00)]),
+    /* ofertas: vencida, vigente en setiembre y programada para diciembre */
+    LP(7, 'Día del Padre', 'PEN', '', '', [G('PT', 10)], '10/06/2026', '21/06/2026'),
+    LP(8, 'Primavera', 'PEN', '', 'MINORISTA', [D('PT-0003', 20)], '01/09/2026', '30/09/2026'),
+    LP(9, 'Navidad', 'PEN', '', '', [G('PT', 15), P('PT-0001', 'UND', 99.90)], '01/12/2026', '24/12/2026')
+  ];
 
   return {
     maestros: { comercial, articulos, categorias },
     colecciones: {
-      clientes, listas,
+      clientes, listasPrecio,
       /* configuración comercial editable en CL-45 */
       comercial: {
         cfg: {

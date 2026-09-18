@@ -1,5 +1,5 @@
 /* COMERCIAL — acceso a la BASE COMPARTIDA (BD, clave 'imperiotex.bd'). Comercial ya no guarda una copia propia:
-   Store.d ES BD.d (maestros, stock y movimientos comunes + colecciones de Comercial: clientes, listas, cots, ventas, devs, sesiones, cmovs, comercial).
+   Store.d ES BD.d (maestros, stock y movimientos comunes + colecciones de Comercial: clientes, listasPrecio, cots, ventas, devs, sesiones, cmovs, comercial).
    El usuario activo de la demo no va en la base: se recuerda en localStorage 'imperiotex.comercial.usuario' (el reinicio global lo borra). */
 const Store = {
   KEY_USUARIO: 'imperiotex.comercial.usuario',
@@ -34,6 +34,13 @@ const Store = {
       else if (Array.isArray(c0[k]) && Array.isArray(cb[k]) && c0[k].every(x => x && x.cod)) c0[k].forEach(it => { if (!cb[k].some(e => e.cod === it.cod)) cb[k].push(BD.copia(it)); });
     });
     Object.keys(X.colecciones || {}).forEach(k => { if (d[k] === undefined) d[k] = BD.copia(X.colecciones[k]); });
+    /* listasPrecio de otra versión (la de estilo SAP B1 guardaba cabeceras sin «filas» y los precios aparte): vuelven a las listas iniciales */
+    if (!Array.isArray(d.listasPrecio) || d.listasPrecio.some(l => !l || !Array.isArray(l.filas))) {
+      d.listasPrecio = BD.copia((X.colecciones || {}).listasPrecio || []);
+      ['precios', 'dctosPC'].forEach(k => { delete d[k]; });
+    }
+    /* listas guardadas con la tienda (TDA-02) en lugar de la sede (DAM) */
+    d.listasPrecio.forEach(l => { const t = M.SEDES.find(x => x.cod === l.sede); if (t) l.sede = t.sede || ''; });
     const cfg0 = ((X.colecciones || {}).comercial || {}).cfg || {};
     d.comercial = d.comercial || {};
     d.comercial.cfg = Object.assign(BD.copia(cfg0), d.comercial.cfg || {});

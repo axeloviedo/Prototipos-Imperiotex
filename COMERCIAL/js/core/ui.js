@@ -46,7 +46,8 @@ const UI = {
     'Abierta': 'var(--aprobado-sol)', 'Aprobada': 'var(--aprobada)', 'Recibida': 'var(--completada)', 'Cerrada': 'var(--borrador)',
     'Pagado': 'var(--completada)', 'Parcial': 'var(--parcial)', 'Pendiente de pago': 'var(--pendiente)', 'Por devolver': 'var(--rechazado-sol)',
     'Por validar': 'var(--pendiente)', 'Stock comprometido': 'var(--pendiente)', 'Stock entregado': 'var(--completada)', 'Stock liberado': 'var(--borrador)', 'Stock devuelto': 'var(--rechazado-sol)', 'Validado': 'var(--confirmado)', 'Procesado': 'var(--confirmado)',
-    'Nuevo': 'var(--prp)', 'Activo': 'var(--confirmado)', 'Por recuperar': 'var(--parcial)', 'Sin compras': 'var(--borrador)', 'Inactivo': 'var(--borrador)'
+    'Nuevo': 'var(--prp)', 'Activo': 'var(--confirmado)', 'Por recuperar': 'var(--parcial)', 'Sin compras': 'var(--borrador)', 'Inactivo': 'var(--borrador)',
+    'Activa': 'var(--confirmado)', 'Inactiva': 'var(--borrador)', 'Programada': 'var(--pendiente)', 'Cancelada': 'var(--cancelada)'
   },
   estado(t) { return UI.badge(t, UI.COLORES[t] || 'var(--borrador)'); },
   opts(lista, sel, vacio) {
