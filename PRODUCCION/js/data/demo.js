@@ -7,7 +7,8 @@
    2) SF azul (PT-0001/0002) aprobada y FABRICADA completa: piezas → crudo → lavado tercerizado
       (SOL del servicio → OC de servicio → envío con GRE → retorno → conformidad → factura) → producto final.
    3) SF negro (PT-0003/0004) en curso: usa 10 crudos T28 adelantados en una orden manual (el crudo no tiene color: el color nace en el lavado),
-      crudo T30 a medias, lavado T28 devuelto por la lavandería con 4 prendas menos (faltante abierto), lavado T30 con el servicio pedido.
+      crudo T30 a medias, lavado T28 devuelto por la lavandería con 4 prendas menos (faltante abierto), lavado T30 pasado a
+      Lavandería Ecotex: vuelven 16 prendas y 6 salen falladas (Compras reclama y Ecotex da un crédito para su siguiente factura).
    4) SF de los cuatro PT aprobada sin órdenes (su materia prima queda comprometida). */
 const Demo = {
   USUARIOS: { comercial: 'Comercial 01', logistica: 'USER02 · Logística', compras: 'USER03 · Compras', gerencia: 'Gerencia General', produccion: 'USER05 · Producción' },
@@ -153,7 +154,17 @@ const Demo = {
     Demo._en('20/07/2026 08:30', 'produccion'); Prod.enviarProveedor(lav28, { cant: lav28.cant }); BD.guardar();
     /* la lavandería devuelve 26 de 30: al cerrar, las 4 que no retornaron quedan como faltante abierto (N6); Compras lo reclama (CO-11) */
     Demo._producir(lav28, '24/07/2026 09:00', { emitir: [lav28.cant], recibir: [lav28.cant - 4], cerrar: true });
-    Demo._comprarServicio(f2('PPT-0008'), '17/07/2026 09:05');
+    /* caso especial Ecotex: el lavado negro T30 pasa a LAVANDERIA ECOTEX; se envían las 16 prendas que hay de crudo T30,
+       vuelven las 16 pero 6 con manchas del lavado (producto fallado, J2). Compras lo reclama y Ecotex da un crédito (ver el generador, paso 3c) */
+    const lav30 = f2('PPT-0008');
+    Demo._en('17/07/2026 09:05', 'produccion');
+    Prod.tercerizar(lav30, { rec: 'SRV-0002', prov: M.rec('SRV-0002').prov, alm: 'SB-TRANSITO', solicitar: false }); BD.guardar();
+    Demo._comprarServicio(lav30, '17/07/2026 09:10', '17/07/2026 15:10', '18/07/2026 10:10');
+    Demo._en('21/07/2026 08:30', 'produccion'); Prod.enviarProveedor(lav30, { cant: 16 }); BD.guardar();
+    Demo._producir(lav30, '28/07/2026 09:00', { emitir: [16], recibir: [16] });
+    Demo._en('28/07/2026 10:00', 'produccion');
+    Prod.reclasificarFallado({ art: 'PPT-0008', fallado: 'PPT-0008F', cant: 6, alm: 'SB-ZARATE-PP', motivo: 'Defecto de lavandería (servicio de terceros)', obs: 'Manchas del lavado de Ecotex: se reclama el servicio (CO-11)' });
+    BD.guardar();
 
     /* ---------- 4) SF de los cuatro terminados: aprobada, sin órdenes ---------- */
     Demo._sf('20/07/2026 10:00', '22/07/2026 09:00', '22/07/2026 11:30',

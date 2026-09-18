@@ -105,6 +105,31 @@ if (of) {
   Docs.nc.crear({ fac: fs.id, ndoc: 'NC02-000012', motivo: '09', rec: r3.id, recLinea: 0, obs: 'Faltante de ' + of.id,
     lineas: [{ art: ocSrv.items[0].art, cant: of.faltante.cant, pu: fs.items[0].pu }] });
 }
+/* caso especial Ecotex: servicio de lavado fallido. Las prendas volvieron (6 falladas, registradas en Producción);
+   la factura ya se pagó, así que la nota de crédito queda como saldo a favor y se aplica a la siguiente factura de Ecotex */
+const ofEco = BD.d.ofs.find(o => o.art === 'PPT-0008' && o.recs.some(r => r.cod === 'SRV-0002'));
+if (ofEco) {
+  const ocEco = BD.d.ocs.find(o => o.of === ofEco.id && o.est !== 'Cancelada');
+  const srv = ocEco.items[0];
+  BD.reloj = '29/07/2026 10:00';
+  Docs.oc.conformidad(ocEco.id, { lineas: [{ art: srv.art, cant: ofEco.prod }], conforme: false, obs: 'Lavado con manchas en 6 prendas' });
+  const fe = Docs.fac.crear({ oc: ocEco.id, ndoc: 'F003-000101', lineas: [{ art: srv.art, cant: ofEco.prod, pu: srv.pu }] });
+  BD.reloj = '30/07/2026 11:00'; Docs.fac.pagar(fe.id);
+  BD.reloj = '31/07/2026 09:00';
+  const re = Docs.rec.crear({ oc: ocEco.id, obs: 'Lavado fallido: 6 prendas manchadas. Ecotex devuelve las prendas (quedan como fallado en planta) y da un crédito para la siguiente factura',
+    lineas: [{ art: srv.art, cant: 6, motivo: 'Servicio mal ejecutado' }] });
+  Docs.rec.resolver(re.id, 0, { resol: 'Nota de crédito' });
+  BD.reloj = '01/08/2026 10:00';
+  Docs.nc.crear({ fac: fe.id, ndoc: 'NC03-000007', motivo: '09', rec: re.id, recLinea: 0, obs: 'Crédito por lavado fallido de ' + ofEco.id, lineas: [{ art: srv.art, cant: 6, pu: srv.pu }] });
+  /* siguiente compra a Ecotex: lavado de prendas de muestra; su factura usa el saldo a favor */
+  BD.reloj = '09/08/2026 09:00';
+  const oc2 = Docs.oc.crear({ prov: ocEco.prov, obs: 'Lavado de prendas de muestra (colección de verano)', items: [{ art: srv.art, cant: 10, pu: srv.pu }] });
+  Docs.oc.enviar(oc2.id); Docs.oc.validar(oc2.id); Docs.oc.aprobar(oc2.id);
+  BD.reloj = '11/08/2026 16:00'; Docs.oc.conformidad(oc2.id, { obs: 'Muestras lavadas conformes' });
+  BD.reloj = '12/08/2026 10:00';
+  const f2 = Docs.fac.crear({ oc: oc2.id, ndoc: 'F003-000115' });
+  Docs.nc.aplicarSaldo(f2.id);
+}
 /* flete de la tela comprada para setiembre como costo de destino */
 const ocTela = BD.d.ocs.filter(o => o.items.some(i => i.art === 'MP-0070') && o.recepciones.length).slice(-1)[0];
 BD.reloj = '06/08/2026 10:00';
@@ -112,7 +137,7 @@ const c = Docs.ccd.crear({ ocs: [ocTela.id], base: 'Valor', obs: 'Transporte de 
 Docs.ccd.registrar(c.id);
 BD.reloj = null; BD.guardar();
 `);
-console.log('Compras:', ev(cmp, "JSON.stringify({recs: BD.d.recs.map(r => r.id + ' ' + r.estado), ncs: BD.d.ncs.map(n => n.id + ' ' + n.motivo + ' ' + n.total), ccds: BD.d.ccds.map(c => c.id + ' ' + c.estado + ' ' + c.movs.join(',')), faltante: (BD.d.ofs.find(o => o.faltante) || {}).faltante})"));
+console.log('Compras:', ev(cmp, "JSON.stringify({recs: BD.d.recs.map(r => r.id + ' ' + r.estado), ncs: BD.d.ncs.map(n => n.id + ' ' + n.motivo + ' ' + n.total + ' ' + n.aplicacion + (n.usos && n.usos.length ? ' usada ' + n.usos.map(u => u.fac + ' ' + u.monto) : '')), facturasEcotex: BD.d.facturas.filter(f => f.prov === 'PROV-0006').map(f => f.ndoc + ' ' + f.est + ' por pagar ' + Docs.nc.saldoFactura(f.id)), ccds: BD.d.ccds.map(c => c.id + ' ' + c.estado + ' ' + c.movs.join(',')), faltante: (BD.d.ofs.find(o => o.faltante) || {}).faltante})"));
 
 /* 4: validación y guardado */
 const d = JSON.parse(almacen['imperiotex.bd']);
