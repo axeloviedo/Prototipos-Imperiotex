@@ -12,13 +12,13 @@ function renderNC(){
   tb.innerHTML=lista.map(n=>{const f=BD.fac(n.fac)||{};
     return '<tr class="clickable" onclick="abrirNC(\''+n.id+'\')"><td>'+n.id+'</td><td>'+coEsc(n.ndoc)+'</td><td>'+n.fecha+'</td><td>'+coEsc(BD.provNom(n.prov))+'</td>'+
       '<td>'+coEsc(f.ndoc||n.fac)+'</td><td>'+n.motivo+' · '+coEsc(n.motivoNom)+'</td><td>'+(n.rec||'-')+'</td>'+
-      '<td style="text-align:right">'+coMon(n.mon)+fmtM(n.total)+'</td><td>'+n.aplicacion+'</td><td><span class="badge" style="background:'+(NC_EST[n.estado]||'var(--borrador)')+'">'+n.estado+'</span></td></tr>';
+      '<td style="text-align:right">'+coMon(n.mon)+fmtM(n.total)+'</td><td>'+n.aplicacion+((n.usos||[]).length?'<br><span class="hint">usado en '+n.usos.map(u=>(BD.fac(u.fac)||{}).ndoc||u.fac).join(', ')+' · queda '+fmtM(Docs.nc.disponible(n))+'</span>':'')+'</td><td><span class="badge" style="background:'+(NC_EST[n.estado]||'var(--borrador)')+'">'+n.estado+'</span></td></tr>';
   }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:16px">Sin notas de crédito</td></tr>';
   document.getElementById('nc-count').textContent=lista.length+' nota(s)';
   /* saldos a favor por proveedor (notas de facturas ya pagadas) */
-  const provs=[...new Set((BD.d.ncs||[]).filter(n=>n.aplicacion==='Saldo a favor'&&n.estado!=='Anulada').map(n=>n.prov))];
+  const provs=[...new Set((BD.d.ncs||[]).filter(n=>Docs.nc.disponible(n)>0.004).map(n=>n.prov))];
   const bx=document.getElementById('nc-favor');
-  if(provs.length){bx.style.display='block';bx.innerHTML='<b style="font-size:12.5px">Saldos a favor (se descuentan en el próximo pago)</b> '+provs.map(p=>coEsc(BD.provNom(p))+': <b>'+fmtM(Docs.nc.saldoFavor(p))+'</b>').join(' · ');}
+  if(provs.length){bx.style.display='block';bx.innerHTML='<b style="font-size:12.5px">Saldos a favor por usar</b> <span class="hint">(se aplican desde la ficha de la siguiente factura del proveedor, CO-10)</span> '+provs.map(p=>coEsc(BD.provNom(p))+': <b>'+fmtM(Docs.nc.saldoFavor(p))+'</b>').join(' · ');}
   else bx.style.display='none';
 }
 /* opciones: {rec, recLinea} para registrar la nota que resuelve una línea de un reclamo */
