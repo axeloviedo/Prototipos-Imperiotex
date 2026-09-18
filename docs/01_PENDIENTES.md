@@ -14,12 +14,12 @@
 - ☑ **N6** Faltante del servicio tercerizado al cerrar la orden + aviso al facturar.
 - ☑ **N7** Lotes por ingreso en artículos con control «Lote», con elección opcional al salir.
 - ☑ **N8** GI-18 Rotación y GI-19 Series sobre la base compartida.
-- ◐ **N9** CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerido: conectar a la base compartida.
+- ☑ **N9** CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerido sobre la base compartida (decisiones **P1–P6**).
 
 ## Prototipo · pendiente
 
-- ☐ **N9** Las cuatro pantallas de Compras de arriba. Cada una necesita su documento en la base y su efecto (reclamo → devolución o reposición; nota de crédito → factura y stock; costos de destino → costo promedio; sugerido → stock, consumo y pedidos).
-- ☐ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) cuando CO-11 esté conectado.
+- ☑ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) con su nota de crédito.
+- ☐ Saldo a favor del proveedor: hoy se muestra en CO-12; descontarlo en el pago es de Tesorería.
 - ☑ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo. → decisiones **O1–O5** en `00_DECISIONES_CERRADAS.md` (2026-09-17).
 
 ## Mejoras futuras (N12, acordadas pero no ahora)

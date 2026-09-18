@@ -20,7 +20,7 @@
 | Stock, movimientos, OC, facturas, solicitudes, órdenes, ventas | vacío | ✔ julio 2026 |
 | Materia prima en **SB-ZARATE-MP** para 400 pantalones más | — | ✔ (compra OC-000006/000007 del 01/08, abastecida con ST-000008 el 04/08) |
 | Solicitud de Fabricación lista para aprobar | — | **SF-000004** (100 de cada PT, **Pendiente Aprobar**) |
-| Historia ya registrada | — | SF-000001 fabricada (lavado tercerizado completo), SF-000002 en curso, SF-000003 aprobada sin órdenes, ventas y cajas en tiendas, reposición ST-000007 en camino |
+| Historia ya registrada | — | SF-000001 fabricada (lavado tercerizado completo), SF-000002 en curso (la lavandería devolvió 4 prendas menos del negro T28), SF-000003 aprobada sin órdenes, ventas y cajas en tiendas, reposición ST-000007 en camino; en Compras, 3 reclamos resueltos (reposición, devolución con nota 07 y el faltante de la lavandería con nota 09) y el flete de la tela como costo de destino |
 
 **Familia de trabajo** (2 colores × 2 tallas; el color nace en el lavado, K9): PIEZAS CORTADAS por talla PPT-0001..0002 → CRUDO por talla PPT-0003..0004 → LAVADO tercerizado por color y talla PPT-0005..0008 → PRODUCTO FINAL PT-0001 (azul 28), PT-0002 (azul 30), PT-0003 (negro 28), PT-0004 (negro 30).
 **Almacenes**: SB-CENTRAL-MP (compra) → SB-ZARATE-MP (materia prima en planta) → SB-ZARATE-PP (producto en proceso) → SB-TRANSITO (en la lavandería) → SB-CENTRAL (producto terminado) → SB-TIENDA01..05.
@@ -45,7 +45,7 @@
 | 14 | Inventarios · GI-11 **+ Transferencia** SB-CENTRAL → SB-TIENDA01 (TRF-REPTIENDA) | **Aprobar Transferencia** (compromete en central, **Pedido** en tienda) → **Confirmar Recepción** (parcial o total). | GI-05: Pedido en la tienda hasta confirmar; luego el stock pasa a la tienda. |
 | 15 | Comercial · Ventas (tienda 1) | Vender PT-0001 y cobrar. | Venta pendiente compromete; al validar el pago completo sale el stock (**SAL-VENTA**). Visible en Inventarios GI-07 y en CL-32. |
 
-**Resultado verificado (prueba automática del 16/09/2026 sobre este mismo recorrido):** 12 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 43,67 – 44,82), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
+**Resultado verificado (prueba automática del 17/09/2026 sobre este mismo recorrido):** 12 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 44,13 – 45,26: incluyen el flete de la tela), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
 
 ## 3. Recorrido desde «Solo maestros»
 
