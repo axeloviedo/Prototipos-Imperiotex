@@ -36,11 +36,11 @@ const DOCUI = {
       const desc = !a.inv ? (ed ? '<input class="celda" style="width:100%;margin-top:4px" placeholder="Descripción personalizada para el cliente" value="' + UI.esc(l.desc) + '" onchange="' + ctx + '.cambiar(' + i + ',\'desc\',this.value)">'
         : (l.desc ? '<br><span class="mini">“' + UI.esc(l.desc) + '”</span>' : '')) : '';
       return '<tr class="' + (msgs.length ? 'con-msg' : '') + '"><td class="num">' + (i + 1) + '</td>' +
-        '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + (l.origen ? ' · ' + UI.esc(l.origen) : '') + '</span>' + desc + '</td>' +
+        '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + (l.origen ? ' · ' + (l.precioRef ? UI.esc(l.origen) + ' <span class="mini">(referencial ' + UI.n(l.precioRef.precio) + ' · ' + UI.esc(l.precioRef.origen) + ')</span>' : l.oferta ? '<b class="ok-t">' + UI.esc(l.origen) + '</b>' + (l.precioLista ? ' (lista ' + UI.n(l.precioLista) + ')' : '') : UI.esc(l.origen)) : '') + '</span>' + desc + '</td>' +
         '<td>' + um + '</td><td>' + alm + '</td><td class="num">' + disp + '</td>' +
         '<td class="num">' + (ed ? inp(i, 'cant', l.cant, 70) : UI.q(l.cant)) + '</td>' +
         '<td class="num">' + (ed ? inp(i, 'precio', l.precio, 90) : UI.n(l.obsequio ? 0 : l.precio)) + '</td>' +
-        '<td class="num">' + (ed ? inp(i, 'dcto', l.dcto, 70) : (l.dcto && !l.obsequio ? UI.n(l.dcto) : '')) + '</td>' +
+        '<td class="num">' + (ed && !l.oferta ? inp(i, 'dcto', l.dcto, 70) : ed ? '<span class="mini">no aplica</span>' : (l.dcto && !l.obsequio ? UI.n(l.dcto) : '')) + '</td>' +
         '<td style="text-align:center">' + (ed ? '<input type="checkbox"' + (l.obsequio ? ' checked' : '') + ' onchange="' + ctx + '.cambiar(' + i + ',\'obsequio\',this.checked)">' : (l.obsequio ? 'Sí' : '')) + '</td>' +
         '<td class="num"><b>' + UI.n(l.total) + '</b>' + (Precios.tasa(l.art) === 0 ? '<br><span class="mini">' + UI.esc(a.igv || 'Sin IGV') + '</span>' : '') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" title="Quitar la línea" onclick="' + ctx + '.quitar(' + i + ')">✕</button>' : '') + '</td></tr>' +

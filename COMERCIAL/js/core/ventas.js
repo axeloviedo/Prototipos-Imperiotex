@@ -64,10 +64,19 @@ const Cli = {
 const Doc = {
   sedeAlm(d) { const s = Store.sede(d.sede); return s ? s.alm : ''; },
   tipoCli(d) { const c = Store.cli(d.cli); return c ? c.tipo : ''; },
+  MANUAL: 'Precio modificado a mano',
+  /* precio de la línea según la tienda del documento, el segmento del cliente y la moneda (listas de precios y ofertas, LP2).
+     La línea guarda de dónde sale el precio (origen) y, si es una oferta, cuál y el precio de lista que reemplaza */
   precio(d, l) {
     const r = Precios.resolver(l.art, l.um, d.sede, Doc.tipoCli(d), d.mon);
     l.precio = r ? r.precio : 0;
     l.origen = r ? r.origen : 'Sin precio en ' + d.mon;
+    delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo; delete l.precioRef;
+    if (r && r.lista) l.lista = r.lista;
+    /* LP5/LP8: evidencia de cómo se llegó al precio (base, ofertas encontradas, ganadora, ajuste al mínimo) */
+    if (r) l.calculo = { base: r.base, ofertas: r.ofertas, gana: r.oferta ? r.oferta.cod : (r.lista || 'sugerido'), minimo: r.minimo, ajusteMin: r.ajusteMin, fecha: UI.hoy() };
+    /* LP4: la oferta no se suma al descuento manual de la línea */
+    if (r && r.oferta) { l.oferta = r.oferta; l.precioLista = r.precioLista; l.dcto = 0; }
     return r;
   },
   nuevaLinea(d, cod) {
@@ -91,18 +100,24 @@ const Doc = {
   cambiar(d, i, campo, val) {
     const l = d.lineas[i];
     if (!l) throw new Error('Línea no encontrada');
-    const antes = { um: l.um, alm: l.alm, precio: l.precio, origen: l.origen, factor: l.factor };
+    const antes = JSON.parse(JSON.stringify(l));
     if (campo === 'cant' || campo === 'precio' || campo === 'dcto') {
       const n = Number(val);
       if (val === '' || isNaN(n) || n < 0) throw new Error('Ingrese un número mayor o igual a cero');
+      if (campo === 'dcto' && n > 0 && l.oferta) throw new Error('La línea tiene la oferta «' + l.oferta.nom + '»: no se suma un descuento manual (cambie el precio a mano si hace falta)');
       l[campo] = n;
-      if (campo === 'precio') l.origen = 'Precio modificado a mano';
+      /* LP11: el precio del motor es REFERENCIAL: el vendedor lo cambia en la línea. Se conserva la referencia (precio, lista y cálculo) como evidencia;
+         la oferta deja de aplicarse (LP4) */
+      if (campo === 'precio') {
+        if (l.origen !== Doc.MANUAL) l.precioRef = { precio: antes.precio, origen: antes.origen, lista: antes.lista || '', oferta: antes.oferta ? antes.oferta.cod : '' };
+        l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista;
+      }
     } else if (campo === 'obsequio') l.obsequio = !!val;
     else if (campo === 'um') { l.um = val; l.factor = Precios.factor(l.art, val); Doc.precio(d, l); }
     else if (campo === 'alm') l.alm = val;
     else if (campo === 'desc') l.desc = String(val || '');
     if ((campo === 'um' || campo === 'alm') && Doc.duplicada(d, l, i)) {
-      Object.assign(l, antes);
+      Object.keys(l).forEach(k => delete l[k]); Object.assign(l, antes);
       Precios.doc(d);
       throw new Error('Ya hay otra línea de ' + l.art + ' con esa unidad y almacén');
     }
@@ -115,8 +130,8 @@ const Doc = {
     if (!c) throw new Error('Cliente no encontrado');
     if (!c.activo) throw new Error('El cliente ' + c.nom + ' está inactivo');
     d.cli = cod;
-    /* el tipo de cliente cambia el nivel de la lista de precios: se vuelven a resolver (salvo los modificados a mano) */
-    d.lineas.forEach(l => { if (l.origen !== 'Precio modificado a mano') Doc.precio(d, l); });
+    /* el segmento del cliente puede cambiar la lista o la oferta: se vuelven a resolver (salvo los modificados a mano) */
+    d.lineas.forEach(l => { if (l.origen !== Doc.MANUAL) Doc.precio(d, l); });
     Precios.doc(d);
     return c;
   },
@@ -124,13 +139,17 @@ const Doc = {
   cambiarMoneda(d, mon) {
     if (!M.MONEDAS.find(m => m.cod === mon)) throw new Error('Moneda no válida');
     if (mon === d.mon) return;
-    const prev = d.mon, copia = d.lineas.map(l => ({ precio: l.precio, origen: l.origen }));
+    const prev = d.mon, copia = JSON.stringify(d.lineas);
     d.mon = mon;
     const sin = [];
-    d.lineas.forEach(l => { const r = Doc.precio(d, l); if (!r && !l.obsequio) sin.push(l.art); });
+    /* el precio escrito a mano se conserva, convertido con el tipo de cambio (LP11); el resto se vuelve a calcular en la moneda nueva */
+    d.lineas.forEach(l => {
+      if (l.origen === Doc.MANUAL) { l.precio = Precios.convertir(l.precio, prev, mon); if (l.precioRef) l.precioRef.precio = Precios.convertir(l.precioRef.precio, prev, mon); return; }
+      const r = Doc.precio(d, l); if (!r && !l.obsequio) sin.push(l.art);
+    });
     if (sin.length) {
       d.mon = prev;
-      d.lineas.forEach((l, k) => { l.precio = copia[k].precio; l.origen = copia[k].origen; });
+      d.lineas = JSON.parse(copia);
       Precios.doc(d);
       throw new Error('No se cambió la moneda: no hay precio en ' + mon + ' para ' + sin.join(', '));
     }
@@ -145,13 +164,17 @@ const Doc = {
     if (!(l.cant > 0)) e.push('la cantidad debe ser mayor que cero');
     if (!l.obsequio && !(l.precio > 0)) e.push('no tiene precio en ' + d.mon);
     if (a.inv && !l.alm) e.push('elija el almacén');
-    if (!l.obsequio && l.precio > 0) {
+    /* LP4/LP8: la línea con oferta no revisa el rango del descuento manual (no lo admite); su precio ya viene con el piso del precio mínimo */
+    if (!l.obsequio && l.precio > 0 && !l.oferta) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');
-      if (a.precioMin > 0 && Precios.verificaMin(a)) {
-        const neto = Precios.netoEnSoles(l, d.mon);
-        if (neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
-      }
+    }
+    /* LP12: el vendedor NUNCA vende debajo del precio mínimo (siempre, sin depender de «Verificar el precio mínimo»), tampoco con descuento manual;
+       sin mínimo, el neto debe ser mayor que cero. Solo el obsequio (con motivo) queda fuera */
+    if (!l.obsequio && l.precio > 0) {
+      const neto = Precios.netoEnSoles(l, d.mon);
+      if (a.precioMin > 0 && neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
+      else if (!(neto > 0)) e.push('el precio neto debe ser mayor que cero (para regalarlo marque Obsequio)');
     }
     /* L6: sin stock disponible no se vende (bloquea siempre); la cotización solo avisa porque no reserva stock */
     if (a.inv && l.alm && l.cant > 0) {
