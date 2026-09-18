@@ -18,9 +18,9 @@
 |---|---|---|
 | Maestros (artículos, almacenes, proveedores, LDM, recursos, operarios, clientes, listas) | ✔ | ✔ (los mismos) |
 | Stock, movimientos, OC, facturas, solicitudes, órdenes, ventas | vacío | ✔ julio 2026 |
-| Materia prima en **SB-ZARATE-MP** para 400 pantalones más | — | ✔ (compra OC-000006/000007 del 01/08, abastecida con ST-000008 el 04/08) |
+| Materia prima en **SB-ZARATE-MP** para 400 pantalones más | — | ✔ (compra OC-000007/000008 del 01/08, abastecida con ST-000009 el 04/08) |
 | Solicitud de Fabricación lista para aprobar | — | **SF-000004** (100 de cada PT, **Pendiente Aprobar**) |
-| Historia ya registrada | — | SF-000001 fabricada (lavado tercerizado completo), SF-000002 en curso (la lavandería devolvió 4 prendas menos del negro T28), SF-000003 aprobada sin órdenes, ventas y cajas en tiendas, reposición ST-000007 en camino; en Compras, 3 reclamos resueltos (reposición, devolución con nota 07 y el faltante de la lavandería con nota 09) y el flete de la tela como costo de destino |
+| Historia ya registrada | — | SF-000001 fabricada (lavado tercerizado completo), SF-000002 en curso (la lavandería devolvió 4 prendas menos del negro T28; el negro T30 pasó a Lavandería Ecotex y volvió con 6 prendas falladas), SF-000003 aprobada sin órdenes, ventas y cajas en tiendas, reposición ST-000007 en camino; en Compras, 3 reclamos resueltos (reposición, devolución con nota 07, el faltante de la lavandería con nota 09 y el lavado fallido de Ecotex, cuyo crédito se aplicó a su siguiente factura) y el flete de la tela como costo de destino |
 
 **Familia de trabajo** (2 colores × 2 tallas; el color nace en el lavado, K9): PIEZAS CORTADAS por talla PPT-0001..0002 → CRUDO por talla PPT-0003..0004 → LAVADO tercerizado por color y talla PPT-0005..0008 → PRODUCTO FINAL PT-0001 (azul 28), PT-0002 (azul 30), PT-0003 (negro 28), PT-0004 (negro 30).
 **Almacenes**: SB-CENTRAL-MP (compra) → SB-ZARATE-MP (materia prima en planta) → SB-ZARATE-PP (producto en proceso) → SB-TRANSITO (en la lavandería) → SB-CENTRAL (producto terminado) → SB-TIENDA01..05.
@@ -45,7 +45,7 @@
 | 14 | Inventarios · GI-11 **+ Transferencia** SB-CENTRAL → SB-TIENDA01 (TRF-REPTIENDA) | **Aprobar Transferencia** (compromete en central, **Pedido** en tienda) → **Confirmar Recepción** (parcial o total). | GI-05: Pedido en la tienda hasta confirmar; luego el stock pasa a la tienda. |
 | 15 | Comercial · Ventas (tienda 1) | Vender PT-0001 y cobrar. | Venta pendiente compromete; al validar el pago completo sale el stock (**SAL-VENTA**). Visible en Inventarios GI-07 y en CL-32. |
 
-**Resultado verificado (prueba automática del 17/09/2026 sobre este mismo recorrido):** 12 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 44,13 – 45,26: incluyen el flete de la tela), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
+**Resultado verificado (prueba automática del 17/09/2026 sobre este mismo recorrido):** 12 órdenes cerradas, 4 OC de servicio Completadas con factura, 4 solicitudes Atendidas, SF-000004 Fabricada, PT en SB-CENTRAL: PT-0001 128, PT-0002 118, PT-0003 108, PT-0004 100 (costos S/ 44,13 – 45,30: incluyen el flete de la tela), ningún stock, comprometido ni pedido negativo; los cuatro módulos muestran lo mismo.
 
 ## 3. Recorrido desde «Solo maestros»
 
@@ -78,3 +78,19 @@ Cantidades orientativas de materia prima por 100 pantalones de un color y talla:
 5. Solicitud de Fabricación rechazada o devuelta para modificar.
 6. Cambio de lavandería en la orden (Tercerizar / Cambiar servicio) antes de enviar.
 7. Reposición a tiendas en dos pasos y venta con pago parcial (stock comprometido hasta el pago completo).
+
+## 4. Caso especial: lavado fallido con crédito del proveedor (Ecotex)
+
+Ya registrado en «Con operación». Sirve para ver cómo se conectan Producción, Compras y el saldo a favor.
+
+| # | Dónde mirarlo | Qué pasó | Qué verificar |
+|---|---|---|---|
+| 1 | Producción · **OF-000016** (lavado negro talla 30) | El servicio se cambió a **SRV-0002 Lavandería Ecotex** («Tercerizar / Cambiar servicio»); se enviaron las 16 prendas de crudo que había. | Pestaña Costo: OC-000006 de Ecotex, su factura y la nota de crédito en negativo. |
+| 2 | Producción · misma orden · Recibos e Inventarios · GI-05 | Volvieron las 16; **6 con manchas** se reclasificaron como producto fallado (SAL-FALLADO + ING-FALLADO, J2). | SB-ZARATE-PP: 10 de PPT-0008 y 6 de **PPT-0008F** al mismo costo. |
+| 3 | Compras · CO-10 **F003-000101** | Ecotex facturó las 16 y la factura **se pagó**. | Estado Pagado. |
+| 4 | Compras · CO-11 **reclamo de Ecotex** | «Servicio mal ejecutado» por 6. Un servicio no se devuelve: se resuelve con **nota de crédito**. | Resuelto; la línea muestra NC-000003. |
+| 5 | Compras · CO-12 **NC-000003** (NC03-000007, motivo 09) | Como la factura ya estaba pagada, el crédito quedó como **saldo a favor** (S/ 26,90). | «Se aplica a: Saldo a favor · usado en F003-000115 · queda 0,00». |
+| 6 | Compras · CO-10 **F003-000115** (lavado de muestras) | La siguiente factura de Ecotex **usó el saldo a favor**. | «Saldo a favor aplicado NC-000003 · S/ 26,90 · queda por pagar S/ 17,94». |
+
+Para repetirlo a mano desde «Solo maestros» o con otra factura: en CO-12 registre una nota de crédito sobre una factura **ya pagada** (queda como saldo a favor) y luego abra en CO-10 una factura **impaga** del mismo proveedor: aparece el aviso y el botón **«Aplicar saldo a favor a esta factura»**.
+

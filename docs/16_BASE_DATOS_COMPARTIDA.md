@@ -117,7 +117,7 @@ Estados: Borrador → Pendiente → Aprobada (Logística define el propósito po
 `Docs.sol.crear(d, enviar)/guardar/enviar/aprobar(id, [{prop, origen}])/rechazar/anular/transferir(id, origen)` (crea una Solicitud de Transferencia aprobada) `/crearOC(id, {prov, precios})`.
 Una línea puede ser un **servicio** (SRV-xxxx): solo se compra.
 
-**Orden de Compra** `ocs`: `{id:'OC-000001', est, tipo:'Bienes'|'Servicio', fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer, items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}`
+**Orden de Compra** `ocs`: `{id:'OC-000001', emp, est, fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer, items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}` — sin tipo, organización ni grupo de compras (N14, N16): una OC puede llevar bienes y servicios; la moneda es libre (N15)
 Estados: Borrador → Pendiente de Validar → Para Recibir y Pagar (V°B° + aprobación) → Para Pagar | Para Recibir → Completada · Cancelada.
 `Docs.oc.crear/guardar/enviar/validar/aprobar/cancelar/recibir(id, {alm, lineas})` (bienes: Ingreso) `/conformidad(id, {lineas, conforme})` (servicio: sin stock) `/avance/totales`.
 Si la OC tiene `of` y es de servicio: al aprobarse se agrega `{tipo:'OC'}` a `of.compras`; al facturarse `{tipo:'Factura'}` (pestaña Costo de la orden, contraste con el estándar).
