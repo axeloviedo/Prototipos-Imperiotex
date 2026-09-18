@@ -13,15 +13,13 @@ Vistas.pantallas(String.raw`
         <div class="field"><label>Buscar (OC / proveedor / solicitud / orden)</label><input id="f-oc-q" placeholder="Ej. OC-000001, LANDEO, SOL-…" oninput="renderOCS()"></div>
         <div class="field"><label>Estado</label><select id="f-oc-e" onchange="renderOCS()"><option value="">Todos</option><option>Borrador</option><option>Pendiente de Validar</option><option>Para Recibir y Pagar</option><option>Para Recibir</option><option>Para Pagar</option><option>Completada</option><option>Cancelada</option><option value="*rec">Pendientes de recibir</option><option value="*fac">Pendientes de facturar</option></select></div>
         <div class="field"><label>Tipo</label><select id="f-oc-t" onchange="renderOCS()"><option value="">Todos</option><option>Bienes</option><option>Servicio</option></select></div>
-        <div class="field"><label>Organización de compras</label><select id="f-oc-o" onchange="renderOCS()"><option value="">Todas</option></select></div>
-        <div class="field"><label>Grupo de compras</label><select id="f-oc-g" onchange="renderOCS()"><option value="">Todos</option></select></div>
         <div class="field"><label>Moneda</label><select id="f-oc-m" onchange="renderOCS()"><option value="">Todas</option><option>S/.</option><option>USD</option></select></div>
         <div class="field" style="display:flex;align-items:flex-end;gap:6px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;color:var(--texto)"><input type="checkbox" id="f-oc-i" onchange="renderOCS()" style="width:auto"> Solo Importación (proveedor internacional)</label></div>
       </div>
     </div>
     <div class="tbl-wrap">
       <table class="grid">
-        <thead><tr><th>ID</th><th>Tipo</th><th title="Organización / grupo de compras">Org. · Grupo</th><th>Proveedor</th><th>Moneda</th><th style="text-align:right">Total</th><th>Estado</th><th>Fecha</th><th>Origen</th><th style="width:80px;text-align:right" title="% recibido: cantidades ingresadas al almacén o con conformidad del servicio">% Recibido</th><th style="width:80px;text-align:right" title="% facturado: cantidades de las facturas registradas contra la OC">% Facturado</th><th style="width:70px">Acciones</th></tr></thead>
+        <thead><tr><th>ID</th><th>Tipo</th><th>Proveedor</th><th>Moneda</th><th style="text-align:right">Total</th><th>Estado</th><th>Fecha</th><th>Origen</th><th style="width:80px;text-align:right" title="% recibido: cantidades ingresadas al almacén o con conformidad del servicio">% Recibido</th><th style="width:80px;text-align:right" title="% facturado: cantidades de las facturas registradas contra la OC">% Facturado</th><th style="width:70px">Acciones</th></tr></thead>
         <tbody id="ocs-body"></tbody>
       </table>
       <div class="pager"><span id="ocs-count"></span></div>
@@ -75,8 +73,6 @@ Vistas.pantallas(String.raw`
         <div class="field"><label>PROVEEDOR <span style="color:var(--cancelada)">*</span> (CT-09)</label>
           <div style="display:flex;gap:8px"><input id="oc-prov" readonly placeholder="Seleccionar proveedor…" style="flex:1"><button class="btn btn-secondary btn-sm" id="oc-b-prov" onclick="openCT09()">Buscar</button></div></div>
         <div class="field"><label>Condición de pago</label><select id="oc-cond"></select></div>
-        <div class="field"><label>Organización de compras</label><select id="oc-org"></select></div>
-        <div class="field"><label>Grupo de compras <span class="warn" title="Por defecto: IMP si el proveedor es internacional, SRV si todo es servicio, si no el grupo de compras de sus artículos">⚠</span></label><select id="oc-gcomp" onchange="OC._gcManual=true"></select></div>
         <div class="field"><label>Moneda (CT-08)</label>
           <select id="oc-mon" onchange="ocMoneda()"><option>S/.</option><option>USD</option></select></div>
         <div class="field"><label>Tipo de Cambio</label>

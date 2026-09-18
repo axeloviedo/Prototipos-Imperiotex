@@ -28,15 +28,6 @@ function ocIGV(art,prov){ const p=BD.prov(prov), a=BD.art(art); if(p&&p.tipo==="
 function ocPrecioRef(cod){ const a=BD.art(cod)||{}, r=BD.rec(cod)||{}; return Number(a.precioCompra||r.costo||a.costo||0); }
 function ocPendRec(o){ return o.items.filter(i=>i.cant-i.recq>0.00005); }
 function ocPendFac(o){ return o.items.filter(i=>i.cant-i.facq>0.00005); }
-/* estructura organizativa: organización (SB/CN) y grupo de compras de la OC; el grupo de compras sale del Grupo de Artículo (K10) */
-function ocGrupoCompraDef(o){
-  const p=BD.prov(o.prov);
-  if(p&&p.tipo==="Internacional")return "IMP";
-  const cnt={}; o.items.forEach(i=>{const g=BD.grupoCompra(i.art); if(g)cnt[g]=(cnt[g]||0)+1});
-  return Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||"MP1";
-}
-function ocOrg(o){ return o.orgCompra||"SB"; }
-function ocGrupo(o){ return o.grupoCompra||ocGrupoCompraDef(o); }
 function ocFacturable(o){ return !!o && ["Para Recibir y Pagar","Para Recibir","Para Pagar"].includes(o.est) && ocPendFac(o).length>0; }
 
 function renderOCS(){
@@ -44,10 +35,6 @@ function renderOCS(){
   const q=sinTildes(document.getElementById('f-oc-q').value||"");
   const e=document.getElementById('f-oc-e').value, m=document.getElementById('f-oc-m').value;
   const ft=(document.getElementById('f-oc-t')||{}).value||"";
-  const fo=document.getElementById('f-oc-o'), fg=document.getElementById('f-oc-g');
-  if(fo && fo.options.length<=1)fo.innerHTML='<option value="">Todas</option>'+(coD().maestros.organizacionesCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
-  if(fg && fg.options.length<=1)fg.innerHTML='<option value="">Todos</option>'+(coD().maestros.gruposCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
-  const vo=fo?fo.value:"", vg=fg?fg.value:"";
   const soloImp=document.getElementById('f-oc-i').checked;
   let html="", n=0;
   coD().ocs.forEach(o=>{
@@ -56,7 +43,7 @@ function renderOCS(){
     if(e==="*rec"){ if(!Docs.oc.recibible(o))return; }
     else if(e==="*fac"){ if(!ocFacturable(o))return; }
     else if(e && o.est!==e)return;
-    if(m && o.mon!==m)return; if(ft && o.tipo!==ft)return; if(vo && ocOrg(o)!==vo)return; if(vg && ocGrupo(o)!==vg)return; if(soloImp && p.tipo!=="Internacional")return;
+    if(m && o.mon!==m)return; if(ft && o.tipo!==ft)return; if(soloImp && p.tipo!=="Internacional")return;
     n++;
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
     const full=(o.est==="Completada");
@@ -64,7 +51,7 @@ function renderOCS(){
       o.of?'<button class="btn-link" onclick="event.stopPropagation();verOFdeOC(\''+o.of+'\')">'+o.of+'</button>':''].filter(Boolean).join(' · ')||'<span class="hint">OC directa</span>';
     const pct=(v,tip)=>'<td style="text-align:right;color:var(--confirmado);'+(v>=100?'font-weight:700':'')+'" title="'+tip+'">'+v+'%</td>';
     html+='<tr class="clickable" onclick="abrirOC(\''+o.id+'\')"><td>'+o.id+(p.tipo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td>'+
-     '<td>'+o.tipo+'</td><td>'+ocOrg(o)+' · '+ocGrupo(o)+'</td><td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
+     '<td>'+o.tipo+'</td><td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
      '<td style="text-align:right;'+(full?'color:var(--confirmado);font-weight:700':'')+'">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
      '<td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td><td>'+o.fecha+'</td>'+
      '<td>'+origen+'</td>'+
@@ -95,7 +82,7 @@ function nuevaOC(){
   coD();
   OCid="";
   OC={id:"",est:"Borrador",tipo:"Bienes",fecha:BD.hoy(),prov:"",cond:"Contado",mon:"S/.",tc:3.75,ref:"",obs:"",sol:"",of:"",sf:"",
-      almDestino:"SB-CENTRAL-MP",orgCompra:"SB",grupoCompra:"",valLog:false,valGer:false,items:[],recepciones:[],facturas:[],hist:[]};
+      almDestino:"SB-CENTRAL-MP",valLog:false,valGer:false,items:[],recepciones:[],facturas:[],hist:[]};
   ocLlenarForm(); renderOC(); go('co07');
   toast("OC directa: seleccione proveedor y agregue ítems; se guarda en la base al Guardar borrador");
 }
@@ -103,7 +90,6 @@ function abrirOC(id){
   const o=BD.oc(id);
   if(!o){toast("No existe la orden de compra "+id);return}
   OCid=o.id; OC=(o.est==="Borrador")?BD.copia(o):o;
-  if(OC.est==="Borrador")OC._gcManual=!!o.grupoCompra && o.grupoCompra!==ocGrupoCompraDef(o);
   ocLlenarForm(); renderOC(); go('co07');
 }
 function loadOC(id){ abrirOC(id); }
@@ -117,10 +103,6 @@ function ocLlenarForm(){
   const conds=coCondiciones().map(c=>c.nom); if(OC.cond && !conds.includes(OC.cond))conds.unshift(OC.cond);
   document.getElementById('oc-cond').innerHTML=conds.map(c=>'<option>'+coEsc(c)+'</option>').join('');
   document.getElementById('oc-cond').value=OC.cond||"Contado";
-  document.getElementById('oc-org').innerHTML=(coD().maestros.organizacionesCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
-  document.getElementById('oc-org').value=ocOrg(OC);
-  document.getElementById('oc-gcomp').innerHTML=(coD().maestros.gruposCompra||[]).map(x=>'<option value="'+x.cod+'">'+x.cod+' · '+coEsc(x.nom)+'</option>').join('');
-  document.getElementById('oc-gcomp').value=ocGrupo(OC);
   document.getElementById('oc-mon').value=OC.mon||"S/.";
   document.getElementById('oc-tc').value=OC.tc;
   document.getElementById('oc-fecha').value=coISO(OC.fecha);
@@ -134,8 +116,6 @@ function ocLlenarForm(){
 function ocLeerForm(){
   if(!OC || OC.est!=="Borrador")return;
   OC.cond=document.getElementById('oc-cond').value;
-  OC.orgCompra=document.getElementById('oc-org').value||"SB";
-  OC.grupoCompra=document.getElementById('oc-gcomp').value;
   OC.mon=document.getElementById('oc-mon').value;
   OC.tc=parseFloat(document.getElementById('oc-tc').value)||0;
   OC.fecha=coDMY(document.getElementById('oc-fecha').value)||OC.fecha||BD.hoy();
@@ -147,7 +127,6 @@ function ocLeerForm(){
 function ocUltimo(o,accion){ const h=(o.hist||[]).filter(x=>x.a===accion).pop(); return h?' <span class="hint">('+coEsc(h.u)+' · '+h.f+')</span>':''; }
 function renderOC(){
   const o=OC, e=o.est, editable=(e==="Borrador"), recibible=Docs.oc.recibible(o);
-  if(editable && !o._gcManual){ o.grupoCompra=ocGrupoCompraDef(o); const sg=document.getElementById('oc-gcomp'); if(sg)sg.value=o.grupoCompra; }
   const b=document.getElementById('oc-badge'); b.textContent=e; b.style.background=OC_EST[e]||"var(--borrador)";
   const tipo=o.items.length?(esServicioOC(o)?"Servicio":"Bienes"):(o.tipo||"Bienes");
   const tb=document.getElementById('oc-tipo-badge'); tb.textContent=tipo; tb.style.background=tipo==="Servicio"?"var(--oc-pagar)":"var(--primario-claro)";
@@ -166,7 +145,7 @@ function renderOC(){
   if(ocFacturable(o))ops.push('<div class="op" onclick="crearFacDesdeOC()">Factura de Compra<small>CO-10 con lo pendiente de facturar de esta OC</small></div>');
   document.getElementById('oc-crear-menu').innerHTML=ops.join('');
   document.getElementById('oc-b-crear').style.display=ops.length?"inline-block":"none";
-  ['oc-org','oc-gcomp','oc-cond','oc-mon','oc-tc','oc-fecha','oc-ref','oc-op','oc-obs','oc-alm'].forEach(id=>document.getElementById(id).disabled=!editable);
+  ['oc-cond','oc-mon','oc-tc','oc-fecha','oc-ref','oc-op','oc-obs','oc-alm'].forEach(id=>document.getElementById(id).disabled=!editable);
   show('oc-b-additem',editable); show('oc-b-prov',editable);
   show('oc-b-versol',!!o.sol); show('oc-b-verof',editable||!!o.of);
   /* validaciones */
@@ -295,8 +274,6 @@ function guardarBorradorOC(silencio){
     items:OC.items.map(i=>({art:i.art,cant:i.cant,pu:i.pu,igv:i.igv}))};
   const o=coTry(()=>OCid?Docs.oc.guardar(OCid,d):Docs.oc.crear(d));
   if(!o)return false;
-  /* orgCompra y grupoCompra no los copia Docs.oc.crear/guardar: se asignan en el documento de la base (propuesta para el núcleo) */
-  const x=BD.oc(o.id); x.orgCompra=OC.orgCompra||"SB"; x.emp=x.orgCompra; x.grupoCompra=OC.grupoCompra||ocGrupoCompraDef(x); BD.guardar();
   const nueva=!OCid; OCid=o.id;
   if(!silencio)toast((nueva?"OC creada en Borrador: ":"Borrador guardado: ")+o.id+(OC.of&&!BD.of(OC.of)?" · aviso: la orden "+OC.of+" no existe en la base":""));
   abrirOC(o.id); coRefrescar();
