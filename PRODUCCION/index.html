@@ -28,10 +28,7 @@
       </select>
     </div>
     <div class="company-sel"><label>Empresa:</label>
-      <select onchange="UI.toast('La demo de producción trae datos de IMPERIOTEX');this.value='IMPERIOTEX'">
-        <option value="IMPERIOTEX" selected>IMPERIOTEX</option>
-        <option value="CATINNA NOW">CATINNA NOW</option>
-      </select>
+      <select id="selEmpresa" onchange="App.empresa(this.value)" title="Empresa activa: filtra los almacenes que se ofrecen al crear órdenes y solicitudes"></select>
     </div>
     <div id="bd-selector"></div>
     <div class="userchip"><div class="avatar">U5</div><span>USER05 · Producción</span></div>

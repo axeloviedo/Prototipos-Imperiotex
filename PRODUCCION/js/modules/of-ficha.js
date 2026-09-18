@@ -75,7 +75,7 @@ const PR02 = {
       cuerpo: '<div class="formgrid">' +
         UI.campo('Servicio', '<select id="te-rec" onchange="PR02.tercProv()">' + UI.opts(servs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom + ' · ' + UI.s(r.costo) + ' / ' + r.u })), recSel) + '</select>', { req: true, full: true }) +
         UI.campo('Proveedor', '<select id="te-prov">' + UI.opts(provs.map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), provSel) + '</select>', { req: true, hint: 'El habitual del servicio; Logística lo confirma al crear la OC' }) +
-        UI.campo('Almacén de tránsito', '<select id="te-alm">' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom + (a.transito ? ' (en tránsito)' : '') })), Prod.almTercero(of)) + '</select>', { req: true }) +
+        UI.campo('Almacén de tránsito', '<select id="te-alm">' + UI.opts(M.opcionesAlm(of.emp || BD.empresaDe(of.alm), Prod.almTercero(of)), Prod.almTercero(of)) + '</select>', { req: true, hint: 'Almacenes de la empresa de la orden; debe estar marcado «en tránsito»' }) +
         '<div class="field full"><label class="check"><input type="checkbox" id="te-sol" checked> Pedir el servicio a Logística (Solicitud de materiales)</label></div></div>' +
         '<p class="hint">' + (actual.length ? 'La orden ya lleva el servicio de su lista de materiales: se reemplaza el servicio o el proveedor (si la solicitud del servicio aún está pendiente, se anula).' :
           'Los materiales de la orden pasan al almacén de tránsito (se mandan con «Enviar al proveedor»), se quitan los recursos propios y se agrega el servicio.') + ' Lo producido vuelve a ' + of.alm + ' con el recibo. La orden pasa a Especial.</p>',

@@ -75,9 +75,15 @@ const Prod = {
       mats: L ? Explosion.materiales(L.id, cant) : [], recs: L ? Explosion.recursos(L.id, cant) : [], textos: L ? Explosion.textos(L.id) : [],
       emisiones: [], recibos: [], compras: [], envios: [], tercero: null, adj: [], hist: [], costo: { mat: 0, rec: 0, serv: 0 }, absorbido: 0
     };
+    Prod._validarEmpresa(of);
     BD.d.ofs.unshift(of);
     Prod._hist(of, 'Orden creada', of.tipofab + ' · ' + (of.sf ? 'desde ' + of.sf : 'en Producción') + ' · ' + Prod.nombreRef() + ' ' + of.ref);
     return of;
+  },
+  /* Q4: los materiales de la orden se toman de almacenes de la MISMA empresa que el almacén donde entra lo producido */
+  _validarEmpresa(of) {
+    const ajenos = of.mats.filter(m => m.alm && BD.empresaDe(m.alm) !== of.emp);
+    if (ajenos.length) throw new Error('La orden entra en ' + of.alm + ' (' + BD.empNom(of.emp) + ') pero toma material de otra empresa: ' + ajenos.map(m => M.nomArt(m.cod) + ' en ' + m.alm).join(', ') + '. Cambie el almacén de esas líneas o el de la orden');
   },
   _crearSugeridas(sugeridas, nec, base, alms) {
     return Object.keys(sugeridas || {}).filter(art => (Number(sugeridas[art]) || 0) > 0).map(art => {
@@ -142,6 +148,7 @@ const Prod = {
     if (!of.mats.length && !of.recs.length) throw new Error('Agregue al menos un material o recurso antes de liberar');
     const sinAlm = of.mats.filter(m => !m.alm);
     if (sinAlm.length) throw new Error('Elija el almacén de: ' + sinAlm.map(m => M.nomArt(m.cod)).join(', '));
+    Prod._validarEmpresa(of);
     Prod._comprometer(of);
     of.estado = 'Liberado'; of.fechaLib = UI.ahora();
     Prod._hist(of, 'Orden liberada', detalle || '');
@@ -209,7 +216,7 @@ const Prod = {
     if (tipo === 'Texto') { of.textos[i] = valor; return; }
     const l = tipo === 'Recurso' ? of.recs[i] : of.mats[i];
     if (campo === 'cons') { const v = parseFloat(valor); if (!(v >= 0)) throw new Error('Cantidad no válida'); l.cons = UI.r4(v); }
-    if (campo === 'alm') { if (!M.alm(valor)) throw new Error('Almacén no válido'); l.alm = valor; }
+    if (campo === 'alm') { if (!M.alm(valor)) throw new Error('Almacén no válido'); if (BD.empresaDe(valor) !== of.emp) throw new Error(valor + ' es de otra empresa: la orden entra en ' + of.alm + ' (' + BD.empNom(of.emp) + ')'); l.alm = valor; }
     if (campo === 'metodo') l.metodo = valor === 'Notificación' ? 'Notificación' : 'Manual';
     Prod._recalc(of);
   },

@@ -69,7 +69,7 @@ const PR01N = {
       UI.campo('Artículo', '<div style="display:flex;gap:6px"><input id="n-artnom" readonly placeholder="Seleccione…" style="flex:1"><button class="btn btn-secondary btn-sm" onclick="PR01N.buscar()">🔍 Buscar</button></div>', { req: true, estilo: 'grid-column:span 2' }) +
       UI.campo('Cantidad', '<input id="n-cant" type="number" min="0" step="any" value="' + (p.cant || 1) + '" oninput="PR01N.prev()">', { req: true }) +
       UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
-      UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom }))), '') + '</select>', { req: true }) +
+      UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'Solo almacenes de ' + UI.esc(BD.empNom(BD.empresa)) + ' (empresa activa)' }) +
       UI.campo(R, '<input id="n-ref" value="' + UI.esc(p.ref || '') + '" placeholder="Nuevo">') +
       UI.campo('Observación', '<input id="n-obs">') +
       '</div></div>' +
@@ -94,7 +94,7 @@ const PR01N = {
     card.style.display = nec.length ? 'block' : 'none';
     if (!nec.length || !UI.chk('n-sug')) { box.innerHTML = ''; return; }
     const filas = nec.sort((a, b) => Explosion.pasoArt(a.art) - Explosion.pasoArt(b.art)).map(n => '<tr><td class="num">' + Explosion.pasoArt(n.art) + '</td><td>' + UI.esc(M.nomArt(n.art)) + '<br><span class="mini">' + n.art + '</span></td>' +
-      '<td class="num">' + UI.n(n.req, 0) + '</td><td class="num"><input type="number" min="0" step="any" id="h-' + n.art + '" value="' + n.sugerido + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px"></td><td>' + '<select id="h-alm-' + n.art + '" style="border:1px solid var(--borde);border-radius:5px;padding:5px">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod }))), n.alm) + '</select>' + '</td></tr>')
+      '<td class="num">' + UI.n(n.req, 0) + '</td><td class="num"><input type="number" min="0" step="any" id="h-' + n.art + '" value="' + n.sugerido + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px"></td><td>' + '<select id="h-alm-' + n.art + '" style="border:1px solid var(--borde);border-radius:5px;padding:5px">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa, n.alm, null, false)), n.alm) + '</select>' + '</td></tr>')
       .concat(['<tr><td class="num">' + Explosion.pasoArt(art, ldm) + '</td><td><b>' + UI.esc(M.nomArt(art)) + '</b></td><td class="num">' + UI.n(cant, 0) + '</td><td class="num"><b>' + UI.n(cant, 0) + '</b></td><td class="mini">' + UI.esc(UI.v('n-alm')) + '</td></tr>']);
     box.innerHTML = UI.tabla([['Fase', 'num'], 'Orden para', ['Se necesita', 'num'], ['A fabricar', 'num'], 'Entra en'], filas);
   },
