@@ -11,6 +11,8 @@ function resetTRF(){
 }
 function abrirST(id){
   const s=stDoc(id); if(!s){toast("No existe la transferencia "+id);return}
+  /* vista compartida de Comercial: la misma ST se ve y se recibe en su pantalla CL-47 (Recepción de mercadería) */
+  if(VISTA_CM&&window.parent!==window){window.parent.postMessage({tipo:"gp-abrir-st",id:s.id},"*");return}
   TRF.id=s.id; TRF.lineas=s.lineas.map(l=>({art:l.art,cant:l.cant}));
   go('gi11');
 }
