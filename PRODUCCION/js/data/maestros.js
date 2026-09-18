@@ -42,5 +42,9 @@ const M = {
   attr: (cod, nom) => BD.attr(cod, nom),
   fabricables: () => M.ARTICULOS.filter(a => BD.fabricable(a.cod)),
   /* almacenes de tránsito (producto en poder de terceros) */
-  transitos: () => M.ALMACENES.filter(a => a.transito)
+  transitos: () => M.ALMACENES.filter(a => a.transito),
+  /* almacenes activos de una empresa (Q4: en Producción solo se ofrecen los de la empresa de la orden o la activa);
+     sel = código ya elegido, que se conserva aunque sea de otra empresa o esté inactivo; filtro(a) opcional */
+  almacenesDe: (emp, sel, filtro) => M.ALMACENES.filter(a => (a.cod === sel) || (a.emp === (emp || BD.empresa) && a.estado !== 'Inactivo' && (!filtro || filtro(a)))),
+  opcionesAlm: (emp, sel, filtro, conNombre) => M.almacenesDe(emp, sel, filtro).map(a => ({ v: a.cod, t: conNombre === false ? a.cod : a.cod + ' · ' + a.nom + (a.transito ? ' (en tránsito)' : '') }))
 };

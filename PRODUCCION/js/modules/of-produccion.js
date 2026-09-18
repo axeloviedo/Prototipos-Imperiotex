@@ -44,9 +44,10 @@ const PREM = {
     const filasM = of.mats.map((m, i) => {
       const notif = m.metodo === 'Notificación', pend = UI.r4(Math.max(0, m.plan - m.consumido));
       return '<tr' + (notif ? gris : '') + '><td>' + UI.esc(M.nomArt(m.cod)) + '<br><span class="mini">' + m.cod + ' · ' + m.alm + '</span></td><td class="mini">' + m.metodo + '</td>' +
-        '<td class="num">' + UI.q(m.plan, m.u) + '</td><td class="num">' + UI.q(m.consumido, m.u) + '</td><td class="num">' + UI.n(Stock.act(m.alm, m.cod)) + '</td>' +
+        '<td class="num">' + UI.q(m.plan, m.u) + '</td><td class="num">' + UI.q(m.consumido, m.u) + '</td>' +
+        '<td class="num">' + UI.n(Prod.dispPara(m)) + '<br><span class="mini">hay ' + UI.n(Stock.act(m.alm, m.cod)) + ' · comp. ' + UI.n(m.almPropio ? 0 : m.comp) + '</span></td>' +
         '<td class="num">' + (notif ? '<span class="mini">se consume al recibir</span>' : PRUI.inp('em-m' + i, UI.n(pend), 'PREM.check()') + ' ' + m.u) + '</td></tr>' +
-        (notif ? '' : '<tr id="em-f' + i + '" style="display:none"><td colspan="6" style="padding-left:30px;background:#FFFBEB"><span class="warn-t" id="em-ft' + i + '"></span> · la diferencia se pide a Logística con una Solicitud de materiales</td></tr>');
+        (notif ? '' : '<tr id="em-f' + i + '" style="display:none"><td colspan="6" style="padding-left:30px;background:#FEF2F2"><span class="err-t" id="em-ft' + i + '"></span></td></tr>');
     });
     const filasR = of.recs.map((r, i) => {
       const notif = r.metodo === 'Notificación', ops = M.operarios().filter(o => o.rec === r.cod && o.activo);
@@ -60,11 +61,12 @@ const PREM = {
       cuerpo: '<div class="formgrid c3">' + UI.dato('Orden', '<b>' + of.id + '</b> · ' + UI.esc(M.nomArt(of.art))) +
         UI.campo('Fecha', '<input id="em-fecha" type="datetime-local" value="' + UI.dtLocal() + '">') + UI.campo('Observación', '<input id="em-obs">') + '</div>' +
         '<div class="sec" style="margin-top:12px">Materiales<div style="flex:1"></div><button class="btn-link" onclick="PREM.copiar()">Copiar pendiente</button></div>' +
-        UI.tabla(['Componente', 'Método', ['Planificado', 'num'], ['Emitido', 'num'], ['Stock en almacén', 'num'], ['A emitir', 'num']], filasM, { vacio: 'Sin materiales', estilo: 'margin-bottom:8px' }) +
+        UI.tabla(['Componente', 'Método', ['Planificado', 'num'], ['Emitido', 'num'], ['Puede usar la orden', 'num'], ['A emitir', 'num']], filasM, { vacio: 'Sin materiales', estilo: 'margin-bottom:8px' }) +
         '<div class="sec">Recursos y operarios</div>' +
         UI.tabla(['Recurso', 'Método', ['Planificado', 'num'], ['Registrado', 'num'], ['A registrar', 'num']], filasR, { vacio: 'Sin recursos' }) +
-        '<p class="hint">Solo se emiten las líneas Manual; las de Notificación se consumen al registrar el recibo. Si falta stock en el almacén de la línea se emite lo que hay y la diferencia se pide a Logística. Las horas del recurso son la suma de sus operarios.</p>',
-      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PREM.guardar()">Registrar emisión</button>'
+        '<p class="hint">Solo se emiten las líneas Manual; las de Notificación se consumen al registrar el recibo. <b>Puede usar la orden</b> = Disponible del almacén + lo que esta orden ya tiene comprometido: lo reservado por otros documentos no se toca. ' +
+        'Si no alcanza, la emisión se bloquea; con «Emitir lo disponible y pedir el resto» se emite lo que hay y la diferencia se pide a Logística. Las horas del recurso son la suma de sus operarios.</p>',
+      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-secondary" id="em-parcial" style="display:none" onclick="PREM.guardar(true)">Emitir lo disponible y pedir el resto</button><button class="btn btn-primary" id="em-ok" onclick="PREM.guardar()">Registrar emisión</button>'
     });
   },
   addOp(i) {
@@ -84,12 +86,16 @@ const PREM = {
   },
   check() {
     const of = PR02.of(); if (!of) return;
+    let cortos = 0;
     of.mats.forEach((m, i) => {
       const e = document.getElementById('em-m' + i), row = document.getElementById('em-f' + i); if (!e || !row) return;
-      const act = Math.max(0, Stock.act(m.alm, m.cod)), falta = UI.r4((parseFloat(e.value) || 0) - act);
+      const pide = parseFloat(e.value) || 0, falta = UI.r4(pide - Prod.dispPara(m));
       row.style.display = falta > 0 ? '' : 'none';
-      if (falta > 0) document.getElementById('em-ft' + i).textContent = 'Hay ' + UI.n(act) + ' en ' + m.alm + ': se emite eso y faltan ' + UI.n(falta) + ' ' + m.u;
+      if (falta > 0) { cortos++; document.getElementById('em-ft' + i).textContent = Prod.textoCorto(m, pide) + ' · faltan ' + UI.n(falta) + ' ' + m.u; }
     });
+    const bp = document.getElementById('em-parcial'), bo = document.getElementById('em-ok');
+    if (bp) bp.style.display = cortos ? '' : 'none';
+    if (bo) { bo.disabled = cortos > 0; bo.title = cortos ? 'Hay líneas que no alcanzan: emita menos o use «Emitir lo disponible y pedir el resto»' : ''; }
     of.recs.forEach((r, i) => {
       const e = document.getElementById('em-r' + i); if (!e) return;
       const ops = PREM.ops(i);
@@ -103,8 +109,8 @@ const PREM = {
     of.recs.forEach((r, i) => { const e = document.getElementById('em-r' + i); if (e && !PREM.ops(i).length) e.value = UI.r4(Math.max(0, r.plan - r.real)); });
     PREM.check();
   },
-  guardar() {
-    const of = PR02.of(), d = { fecha: UI.dtTexto(UI.v('em-fecha')), obs: UI.v('em-obs'), mats: {}, recs: {} };
+  guardar(parcial) {
+    const of = PR02.of(), d = { fecha: UI.dtTexto(UI.v('em-fecha')), obs: UI.v('em-obs'), mats: {}, recs: {}, parcial: !!parcial };
     of.mats.forEach((m, i) => { const e = document.getElementById('em-m' + i); if (e && e.value !== '') d.mats[i] = e.value; });
     of.recs.forEach((r, i) => { const e = document.getElementById('em-r' + i), ops = PREM.ops(i); if (e && (e.value !== '' || ops.length)) d.recs[i] = { cant: e.value, operarios: ops }; });
     const r = App.accion(() => Prod.emitir(of, d), x => (x.em ? 'Emisión ' + x.em.n + (x.em.movs.length ? ': ' + x.em.movs.join(', ') : '') : 'Sin stock para emitir') +
@@ -249,12 +255,12 @@ const PRRE = {
     const mats = of.mats.filter(m => m.metodo === 'Notificación'), recs = of.recs.filter(r => r.metodo === 'Notificación');
     box.innerHTML = (exceso ? UI.aviso('Quedan por recibir <b>' + UI.n(max, 0) + '</b>: no puede recibir ' + UI.n(cant, 0) + '.', 'err') : '') +
       '<div class="sec">Se consume por notificación</div>' +
-      UI.tabla(['Componente', 'Almacén', ['Cantidad', 'num'], ['Stock en almacén', 'num']], mats.map(m => {
-        const q = UI.r4(m.cons * c), act = Stock.act(m.alm, m.cod);
-        return '<tr><td>' + UI.esc(M.nomArt(m.cod)) + ' <span class="mini">' + m.cod + '</span></td><td class="mini">' + m.alm + '</td><td class="num">' + UI.q(q, m.u) + '</td><td class="num"><span class="' + (act + 0.00005 < q ? 'err-t' : 'mini') + '">' + UI.n(act) + '</span></td></tr>';
+      UI.tabla(['Componente', 'Almacén', ['Cantidad', 'num'], ['Puede usar la orden', 'num']], mats.map(m => {
+        const q = UI.r4(m.cons * c), disp = Prod.dispPara(m);
+        return '<tr><td>' + UI.esc(M.nomArt(m.cod)) + ' <span class="mini">' + m.cod + '</span></td><td class="mini">' + m.alm + '</td><td class="num">' + UI.q(q, m.u) + '</td><td class="num"><span class="' + (disp + 0.00005 < q ? 'err-t' : 'mini') + '">' + UI.n(disp) + '</span><br><span class="mini">hay ' + UI.n(Stock.act(m.alm, m.cod)) + '</span></td></tr>';
       }).concat(recs.map(r => '<tr><td>' + UI.esc(PRUI.nomRec(r.cod)) + ' <span class="mini">recurso</span></td><td class="mini">—</td><td class="num">' + UI.n(r.cons * c) + ' ' + r.u + '</td><td></td></tr>')),
         { vacio: 'Ninguna línea es de método Notificación', estilo: 'margin-bottom:8px' }) +
-      (falt.length ? '<div class="card aviso err"><b>Falta stock para el consumo por notificación.</b> Solicite los materiales a Logística y registre el recibo cuando lleguen.' +
+      (falt.length ? '<div class="card aviso err"><b>Falta stock para el consumo por notificación</b> (lo reservado por otros documentos no se usa). Solicite los materiales a Logística y registre el recibo cuando lleguen.' +
         UI.tabla(['Componente', 'Hacia', ['Falta', 'num']], falt.map(x => '<tr><td>' + UI.esc(M.nomArt(x.cod)) + '</td><td class="mini">' + x.alm + '</td><td class="num"><b>' + UI.n(x.falta) + '</b></td></tr>'), { estilo: 'margin:8px 0' }) +
         '<button class="btn btn-secondary btn-sm" onclick="PRRE.solicitar()">Solicitar materiales a Logística</button></div>' : '') +
       '<div class="sec">Entra al almacén</div>' +
