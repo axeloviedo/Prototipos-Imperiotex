@@ -35,7 +35,8 @@ function renderKardex(){
     let prom=0, saldoPrev=0, filas='';
     Stock.kardex(a,l).forEach(r=>{
       /* costo promedio vigente después del movimiento */
-      if(r.ent>0) prom=saldoPrev>0?BD.r4((saldoPrev*prom+r.ent*r.costo)/(saldoPrev+r.ent)):r.costo;
+      if(r.reval) prom=r.costo; /* revalorización: cambia el costo sin mover cantidades */
+      else if(r.ent>0) prom=saldoPrev>0?BD.r4((saldoPrev*prom+r.ent*r.costo)/(saldoPrev+r.ent)):r.costo;
       saldoPrev=r.saldo;
       const m=movPorId[r.id]||{}, n=Fmt.num(r.fecha);
       if(d&&n<d)return; if(h&&n>h)return; if(fg&&m.grupoMov!==fg)return; if(ft&&m.tipoMov!==ft)return;
