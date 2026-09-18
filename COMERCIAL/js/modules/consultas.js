@@ -1,29 +1,36 @@
 /* COMERCIAL · CL-32 Existencias y movimientos sobre la BASE COMPARTIDA: el mismo stock y los mismos movimientos que ven Inventarios (GI-05/06/07)
-   y Producción. Existencias de TODOS los almacenes (por defecto los de venta), movimientos de todos los módulos y Kardex · modal CL-33 */
+   y Producción · modal CL-33. Alcance (decisión 2026-09-18, Store.almsTiendas / Store.almsSede):
+   - Existencias: el stock de las tiendas de la empresa (todas), solo consulta.
+   - Movimientos y Kardex: solo los almacenes de la sede del usuario.
+   - Usuario logístico general (acceso_logistico_general): todos los almacenes, como en Inventarios. */
 const CM06 = {
-  tab: 'ex', f: { alm: '_venta', grupo: '', q: '', cero: false, tipo: '', tmov: '', modulo: '', malm: '', mq: '', art: 'PT-0001', kalm: '' },
+  tab: 'ex', f: { alm: '', grupo: '', q: '', cero: false, tipo: '', tmov: '', modulo: '', malm: '', mq: '', art: 'PT-0001', kalm: '' },
   render() {
     const t = CM06.tab;
-    const tabs = [['ex', 'Existencias'], ['mov', 'Movimientos (' + Store.d.movs.length + ')'], ['kar', 'Kardex']];
+    const tabs = [['ex', 'Existencias'], ['mov', 'Movimientos (' + CM06.movsSede().length + ')'], ['kar', 'Kardex']];
     return '<div class="screen-head"><h1>Existencias y movimientos</h1><span class="code">CL-32</span></div>' +
       '<div class="tabs">' + tabs.map(x => '<div class="tab' + (x[0] === t ? ' active' : '') + '" onclick="CM06.tab=\'' + x[0] + '\';App.refrescar()">' + x[1] + '</div>').join('') + '</div>' +
       (t === 'ex' ? CM06.existencias() : t === 'mov' ? CM06.movimientos() : CM06.kardex());
   },
-  /* opciones de almacén: los de venta, todos y cada almacén de la base */
-  optsAlm(sel, conVenta) {
-    const venta = M.ALMACENES.map(a => a.cod);
-    const grupo = [{ v: '', t: 'Todos los almacenes' }].concat(conVenta ? [{ v: '_venta', t: 'Almacenes de venta (' + venta.length + ')' }] : []);
-    return UI.opts(grupo.concat(Store.d.maestros.almacenes.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom + (venta.indexOf(a.cod) >= 0 ? ' · venta' : '') }))), sel);
+  /* almacenes que puede ver: 'ex' existencias (tiendas de la empresa) · 'mov' movimientos y Kardex (su sede); null = todos (logístico general) */
+  alcance(modo) { return Store.general() ? null : modo === 'ex' ? Store.almsTiendas() : Store.almsSede(); },
+  /* opciones de almacén dentro del alcance; '' = todo el alcance */
+  optsAlm(sel, modo) {
+    const alc = CM06.alcance(modo), lista = Store.d.maestros.almacenes.filter(a => !alc || alc.indexOf(a.cod) >= 0);
+    const todo = !alc ? 'Todos los almacenes' : modo === 'ex' ? 'Tiendas de la empresa (' + lista.length + ')' : 'Almacenes de mi sede (' + lista.length + ')';
+    return UI.opts([{ v: '', t: todo }].concat(lista.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom }))), sel);
   },
-  enAlm(cod, f) { return !f || (f === '_venta' ? M.ALMACENES.some(a => a.cod === cod) : cod === f); },
+  enAlm(cod, f, modo) { const alc = CM06.alcance(modo); return (!alc || alc.indexOf(cod) >= 0) && (!f || cod === f); },
+  /* movimientos que tocan algún almacén de su sede */
+  movsSede() { const alc = CM06.alcance('mov'); return Store.d.movs.filter(m => !alc || m.lineas.some(l => alc.indexOf(l.alm) >= 0)); },
   existencias() {
     const f = CM06.f, q = f.q.toLowerCase(), sup = Store.puede('configurar_comercial');
-    const filas = Store.d.stock.filter(s => (f.cero || s.act || s.comp || s.ped) && CM06.enAlm(s.alm, f.alm) && (!f.grupo || (Store.art(s.art) || {}).grupo === f.grupo) &&
+    const filas = Store.d.stock.filter(s => (f.cero || s.act || s.comp || s.ped) && CM06.enAlm(s.alm, f.alm, 'ex') && (!f.grupo || (Store.art(s.art) || {}).grupo === f.grupo) &&
       (!q || s.art.toLowerCase().includes(q) || M.nomArt(s.art).toLowerCase().includes(q)))
       .sort((a, b) => a.alm.localeCompare(b.alm) || a.art.localeCompare(b.art));
     const valor = filas.reduce((a, s) => a + s.act * s.costo, 0);
     return '<div class="card"><div class="filters">' +
-      UI.campo('Almacén', '<select onchange="CM06.f.alm=this.value;App.refrescar()">' + CM06.optsAlm(f.alm, true) + '</select>') +
+      UI.campo('Almacén', '<select onchange="CM06.f.alm=this.value;App.refrescar()">' + CM06.optsAlm(f.alm, 'ex') + '</select>') +
       UI.campo('Grupo de artículo', '<select onchange="CM06.f.grupo=this.value;App.refrescar()">' + UI.opts(Store.d.maestros.grupos.filter(g => g.inv).map(g => ({ v: g.cod, t: g.nom })), f.grupo, 'Todos') + '</select>') +
       UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM06.f.q=this.value;App.refrescar()" placeholder="Código o nombre">') +
       '<label class="check"><input type="checkbox"' + (f.cero ? ' checked' : '') + ' onchange="CM06.f.cero=this.checked;App.refrescar()"> Mostrar en cero</label></div></div>' +
@@ -33,38 +40,34 @@ const CM06 = {
           '<td class="num"><span class="' + (s.act < 0 ? 'err-t' : '') + '">' + UI.q(s.act) + '</span></td><td class="num">' + (s.comp ? UI.q(s.comp) + (cv ? '<br><span class="mini">' + UI.q(cv) + ' por ventas pendientes</span>' : '') : '') + '</td>' +
           '<td class="num"><b class="' + (disp <= 0 ? 'err-t' : '') + '">' + UI.q(disp) + '</b></td><td class="num">' + (s.ped ? UI.q(s.ped) : '') + '</td>' + (sup ? '<td class="num">' + UI.n(s.costo, 4) + '</td><td class="num">' + UI.s(s.act * s.costo) + '</td>' : '') + '</tr>';
       }), { vacio: 'Sin existencias con estos filtros' + (Store.d.stock.length ? '' : ' (la base aún no tiene stock: escenario «Solo maestros»)'), foot: sup ? '<tr><td colspan="9" class="num"><b>Valor total</b></td><td class="num"><b>' + UI.s(valor) + '</b></td></tr>' : '' }) +
-      CM06.trfPendientes() +
-      '<p class="hint">Es el stock único de la base compartida: lo mismo que ven Inventarios (GI-05) y Producción. Disponible = Actual − Comprometido. <b>Pedido</b> = lo que viene en camino por Solicitudes de Transferencia aprobadas y aún no recibidas (no suma al Disponible hasta que la tienda confirma la recepción). <b>Comercial sí compromete stock</b>: la venta pendiente de pago sube el Comprometido de cada línea en su almacén; cuando los pagos validados cubren el total se registra su Salida, que baja el Actual y libera lo comprometido. La devolución sube el Actual con su ingreso. El resto del comprometido viene de otros módulos (p. ej. materia prima de Solicitudes de Fabricación aprobadas). El producto terminado entra a SB-CENTRAL por los recibos de Producción y llega a las tiendas por transferencia en dos pasos (aprobar compromete en origen y suma Pedido en destino; recibir mueve el stock).</p>';
+      CM06.enCamino() +
+      '<p class="hint">Es el stock único de la base compartida: lo mismo que ven Inventarios (GI-05) y Producción. Aquí se consulta el stock de todas las tiendas de la empresa; los movimientos y el Kardex solo muestran los almacenes de su sede. Disponible = Actual − Comprometido. <b>Pedido</b> = lo que viene en camino por Solicitudes de Transferencia aprobadas y aún no recibidas (no suma al Disponible hasta que la tienda confirma la recepción). <b>Comercial sí compromete stock</b>: la venta pendiente de pago sube el Comprometido de cada línea en su almacén; cuando los pagos validados cubren el total se registra su Salida, que baja el Actual y libera lo comprometido. La devolución sube el Actual con su ingreso. El resto del comprometido viene de otros módulos (p. ej. materia prima de Solicitudes de Fabricación aprobadas). El producto terminado entra a SB-CENTRAL por los recibos de Producción y llega a las tiendas por transferencia en dos pasos (aprobar compromete en origen y suma Pedido en destino; recibir mueve el stock).</p>';
   },
-  /* Solicitudes de Transferencia aprobadas y no recibidas hacia almacenes de venta (se reciben en Inventarios GI-11) */
-  trfPendientes() {
-    const f = CM06.f, lista = (Store.d.trfs || []).filter(t => (t.estado === 'Aprobada' || t.estado === 'Parcial') && CM06.enAlm(t.destino, f.alm === '' ? '_venta' : f.alm));
-    if (!lista.length) return '';
-    return '<div class="sec">Transferencias en camino hacia almacenes de venta (' + lista.length + ')</div>' +
-      UI.tabla(['Solicitud', 'Fecha', 'Tipo de movimiento', 'Origen → destino', 'Estado', 'Pendiente de recibir'], lista.map(t =>
-        '<tr><td><b>' + t.id + '</b></td><td class="mini">' + t.fecha + '</td><td class="mini">' + UI.esc(t.tipoMov + ' · ' + ((BD.tipoMov(t.tipoMov) || {}).nom || '')) + '</td>' +
-        '<td class="mini">' + t.origen + ' → <b>' + t.destino + '</b><br>' + UI.esc(M.almNom(t.destino)) + '</td><td>' + UI.estado(t.estado) + '</td>' +
-        '<td class="mini">' + t.lineas.filter(l => Docs.trf.pendiente(l) > 0).map(l => l.art + ' × ' + UI.q(Docs.trf.pendiente(l))).join('<br>') + '</td></tr>'), { sub: true }) +
-      '<p class="hint">La recepción la confirma Inventarios (GI-11); mientras tanto se ve como Pedido en el destino y Comprometido en el origen.</p>';
+  /* aviso de lo que viene en camino a su sede: la recepción se confirma en CL-47 (misma Solicitud de Transferencia que GI-11) */
+  enCamino() {
+    const n = typeof CM13 !== 'undefined' ? CM13.pendientes().length : 0;
+    if (!n) return '';
+    return UI.aviso('<b>' + n + ' transferencia(s) en camino a su sede.</b> Confírmelas cuando llegue la mercadería: ' +
+      '<button class="btn-link" style="padding:0" onclick="App.go(\'cm13\')">Recepción de mercadería (CL-47)</button>', 'info');
   },
   movimientos() {
     const f = CM06.f, mq = f.mq.toLowerCase();
     const modulos = [...new Set(Store.d.movs.map(m => m.modulo || 'Sin módulo'))].sort();
     const tipos = (Store.d.maestros.tiposMovimiento || []).map(t => ({ v: t.cod, t: t.cod + ' · ' + t.nom }));
-    const lista = Store.d.movs.filter(m => (!f.tipo || m.tipo === f.tipo) && (!f.tmov || m.tipoMov === f.tmov) && (!f.modulo || (m.modulo || 'Sin módulo') === f.modulo) &&
-      (!f.malm || m.lineas.some(l => CM06.enAlm(l.alm, f.malm))) &&
+    const lista = CM06.movsSede().filter(m => (!f.tipo || m.tipo === f.tipo) && (!f.tmov || m.tipoMov === f.tmov) && (!f.modulo || (m.modulo || 'Sin módulo') === f.modulo) &&
+      (!f.malm || m.lineas.some(l => CM06.enAlm(l.alm, f.malm, 'mov'))) &&
       (!mq || (m.ndoc + ' ' + m.id + ' ' + m.det + ' ' + m.od + ' ' + (m.obs || '')).toLowerCase().includes(mq)));
     const color = t => t === 'Ingreso' ? 'var(--confirmado)' : t === 'Salida' ? 'var(--parcial)' : 'var(--prp)';
     return '<div class="card"><div class="filters">' +
       UI.campo('Tipo', '<select onchange="CM06.f.tipo=this.value;App.refrescar()">' + UI.opts(['Ingreso', 'Salida', 'Transferencia'], f.tipo, 'Todos') + '</select>') +
       UI.campo('Tipo de movimiento', '<select onchange="CM06.f.tmov=this.value;App.refrescar()">' + UI.opts(tipos, f.tmov, 'Todos') + '</select>') +
       UI.campo('Módulo', '<select onchange="CM06.f.modulo=this.value;App.refrescar()">' + UI.opts(modulos, f.modulo, 'Todos') + '</select>') +
-      UI.campo('Almacén', '<select onchange="CM06.f.malm=this.value;App.refrescar()">' + CM06.optsAlm(f.malm, true) + '</select>') +
+      UI.campo('Almacén', '<select onchange="CM06.f.malm=this.value;App.refrescar()">' + CM06.optsAlm(f.malm, 'mov') + '</select>') +
       UI.campo('Buscar (documento / movimiento / cliente)', '<input value="' + UI.esc(f.mq) + '" onchange="CM06.f.mq=this.value;App.refrescar()" placeholder="Ej. VEN-2026-000003">') + '</div></div>' +
       UI.tabla(['Movimiento', 'Fecha', 'Tipo', 'Tipo de movimiento', 'Detalle', 'Módulo', 'Documento', 'Origen → destino', 'Concepto contable', ['Líneas', 'num'], ['Valor', 'num']], lista.map(m =>
         '<tr class="clickable" onclick="CM06.verMov(\'' + m.id + '\')"><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '</td><td>' + UI.badge(m.tipo, color(m.tipo)) + '</td>' +
         '<td class="mini">' + (m.tipoMov ? '<b>' + UI.esc(m.tipoMov) + '</b><br>' + UI.esc(m.tipoMovNom || '') : '—') + '</td><td>' + UI.esc(m.det) + '</td><td class="mini">' + UI.esc(m.modulo || '—') + '</td><td>' + CM06.linkDoc(m.ndoc) + '</td><td class="mini">' + UI.esc(m.od) + '</td><td class="mini">' + UI.esc(m.concepto) + '</td><td class="num">' + m.lineas.length + '</td><td class="num">' + UI.s(m.valor) + '</td></tr>'), { vacio: 'Sin movimientos' }) +
-      '<p class="hint">Todos los movimientos de la base compartida (Inventarios, Compras, Producción y Comercial). La venta genera su <b>Salida SAL-VENTA</b> («Venta al por menor / por mayor») cuando el pago confirmado cubre el total; la devolución o la anulación, un <b>Ingreso ING-DEVCLI</b> («Devoluciones de Clientes») y, si llega en mal estado, un traslado <b>TRF-LIQUID</b> al almacén de liquidación; la reposición de tienda es <b>TRF-REPTIENDA</b>; con la venta o la devolución como documento de origen y módulo Comercial. Aparecen igual en Inventarios (GI-07 y Kardex GI-06).</p>';
+      '<p class="hint">Movimientos de la base compartida (Inventarios, Compras, Producción y Comercial) que tocan los almacenes de su sede (todos, si es usuario logístico general). La venta genera su <b>Salida SAL-VENTA</b> («Venta al por menor / por mayor») cuando el pago confirmado cubre el total; la devolución o la anulación, un <b>Ingreso ING-DEVCLI</b> («Devoluciones de Clientes») y, si llega en mal estado, un traslado <b>TRF-LIQUID</b> al almacén de liquidación; la reposición de tienda es <b>TRF-REPTIENDA</b>; con la venta o la devolución como documento de origen y módulo Comercial. Aparecen igual en Inventarios (GI-07 y Kardex GI-06).</p>';
   },
   linkDoc(nd) {
     if (/^VEN-/.test(nd)) return '<button class="btn-link" style="padding:0" onclick="event.stopPropagation();App.go(\'cm02v\',{id:\'' + nd + '\'})">' + nd + '</button>';
@@ -73,12 +76,13 @@ const CM06 = {
   },
   kardex() {
     const f = CM06.f;
-    const arts = [...new Set(Store.d.movs.flatMap(m => m.lineas.map(l => l.art)))].sort();
+    const alc = CM06.alcance('mov');
+    const arts = [...new Set(CM06.movsSede().flatMap(m => m.lineas.filter(l => !alc || alc.indexOf(l.alm) >= 0).map(l => l.art)))].sort();
     if (arts.indexOf(f.art) < 0) f.art = arts[0] || '';
-    const filas = f.art ? Stock.kardex(f.art, f.kalm) : [];
+    const filas = f.art ? Stock.kardex(f.art, f.kalm).filter(k => CM06.enAlm(k.alm, '', 'mov')) : [];
     return '<div class="card"><div class="filters">' +
       UI.campo('Artículo', '<select onchange="CM06.f.art=this.value;App.refrescar()">' + UI.opts(arts.map(a => ({ v: a, t: a + ' · ' + M.nomArt(a) })), f.art) + '</select>') +
-      UI.campo('Almacén', '<select onchange="CM06.f.kalm=this.value;App.refrescar()">' + CM06.optsAlm(f.kalm, false) + '</select>') + '</div></div>' +
+      UI.campo('Almacén', '<select onchange="CM06.f.kalm=this.value;App.refrescar()">' + CM06.optsAlm(f.kalm, 'mov') + '</select>') + '</div></div>' +
       UI.tabla(['Fecha', 'Movimiento', 'Detalle', 'Documento', 'Almacén', ['Entrada', 'num'], ['Salida', 'num'], ['Costo', 'num'], ['Saldo en almacén', 'num']], filas.map(k =>
         '<tr><td class="mini">' + k.fecha + '</td><td><button class="btn-link" onclick="CM06.verMov(\'' + k.id + '\')">' + k.id + '</button></td><td>' + UI.esc(k.det) + '</td><td>' + CM06.linkDoc(k.ndoc) + '</td><td class="mini">' + k.alm + '</td>' +
         '<td class="num">' + (k.ent ? UI.q(k.ent) : '') + '</td><td class="num">' + (k.sal ? UI.q(k.sal) : '') + '</td><td class="num">' + UI.n(k.costo, 4) + '</td><td class="num">' + UI.q(k.saldo) + '</td></tr>'), { vacio: 'Sin movimientos de este artículo' }) +
@@ -87,6 +91,7 @@ const CM06 = {
   verMov(id) {
     const m = Store.d.movs.find(x => x.id === id);
     if (!m) { UI.toast('Movimiento no encontrado'); return; }
+    if (!CM06.movsSede().includes(m)) { UI.toast('El movimiento ' + id + ' no toca almacenes de su sede'); return; }
     UI.modal({
       titulo: m.id + ' · ' + m.tipo, lg: true, code: 'CL-33',
       cuerpo: '<div class="formgrid c3">' + UI.dato('Detalle', UI.esc(m.det), { estilo: 'grid-column:span 2' }) + UI.dato('Estado', m.est) + UI.dato('Tipo de movimiento', m.tipoMov ? UI.esc(m.tipoMov + ' · ' + (m.tipoMovNom || '')) : '—', { estilo: 'grid-column:span 2' }) + UI.dato('Fecha', m.fecha) +
