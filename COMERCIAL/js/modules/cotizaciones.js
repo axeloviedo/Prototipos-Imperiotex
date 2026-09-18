@@ -52,8 +52,8 @@ const CM01 = {
       return;
     }
     const filas = [];
-    l.forEach(c => c.lineas.forEach((x, i) => filas.push([c.id, c.fecha, c.cliente.nom, i + 1, x.art, x.nom, x.desc, x.um, x.cant, x.precio, x.dcto, x.obsequio ? 'Sí' : '', x.total, c.mon, c.estado])));
-    UI.csv('cotizaciones-detalle', ['N°', 'Fecha de creación', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Cantidad', 'Precio', 'Dcto. unit.', 'Obsequio', 'Total', 'Moneda', 'Estado'], filas);
+    l.forEach(c => c.lineas.forEach((x, i) => filas.push([c.id, c.fecha, c.cliente.nom, i + 1, x.art, x.nom, x.desc, x.um, x.cant, x.precio, x.dcto, x.total, c.mon, c.estado])));
+    UI.csv('cotizaciones-detalle', ['N°', 'Fecha de creación', 'Cliente', 'Línea', 'Código', 'Artículo', 'Descripción', 'UM', 'Cantidad', 'Precio', 'Dcto. unit.', 'Total', 'Moneda', 'Estado'], filas);
   }
 };
 App.pantalla('cm01', { titulo: 'Cotizaciones', permiso: 'ver_cotizacion', render: CM01.render, despues: CM01.pintar });
@@ -96,7 +96,7 @@ const CM01F = {
       (ed ? UI.campo('Moneda', sel('mon', M.MONEDAS.map(m => ({ v: m.cod, t: m.cod + ' · ' + m.nom })), c.mon), { req: true }) : UI.dato('Moneda', c.mon)) +
       (ed ? UI.campo('Condición de pago', sel('cond', M.CONDICIONES.map(x => ({ v: x.cod, t: x.nom })), c.cond), { req: true }) : UI.dato('Condición de pago', M.cond(c.cond).nom)) +
       (ed && Store.puede('asignar_vendedor') ? UI.campo('Vendedor', sel('asesor', DOCUI.vendedores(), c.asesor)) : UI.dato('Vendedor', UI.esc(DOCUI.vendedor(c.asesor)))) +
-      (ed ? UI.campo('Observación', '<input value="' + UI.esc(c.obs) + '" onchange="CM01F.cab(\'obs\',this.value)">', { estilo: 'grid-column:span 2', hint: 'Obligatoria si hay obsequios' }) : UI.dato('Observación', UI.esc(c.obs), { estilo: 'grid-column:span 2' })) +
+      (ed ? UI.campo('Observación', '<input value="' + UI.esc(c.obs) + '" onchange="CM01F.cab(\'obs\',this.value)">', { estilo: 'grid-column:span 2' }) : UI.dato('Observación', UI.esc(c.obs), { estilo: 'grid-column:span 2' })) +
       '</div></div>' +
       DOCUI.cardCliente('CM01F', c, ed) +
       '<div class="card"><div class="sec">Detalle' + (ed ? '<div class="spacer"></div><button class="btn btn-secondary btn-sm" onclick="BUS.articulo(CM01F.doc(), cod => CM01F.agregar(cod))">+ Agregar artículos</button>' : '') + '</div>' +

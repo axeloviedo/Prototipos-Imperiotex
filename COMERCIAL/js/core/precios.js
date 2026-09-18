@@ -141,10 +141,10 @@ const Precios = {
     return a && a.igv === 'Gravado' ? (Store.cfg().igv || 0) / 100 : 0;
   },
 
-  /* completa los importes de una línea {art, cant, precio, dcto, obsequio}; dcto es monto por unidad */
+  /* completa los importes de una línea {art, cant, precio, dcto}; dcto es monto por unidad */
   linea(l) {
-    const pu = l.obsequio ? 0 : (Number(l.precio) || 0);
-    const dct = l.obsequio ? 0 : (Number(l.dcto) || 0);
+    const pu = Number(l.precio) || 0;
+    const dct = Number(l.dcto) || 0;
     l.neto = UI.r4(pu - dct);
     l.total = UI.r2(l.neto * (Number(l.cant) || 0));
     const t = Precios.tasa(l.art);

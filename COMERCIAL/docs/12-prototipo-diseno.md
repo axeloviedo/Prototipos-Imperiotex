@@ -55,7 +55,7 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 | K10 | **Devolución de una venta Pagada** | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
 | K11 | **Un documento para productos y servicios** | La línea es un artículo: si no es inventariable (grupo SERVICIOS) no lleva almacén ni stock y admite descripción personalizada. |
 | K12 | **Sin stock no se vende** *(L6, 2026-09-16)* | Ya no hay control de stock por artículo. En la cotización solo avisa (no reserva stock). La orden y la venta directa **siempre** impiden pasar del Disponible. Al completar el cobro se revisa el Actual. |
-| K13 | ~~Listas de precios en cascada por artículo~~ **Reemplazada el 2026-09-18 por LP1–LP5 (§12)** | Ahora se crea la **lista** (moneda; sede y segmento de cliente opcionales; con fechas = **oferta**) y se le agregan artículos o grupos con precio fijo o % de descuento. Se mantienen: IGV incluido, orden sede y segmento → sede → segmento → general → precio sugerido (solo PEN), descuento manual en rango, precio mínimo, obsequio con motivo y la **reversión** si falta precio en la moneda. |
+| K13 | ~~Listas de precios en cascada por artículo~~ **Reemplazada el 2026-09-18 por LP1–LP5 (§12)** | Ahora se crea la **lista** (moneda; sede y segmento de cliente opcionales; con fechas = **oferta**) y se le agregan artículos o grupos con precio fijo o % de descuento. Se mantienen: IGV incluido, orden sede y segmento → sede → segmento → general → precio sugerido (solo PEN), descuento manual en rango, precio mínimo y la **reversión** si falta precio en la moneda. |
 | K14 | **La caja es de la tienda** | Una caja abierta por tienda y moneda. Pestañas **Por cobrar**, **Cobros**, **Ingresos y egresos** y **Devoluciones de dinero**. Cierre con **conteo ciego**: el esperado solo lo ve el supervisor y la diferencia aparece al confirmar. Los movimientos no se borran: se anulan. |
 | K15 | **Fecha de creación** | Todos los listados y fichas dicen «Fecha de creación». La fecha la pone el sistema: no se registra con fecha pasada. |
 | K16 | **Permisos por acción** | `ver_*`, `crear_*`, `anular_venta`, `crear_devolucion_venta`, `crear_caja`, `editar_caja`, `asignar_vendedor`, `editar_precios`, `configurar_comercial`. Se exigen en las reglas, no solo ocultando botones. Perfiles de la demo: Vendedor, Cajero y Supervisor comercial. |
@@ -140,7 +140,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | F1 editar ventas guardadas | ⛔ No: se corrige anulando o devolviendo (como el backend) |
 | F2 agregar pagos | ✅ «Cobrar» en la venta y en caja |
 | F3 revalidar stock | ✅ Al crear la orden, al registrar la venta directa y al completar el cobro |
-| F12 obsequio con motivo | ✅ |
+| F12 obsequio con motivo | ~~✅~~ Retirado el 2026-09-18: ya no hay obsequio (§13) |
 | F13 entrega | ✅ En la orden de venta |
 | C1 nombres confusos | ✅ Un solo estado de cobro: «Cobrado» |
 | C2, C5, C6 validación de pagos | No aplica: registrar el cobro ya es cobrado (K8) |
@@ -313,7 +313,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 | LP9 | **Sin ambigüedad entre listas** *(2026-09-18)* | Dos listas de precios (sin fechas) **activas** del **mismo nivel** (misma moneda, sede y segmento) no pueden tener el mismo artículo, el mismo grupo, ni un artículo y el grupo al que pertenece: se rechaza con «Conflicto de precios: … ya tiene precio en «…»». Se revisa al agregar artículos o grupos y al cambiar la moneda, sede, segmento o «Activa» de una lista. Así nunca decide el orden de creación. Las ofertas pueden cruzarse: las resuelve LP10. |
 | LP10 | **Mejor precio entre base y ofertas; «Precio obligatorio»** *(2026-09-18)* | Se reúnen **todas** las ofertas vigentes que aplican (la especificidad solo decide si aplican, no quién gana) y gana el **menor precio** entre el precio base y esas ofertas: una oferta **no empeora** el precio. Una oferta con el check **«Precio obligatorio»** se aplica aunque sea más cara (liquidación, precio único); si hay varias obligatorias, la de menor precio. El piso LP8 vale también para ella. |
 | LP11 | **El precio de las listas es REFERENCIAL** *(2026-09-18)* | El motor **propone** el precio; en la cotización y en la venta directa el vendedor **puede cambiarlo** en la línea, más alto o más bajo. La línea queda «Precio modificado a mano» y guarda la **referencia** `precioRef {precio, origen, lista, oferta}` (lo que proponía el motor) junto al cálculo, como evidencia de cuánto se apartó. El precio a mano lo controlan el **precio mínimo, siempre** (LP12) y el rango del descuento manual. Cambiar la moneda **no pisa** el precio a mano: se convierte con el tipo de cambio. La venta desde una cotización respeta el precio cotizado (sus líneas no se editan): **confirmado por el usuario** — lo normal es que al convertir una cotización no se edite el precio. |
-| LP12 | **Nunca se vende debajo del precio mínimo** *(2026-09-18)* | En Comercial el precio mínimo del artículo se exige **siempre**, sin depender de «Verificar el precio mínimo» (Configuración General de Inventarios o del artículo): ni lista, ni oferta (LP8), ni precio a mano, ni descuento manual dejan el **neto** debajo del mínimo. Sin mínimo (0), el neto debe ser mayor que cero. Solo el **obsequio** (con motivo) queda fuera. En CL-43/CL-44 el mínimo se muestra como «se exige siempre». |
+| LP12 | **Nunca se vende debajo del precio mínimo** *(2026-09-18)* | En Comercial el precio mínimo del artículo se exige **siempre**, sin depender de «Verificar el precio mínimo» (Configuración General de Inventarios o del artículo): ni lista, ni oferta (LP8), ni precio a mano, ni descuento manual dejan el **neto** debajo del mínimo. Sin mínimo (0), el neto debe ser mayor que cero, sin excepciones (el obsequio se retiró, §13). En CL-43/CL-44 el mínimo se muestra como «se exige siempre». |
 
 **Datos de ejemplo (a confirmar):** LP-01 Precios generales S/ · LP-02 Precios generales US$ · LP-03 Mayorista (UND y docena) · LP-04 Exportación (US$) · LP-05 Galería Damero (sede DAM) · LP-06 Mayorista Galería Ya (sede YA + MAYORISTA) · ofertas LP-07 Día del Padre (grupo PT −10 %, vencida), LP-08 Primavera (PT-0003 −20 % solo MINORISTA, setiembre), LP-09 Navidad (grupo PT −15 % y PT-0001 a 99.90, programada). Las ventas de la historia de julio no cambian de precio.
 
@@ -369,7 +369,7 @@ Acordado con el usuario tras revisar una propuesta externa de «motor en fases»
 | C16 | Descuento manual en una línea con oferta | No se permite |
 | C17 | Cambio de cliente o unidad | Se recalcula (salvo lo escrito a mano) · cambio de cantidad: no |
 | C18 | Venta desde cotización | Respeta el precio cotizado aunque la oferta ya venció |
-| C19 | Obsequio | Precio 0 con motivo (fuera del motor) |
+| C19 | ~~Obsequio~~ | Retirado el 2026-09-18 (§13): una línea nunca queda en precio 0 |
 
 ### 12.2 Para el desarrollo (listas de precios y ofertas)
 
@@ -380,3 +380,10 @@ Acordado con el usuario tras revisar una propuesta externa de «motor en fases»
 - El **motor de precios** vive en el back (un solo servicio `resolverPrecio`), con las fases de §12.1; la pantalla solo lo consulta. Validar en el back LP8 (piso al guardar un precio fijo) y LP9 (conflictos).
 - El precio que devuelve el motor es **referencial** (LP11): la API de venta acepta el precio que envía el vendedor; guarda el de referencia (`reference_price`, `reference_source`) y valida el precio mínimo **siempre** (neto por unidad de inventario, en soles; LP12) y el rango de descuento.
 - Guardar en la línea del documento la **evidencia** del cálculo (`calculo`: base, ofertas encontradas con su precio, ganadora, mínimo y ajuste), no solo el precio final.
+
+## 13. Sin obsequio (2026-09-18)
+
+| # | Decisión | Detalle |
+|---|---|---|
+| OB1 | **Se quita el obsequio** de la cotización y de la venta | Ya no existe la casilla «Obsequio» en la línea ni el campo `obsequio`. Toda línea lleva precio y pasa por las reglas de precio: precio en la moneda, rango del descuento manual y **precio mínimo siempre (LP12), sin excepciones**. La observación vuelve a ser opcional. El comprobante impreso y los CSV de detalle ya no tienen la columna Obsequio. |
+| OB2 | Por qué | El obsequio saltaba el precio mínimo sin permiso ni tope (bastaba escribir algo en la observación), una venta al contado de solo obsequios no se podía registrar, y ante SUNAT sería una **operación gratuita** con su propio tratamiento de IGV. Si el negocio vuelve a necesitar regalos, se diseñará aparte (permiso, motivo por línea, operación gratuita). |

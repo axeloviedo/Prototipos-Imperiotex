@@ -54,7 +54,7 @@
 |---|---|---|---|---|---|
 | Listar | `GET /quotes?q=&status=&site=&createdFrom=&createdTo=` | ver_cotizacion | filtros | `expired` calculado | — |
 | Ver | `GET /quotes/{id}` | ver_cotizacion | — | Con historial y relaciones | 404 |
-| Crear | `POST /quotes` | crear_cotizacion | customerCode, currency, validUntil, sellerCode, notes, lines[{article, unit, warehouse, quantity, price, unitDiscount, gift, description}] | Estado **Abierta**. Cliente activo; ≥ 1 línea; descuento en rango; precio mínimo; obsequio exige notas. La falta de stock va en `warnings[]` | 400, 404 CUSTOMER, 422 PRICE-BELOW-MIN / DISCOUNT-RANGE |
+| Crear | `POST /quotes` | crear_cotizacion | customerCode, currency, validUntil, sellerCode, notes, lines[{article, unit, warehouse, quantity, price, unitDiscount, description}] | Estado **Abierta**. Cliente activo; ≥ 1 línea; descuento en rango; precio mínimo. La falta de stock va en `warnings[]` | 400, 404 CUSTOMER, 422 PRICE-BELOW-MIN / DISCOUNT-RANGE |
 | Editar cabecera | `PATCH /quotes/{id}` | editar_cotizacion | customer, currency, validUntil, seller, notes | Solo Abierta. Cambiar moneda o cliente vuelve a resolver precios; si falta uno no cambia | 409 NOT-EDITABLE, 422 NO-PRICE |
 | Líneas | `POST /quotes/{id}/lines` · `PUT …/lines/{n}` · `DELETE …/lines/{n}` | editar_cotizacion | línea | Una a una; no se quita la última | 409 LAST-LINE, 422 |
 | Clonar | `POST /quotes/{id}/clone` | crear_cotizacion | — | Nueva Abierta con validez desde hoy | 404 |
