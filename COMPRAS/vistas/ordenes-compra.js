@@ -12,14 +12,13 @@ Vistas.pantallas(String.raw`
       <div class="filters">
         <div class="field"><label>Buscar (OC / proveedor / solicitud / orden)</label><input id="f-oc-q" placeholder="Ej. OC-000001, LANDEO, SOL-…" oninput="renderOCS()"></div>
         <div class="field"><label>Estado</label><select id="f-oc-e" onchange="renderOCS()"><option value="">Todos</option><option>Borrador</option><option>Pendiente de Validar</option><option>Para Recibir y Pagar</option><option>Para Recibir</option><option>Para Pagar</option><option>Completada</option><option>Cancelada</option><option value="*rec">Pendientes de recibir</option><option value="*fac">Pendientes de facturar</option></select></div>
-        <div class="field"><label>Tipo</label><select id="f-oc-t" onchange="renderOCS()"><option value="">Todos</option><option>Bienes</option><option>Servicio</option></select></div>
         <div class="field"><label>Moneda</label><select id="f-oc-m" onchange="renderOCS()"><option value="">Todas</option><option>S/.</option><option>USD</option></select></div>
         <div class="field" style="display:flex;align-items:flex-end;gap:6px"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;color:var(--texto)"><input type="checkbox" id="f-oc-i" onchange="renderOCS()" style="width:auto"> Solo Importación (proveedor internacional)</label></div>
       </div>
     </div>
     <div class="tbl-wrap">
       <table class="grid">
-        <thead><tr><th>ID</th><th>Tipo</th><th>Proveedor</th><th>Moneda</th><th style="text-align:right">Total</th><th>Estado</th><th>Fecha</th><th>Origen</th><th style="width:80px;text-align:right" title="% recibido: cantidades ingresadas al almacén o con conformidad del servicio">% Recibido</th><th style="width:80px;text-align:right" title="% facturado: cantidades de las facturas registradas contra la OC">% Facturado</th><th style="width:70px">Acciones</th></tr></thead>
+        <thead><tr><th>ID</th><th>Proveedor</th><th>Moneda</th><th style="text-align:right">Total</th><th>Estado</th><th>Fecha</th><th>Origen</th><th style="width:80px;text-align:right" title="% recibido: cantidades ingresadas al almacén o con conformidad del servicio">% Recibido</th><th style="width:80px;text-align:right" title="% facturado: cantidades de las facturas registradas contra la OC">% Facturado</th><th style="width:70px">Acciones</th></tr></thead>
         <tbody id="ocs-body"></tbody>
       </table>
       <div class="pager"><span id="ocs-count"></span></div>
@@ -32,7 +31,6 @@ Vistas.pantallas(String.raw`
     <div class="screen-head">
       <h1 id="oc-titulo">ORDEN DE COMPRA</h1><span class="code">CO-07</span>
       <span class="badge" id="oc-badge" style="background:var(--borrador)">Borrador</span>
-      <span class="badge" id="oc-tipo-badge" style="background:var(--primario-claro)">Bienes</span>
       <div class="spacer"></div>
       <button class="btn btn-danger" id="oc-b-cancelar" onclick="preCancelarOC()">Cancelar OC</button>
       <button class="btn btn-secondary" id="oc-b-guardar" onclick="guardarBorradorOC()">Guardar borrador</button>

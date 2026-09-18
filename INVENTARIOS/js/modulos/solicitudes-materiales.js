@@ -152,6 +152,6 @@ function confirmarOCdesdeSOL(){
   const precios={}; document.querySelectorAll('.sol-oc-pu').forEach(x=>precios[x.dataset.art]=parseFloat(x.value)||0);
   const oc=intentar(()=>Docs.sol.crearOC(SOLF.id,{prov,precios})); if(!oc)return;
   closeModal('m-gi13b');
-  toast(oc.id+" creada en Borrador desde "+SOLF.id+" ("+oc.tipo+"): complétela en Compras");
+  toast(oc.id+" creada en Borrador desde "+SOLF.id+": complétela en Compras");
   irOC(oc.id);
 }

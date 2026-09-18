@@ -225,6 +225,9 @@ const Docs = (() => {
   const oc = {
     ESTADOS: ['Borrador', 'Pendiente de Validar', 'Para Recibir y Pagar', 'Para Recibir', 'Para Pagar', 'Completada', 'Cancelada'],
     esServicio(o) { return o.items.length > 0 && o.items.every(it => BD.esServicio(it.art)); },
+    /* la OC no tiene tipo: puede llevar bienes (se reciben con ingreso) y servicios (se da conformidad) a la vez */
+    tieneBienes(o) { return !!o && o.items.some(it => !BD.esServicio(it.art)); },
+    tieneServicios(o) { return !!o && o.items.some(it => BD.esServicio(it.art)); },
     _items(items) {
       const out = (items || []).filter(i => i.art).map(i => ({ art: i.art, cant: BD.r4(num(i.cant)), pu: BD.r4(num(i.pu) || 0), igv: i.igv == null ? 18 : Number(i.igv), recq: 0, facq: 0 }));
       out.forEach(i => { exigir(BD.art(i.art), 'No existe el artículo ' + i.art); exigir(i.cant > 0, 'Cantidad no válida en ' + BD.nomArt(i.art)); });
@@ -240,7 +243,6 @@ const Docs = (() => {
         ref: d.ref || '', obs: d.obs || '', sol: d.sol || '', of: d.of || '', sf: d.sf || '', almDestino: d.almDestino || '', valLog: false, valGer: false,
         items, recepciones: [], facturas: [], hist: []
       };
-      o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
       BD.d.ocs.unshift(o);
       BD.hist(o, 'Creada en borrador', (o.sol ? 'desde ' + o.sol : 'OC directa') + (o.of ? ' · ' + o.of : ''));
       g(); return o;
@@ -250,7 +252,6 @@ const Docs = (() => {
       ['prov', 'fecha', 'cond', 'mon', 'tc', 'ref', 'obs', 'almDestino', 'of'].forEach(k => { if (d[k] != null) o[k] = d[k]; });
       o.emp = BD.empresaDe(o.almDestino);
       if (d.items) o.items = oc._items(d.items);
-      o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
       g(); return o;
     },
     enviar(id) {

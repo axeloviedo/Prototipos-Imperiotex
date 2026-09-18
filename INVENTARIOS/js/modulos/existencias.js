@@ -4,7 +4,7 @@ function stockPedido(){
   const p={};
   /* la base lleva el Pedido en stock.ped (OC aprobadas y transferencias aprobadas, T1); si aún no existe se calcula de las OC */
   if(BD.d.stock.some(s=>s.ped!==undefined)||Array.isArray(BD.d.trfs)){BD.d.stock.forEach(s=>{if(s.ped>0)p[s.alm+'|'+s.art]=s.ped});return p}
-  BD.d.ocs.filter(o=>Docs.oc.recibible(o)&&o.tipo!=='Servicio').forEach(o=>o.items.forEach(i=>{
+  BD.d.ocs.filter(o=>Docs.oc.recibible(o)&&Docs.oc.tieneBienes(o)).forEach(o=>o.items.forEach(i=>{
     const falta=BD.r4(i.cant-i.recq); if(!(falta>0)||!Stock.inventariable(i.art))return;
     const k=(o.almDestino||'')+'|'+i.art; p[k]=BD.r4((p[k]||0)+falta);
   }));

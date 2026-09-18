@@ -327,7 +327,7 @@ const PRCOS = {
     const o = BD.oc(id); if (!o) { UI.toast('OC no encontrada'); return; }
     const t = Docs.oc.totales(o), av = Docs.oc.avance(o);
     UI.modal({
-      titulo: 'Orden de compra ' + o.id + ' · ' + o.tipo, lg: true,
+      titulo: 'Orden de compra ' + o.id, lg: true,
       cuerpo: '<div class="formgrid c3">' + UI.dato('Estado', UI.esc(o.est)) + UI.dato('Proveedor', UI.esc(M.provNom(o.prov)) + ' <span class="mini">' + o.prov + '</span>') + UI.dato('Fecha', o.fecha) +
         UI.dato('Solicitud', UI.esc(o.sol || '—')) + UI.dato('Orden', UI.esc(o.of || '—')) + UI.dato('Avance', 'Recibido ' + av.rec + ' % · facturado ' + av.fac + ' %') + '</div>' +
         '<div class="sec" style="margin-top:12px">Líneas</div>' + UI.tabla(['Código', 'Descripción', ['Cantidad', 'num'], ['Precio', 'num'], ['Recibido / conforme', 'num'], ['Facturado', 'num']], o.items.map(i =>

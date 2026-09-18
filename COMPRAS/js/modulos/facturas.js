@@ -44,7 +44,7 @@ function abrirFacOC(){
   let html="";
   coD().ocs.filter(ocFacturable).forEach(o=>{
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
-    html+='<tr><td>'+o.id+'</td><td>'+o.tipo+'</td><td>'+coEsc(coProvTxt(o.prov))+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td>'+
+    html+='<tr><td>'+o.id+'</td><td>'+coEsc(coProvTxt(o.prov))+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td>'+
      '<td style="text-align:right">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
      '<td style="text-align:right">'+a.rec+'%</td><td style="text-align:right;color:var(--confirmado)">'+a.fac+'%</td>'+
      '<td><button class="btn btn-primary btn-sm" onclick="crearFacDesdeOCk(\''+o.id+'\')">Facturar</button></td></tr>';
@@ -161,7 +161,7 @@ function renderFacDocs(){
   const fila=h=>'<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+h+'</div>';
   if(o){
     const a=Docs.oc.avance(o);
-    filas.push(fila('Orden de compra <button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button> · '+o.tipo+' · <span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span> · recibido '+a.rec+'% · facturado '+a.fac+'%'));
+    filas.push(fila('Orden de compra <button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button> · <span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span> · recibido '+a.rec+'% · facturado '+a.fac+'%'));
     o.recepciones.filter(r=>r.tipo==="Ingreso").forEach(r=>filas.push(fila('Ingreso relacionado: '+((typeof abrirMov==='function')?'<button class="btn-link" onclick="abrirMov(\''+r.mov+'\')">'+r.mov+'</button>':'<b>'+r.mov+'</b>')+((BD.mov(r.mov)||{}).tipoMov?' · '+coEsc(BD.mov(r.mov).tipoMov):'')+' · '+r.fecha+' · '+coEsc(r.alm))));
     o.recepciones.filter(r=>r.tipo==="Conformidad").forEach(r=>filas.push(fila('Conformidad del servicio · '+r.fecha+(r.conforme===false?' · con observaciones':''))));
     o.facturas.filter(id=>id!==FAC.id).forEach(id=>{const f=BD.fac(id); if(f)filas.push(fila('Otra factura de la misma OC: <button class="btn-link" onclick="abrirFactura(\''+f.id+'\')">'+f.id+'</button> · '+coEsc(f.ndoc)+' · '+f.est))});

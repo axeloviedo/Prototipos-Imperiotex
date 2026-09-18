@@ -1,6 +1,6 @@
 /* COMPRAS · CO-06/07 Órdenes de Compra
    Conectado a la base compartida: BD.d.ocs con Docs.oc (docs/16 §3.4).
-   {id:'OC-000001', est, tipo:'Bienes'|'Servicio', fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer,
+   {id:'OC-000001', est, fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer,
     items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}
    Globales que usan otras pantallas: renderOCS(), loadOC(id), abrirOC(id), nuevaOC(), fmtM(n), sinTildes(t) (en proveedores.js). */
 
@@ -34,7 +34,6 @@ function renderOCS(){
   const tb=document.getElementById('ocs-body'); if(!tb)return;
   const q=sinTildes(document.getElementById('f-oc-q').value||"");
   const e=document.getElementById('f-oc-e').value, m=document.getElementById('f-oc-m').value;
-  const ft=(document.getElementById('f-oc-t')||{}).value||"";
   const soloImp=document.getElementById('f-oc-i').checked;
   let html="", n=0;
   coD().ocs.forEach(o=>{
@@ -43,7 +42,7 @@ function renderOCS(){
     if(e==="*rec"){ if(!Docs.oc.recibible(o))return; }
     else if(e==="*fac"){ if(!ocFacturable(o))return; }
     else if(e && o.est!==e)return;
-    if(m && o.mon!==m)return; if(ft && o.tipo!==ft)return; if(soloImp && p.tipo!=="Internacional")return;
+    if(m && o.mon!==m)return; if(soloImp && p.tipo!=="Internacional")return;
     n++;
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
     const full=(o.est==="Completada");
@@ -51,11 +50,11 @@ function renderOCS(){
       o.of?'<button class="btn-link" onclick="event.stopPropagation();verOFdeOC(\''+o.of+'\')">'+o.of+'</button>':''].filter(Boolean).join(' · ')||'<span class="hint">OC directa</span>';
     const pct=(v,tip)=>'<td style="text-align:right;color:var(--confirmado);'+(v>=100?'font-weight:700':'')+'" title="'+tip+'">'+v+'%</td>';
     html+='<tr class="clickable" onclick="abrirOC(\''+o.id+'\')"><td>'+o.id+(p.tipo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td>'+
-     '<td>'+o.tipo+'</td><td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
+     '<td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
      '<td style="text-align:right;'+(full?'color:var(--confirmado);font-weight:700':'')+'">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
      '<td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td><td>'+o.fecha+'</td>'+
      '<td>'+origen+'</td>'+
-     pct(a.rec,o.tipo==="Servicio"?"% con conformidad del servicio":"% recibido en almacén")+pct(a.fac,"% facturado")+
+     pct(a.rec,esServicioOC(o)?"% con conformidad del servicio":"% recibido en almacén")+pct(a.fac,"% facturado")+
      '<td><button class="btn-link" onclick="event.stopPropagation();abrirOC(\''+o.id+'\')">Abrir</button></td></tr>';
   });
   tb.innerHTML=html||'<tr><td colspan="12" style="text-align:center;color:var(--texto-sec);padding:16px">'+(coD().ocs.length?'Sin órdenes para los filtros aplicados':'Aún no hay órdenes de compra en la base: use "+ Agregar OC" o créelas desde una Solicitud de Materiales (GI-13)')+'</td></tr>';
@@ -81,7 +80,7 @@ function verOFdeOC(id){
 function nuevaOC(){
   coD();
   OCid="";
-  OC={id:"",est:"Borrador",tipo:"Bienes",fecha:BD.hoy(),prov:"",cond:"Contado",mon:"S/.",tc:3.75,ref:"",obs:"",sol:"",of:"",sf:"",
+  OC={id:"",est:"Borrador",fecha:BD.hoy(),prov:"",cond:"Contado",mon:"S/.",tc:3.75,ref:"",obs:"",sol:"",of:"",sf:"",
       almDestino:"SB-CENTRAL-MP",valLog:false,valGer:false,items:[],recepciones:[],facturas:[],hist:[]};
   ocLlenarForm(); renderOC(); go('co07');
   toast("OC directa: seleccione proveedor y agregue ítems; se guarda en la base al Guardar borrador");
@@ -128,8 +127,6 @@ function ocUltimo(o,accion){ const h=(o.hist||[]).filter(x=>x.a===accion).pop();
 function renderOC(){
   const o=OC, e=o.est, editable=(e==="Borrador"), recibible=Docs.oc.recibible(o);
   const b=document.getElementById('oc-badge'); b.textContent=e; b.style.background=OC_EST[e]||"var(--borrador)";
-  const tipo=o.items.length?(esServicioOC(o)?"Servicio":"Bienes"):(o.tipo||"Bienes");
-  const tb=document.getElementById('oc-tipo-badge'); tb.textContent=tipo; tb.style.background=tipo==="Servicio"?"var(--oc-pagar)":"var(--primario-claro)";
   const show=(id,v)=>{const el=document.getElementById(id); if(el)el.style.display=v?"inline-block":"none"};
   const pendBienes=ocPendRec(o).filter(i=>!BD.esServicio(i.art)), pendSrv=ocPendRec(o).filter(i=>BD.esServicio(i.art));
   show('oc-b-cancelar',["Borrador","Pendiente de Validar","Para Recibir y Pagar"].includes(e) && !o.recepciones.length && !o.facturas.length);

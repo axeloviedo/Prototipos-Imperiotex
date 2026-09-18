@@ -27,7 +27,7 @@ Vistas.pantallas(String.raw`
       <div class="card" style="margin:0"><span class="hint">Órdenes de compra del período</span><div id="cpk-count" style="font-size:24px;font-weight:700;margin-top:6px"></div><span class="hint" id="cpk-count-sub"></span></div>
       <div class="card" style="margin:0"><span class="hint">Monto total comprado</span><div id="cpk-total" style="font-size:24px;font-weight:700;color:var(--primario);margin-top:6px"></div><span class="hint" id="cpk-total-sub"></span></div>
       <div class="card" style="margin:0"><span class="hint">Valor promedio por orden</span><div id="cpk-prom" style="font-size:24px;font-weight:700;margin-top:6px"></div><span class="hint">monto del período / órdenes del período</span></div>
-      <div class="card" style="margin:0"><span class="hint">Bienes / servicios</span><div id="cpk-tipos" style="font-size:24px;font-weight:700;margin-top:6px"></div><span class="hint">órdenes del período por tipo</span></div>
+      <div class="card" style="margin:0"><span class="hint">Bienes / servicios</span><div id="cpk-tipos" style="font-size:24px;font-weight:700;margin-top:6px"></div><span class="hint">órdenes del período con bienes / con servicios (una OC puede tener ambos)</span></div>
     </div>
     <div class="card" style="margin-top:16px">
       <b style="font-size:13px" id="cpk-top-titulo">¿Qué se compra más?</b>

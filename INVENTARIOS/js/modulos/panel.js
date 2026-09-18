@@ -36,6 +36,6 @@ function renderDash(){
     item(cnt(BD.d.sfs,s=>s.est==='Aprobada'),'Solicitudes de Fabricación aprobadas sin órdenes',"go('gi21');document.getElementById('f-sp-e').value='Aprobada';renderSP()")+
     item(cnt(BD.d.sols,s=>s.estado==='Pendiente'),'Solicitudes de Materiales por aprobar',"go('gi13');document.getElementById('f-sol-e').value='Pendiente';renderSol()")+
     item(cnt(BD.d.sols,s=>s.estado==='Aprobada'||s.estado==='En proceso'),'Solicitudes de Materiales por atender',"go('gi13')")+
-    item(cnt(BD.d.ocs,o=>Docs.oc.recibible(o)&&o.tipo!=='Servicio'),'Órdenes de Compra de bienes por recibir (GI-09)',"nuevoIngreso()");
+    item(cnt(BD.d.ocs,o=>Docs.oc.recibible(o)&&Docs.oc.tieneBienes(o)),'Órdenes de Compra de bienes por recibir (GI-09)',"nuevoIngreso()");
 }
 RENDER.gi00=renderDash;

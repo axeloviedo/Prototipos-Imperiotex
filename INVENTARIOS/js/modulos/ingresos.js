@@ -72,7 +72,7 @@ RENDER.gi09=()=>{};
 BUSCADOR_CTX.gi09={etiqueta:"el almacén destino",soloInv:true,alm:()=>document.getElementById('gi09-alm').value,
   agregar:cod=>{const a=BD.art(cod)||{}; if(agregarLinea(ING,cod,{costo:Stock.costo(document.getElementById('gi09-alm').value,cod)||a.precioCompra||a.costo||0}))renderIngreso()}};
 
-function ocsPorRecibir(){return BD.d.ocs.filter(o=>Docs.oc.recibible(o)&&o.tipo!=='Servicio'&&o.items.some(i=>i.recq<i.cant&&Stock.inventariable(i.art)))}
+function ocsPorRecibir(){return BD.d.ocs.filter(o=>Docs.oc.recibible(o)&&Docs.oc.tieneBienes(o)&&o.items.some(i=>i.recq<i.cant&&Stock.inventariable(i.art)))}
 function abrirVincularOC(){
   const lista=ocsPorRecibir();
   document.getElementById('gi09a-body').innerHTML=lista.map(o=>{

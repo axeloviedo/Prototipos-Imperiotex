@@ -100,7 +100,7 @@ Vistas.pantallas(String.raw`
       <div class="card">
         <b style="font-size:13px">Órdenes de compra del proveedor</b>
         <table class="grid subtable" style="margin-top:12px">
-          <thead><tr><th>OC</th><th>Tipo</th><th>Fecha</th><th>Concepto</th><th style="text-align:right">Monto</th><th style="text-align:right">% Recibido</th><th style="text-align:right">% Facturado</th><th>Estado</th></tr></thead>
+          <thead><tr><th>OC</th><th>Fecha</th><th>Concepto</th><th style="text-align:right">Monto</th><th style="text-align:right">% Recibido</th><th style="text-align:right">% Facturado</th><th>Estado</th></tr></thead>
           <tbody id="prv-hist-compras"></tbody>
         </table>
         <p class="hint" style="margin-top:8px">Calculado de las órdenes de compra de la base. Abra una OC para ver su detalle, recepciones y facturas.</p>

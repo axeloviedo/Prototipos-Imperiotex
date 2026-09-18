@@ -88,7 +88,7 @@ function loadProv(cod,modo){
   hc.innerHTML=ocs.map(o=>{
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
     const concepto=o.items.slice(0,2).map(i=>coEsc(BD.nomArt(i.art))).join(', ')+(o.items.length>2?' (+'+(o.items.length-2)+')':'');
-    return '<tr><td><button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button></td><td>'+o.tipo+'</td><td>'+o.fecha+'</td><td>'+concepto+'</td>'+
+    return '<tr><td><button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button></td><td>'+o.fecha+'</td><td>'+concepto+'</td>'+
      '<td style="text-align:right">'+coMon(o.mon)+fmtM(t.total)+'</td><td style="text-align:right">'+a.rec+'%</td><td style="text-align:right">'+a.fac+'%</td>'+
      '<td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td></tr>';
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:16px">Sin órdenes de compra registradas</td></tr>';
