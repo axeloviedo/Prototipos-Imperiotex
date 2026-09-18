@@ -92,18 +92,16 @@
 |---|---|---|---|---|---|
 | Listar / ver | `GET /returns?…` · `GET /returns/{id}` | ver_devolucion_venta | — | — | 404 |
 | Líneas devolvibles | `GET /sales/{id}/returnable-lines` | ver_devolucion_venta | — | `{line, sold, returned, max, price}`; solo productos | 404 |
-| **Registrar** | `POST /returns` | crear_devolucion_venta | saleId, lines[{line, quantity, type: NORMAL/DAMAGED}], takes[{article, uom, warehouse, quantity}], creditNote{type, number}, notes | Venta con salida de stock; cantidad ≤ máximo; N° de la nota escrito. Queda **Pendiente** (sin efectos). `takes` vacío = devolución; con líneas = cambio (precios como cualquier venta) | 409 SALE-NOT-DELIVERED, 422 QUANTITY-EXCEEDS |
-| Editar / anular pendiente | `PUT /returns/{id}` · `POST /returns/{id}/void` | crear_devolucion_venta | … / reason | Solo Pendiente; anular guarda motivo, usuario y fecha (no se borra) | 409 NOT-PENDING |
-| **Aceptar** *(2026-09-18)* | `POST /returns/{id}/accept` | editar_devolucion_venta (Vendedor y Supervisor) | differencePayment{method, bank, operation, voucher} si el cliente paga más | Transacción: Entrada de stock (dañado → liquidación), abono del crédito al **saldo a favor**, venta nueva con el mismo comprobante pagada con `SALDO` (+ la diferencia Por validar en caja), lo que sobra a saldo a favor (o por devolver en caja según `returnMoney`). Los cobros de la venta original no cambian | 409 NOT-PENDING, 422 DIFFERENCE-PAYMENT-REQUIRED, 409 STOCK-NOT-AVAILABLE |
-| Registrar y aceptar | `POST /returns?accept=true` | crear_ + editar_devolucion_venta | como Registrar + differencePayment | Igual que Aceptar, en un solo paso | ídem |
+| **Registrar** *(2026-09-18)* | `POST /returns` | crear_devolucion_venta | saleId, lines[{line, quantity}], creditNote{type, number}, reason | Nota de crédito por ítem sobre una venta con salida de stock, hasta 12 meses; cantidad ≤ máximo. Efecto inmediato: Entrada de stock al almacén de la venta al costo de salida y **crédito del cliente** por lo pagado de lo devuelto. La venta no se anula ni cambia sus cobros | 409 SALE-NOT-DELIVERED / CREDIT-NOTE-PERIOD-EXPIRED, 422 QUANTITY-EXCEEDS |
+| **Devolver en caja** *(2026-09-18)* | `POST /returns/{id}/cash-refund` | crear_caja | amount, method, bank, operation | ≤ lo que queda de la nota y del crédito del cliente; caja abierta de la tienda. Transacción: Uso del crédito + movimiento de caja tipo Devolución | 409 CASH-CLOSED, 422 AMOUNT-EXCEEDS |
 
-### 6.1 Saldo a favor · `CUSTOMER-CREDIT` *(2026-09-18)*
+### 6.1 Crédito del cliente · `CUSTOMER-CREDIT` *(2026-09-18)*
 
 | Operación | Ruta sugerida | Permiso | Reglas |
 |---|---|---|---|
-| Saldo y movimientos | `GET /customers/{id}/credit?currency=` | ver_cliente | Saldo por moneda (Σ abonos − Σ usos) y movimientos con origen; no vence |
-| Pagar con saldo | `POST /sales/{id}/payments` con `method=SALDO` | crear_venta | Monto ≤ saldo y ≤ deuda; sin caja; Validado al instante (puede disparar la salida de stock) |
-| Anular venta pagada con saldo | `POST /sales/{id}/void` | anular_venta | Lo pagado con saldo vuelve como Abono; el resto, devolución de dinero en caja |
+| Crédito y movimientos | `GET /customers/{id}/credit?currency=` | ver_cliente | Por moneda (Σ abonos − Σ usos) y movimientos con origen; no vence |
+| Pagar con nota de crédito | `POST /sales/{id}/payments` con `method=NC` (también al registrar la venta) | crear_venta | Monto ≤ crédito y ≤ deuda; sin caja; Validado al instante (puede disparar la salida de stock) |
+| Anular venta pagada con nota | `POST /sales/{id}/void` | anular_venta | Solo por error, dentro de 7 días. Lo pagado con nota vuelve como Abono; el resto, devolución de dinero en caja |
 
 ## 7. Caja · `CASH`
 
@@ -125,7 +123,7 @@
 | Operación | Ruta sugerida | Permiso | Reglas |
 |---|---|---|---|
 | Leer catálogos | `GET /commercial-settings` | ver_venta | Tiendas, cajas, series, medios de pago, bancos, comprobantes, lugares de entrega, agencias, tipos de cliente, categorías de caja, parámetros |
-| Guardar parámetros | `PUT /commercial-settings/parameters` | configurar_comercial | IGV 0–30, TC > 0, validez 1–90, plazo de anulación 0–30, almacén de mal estado existente, `returnMoney` = CREDIT (saldo a favor, por defecto) / CASH (se devuelve en caja) |
+| Guardar parámetros | `PUT /commercial-settings/parameters` | configurar_comercial | IGV 0–30, TC > 0, validez 1–90, plazo de anulación 0–30, almacén de mal estado existente |
 | Categorías de caja | `POST` / `DELETE /commercial-settings/cash-categories` | configurar_comercial | No vacía; única por tipo; queda al menos una |
 
 ---

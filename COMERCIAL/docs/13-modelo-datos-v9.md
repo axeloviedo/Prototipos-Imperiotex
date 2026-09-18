@@ -196,7 +196,7 @@ Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a l
 | id | PK `DD-NNNNNN` | V46 |
 | venta, origen | origen = devolución o «Anulación» | |
 | monto, estado | **Pendiente / Devuelto** | |
-| destino *(2026-09-18)* | **Caja** (se entrega en caja) o **Saldo a favor** (nace procesado, sin caja, con su movimiento de saldo) | |
+| destino *(2026-09-18)* | **Caja** (se entrega en caja) o **Crédito del cliente** (nace procesado, sin caja, con su movimiento de crédito) | |
 | caja_movimiento, caja_sesion | Al entregarlo | |
 
 ### Devolución · *SAP B1 devolución `ORDN`, objeto 16*
@@ -212,31 +212,29 @@ Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a l
 
 > No tiene estados: registrar = ingreso de stock y dinero por devolver.
 
-**Revisión 2026-09-18 (cambios, `12-prototipo-diseno.md` §14):**
+**Revisión 2026-09-18 (devolución = nota de crédito por ítem, `12-prototipo-diseno.md` §14):**
 
 | Campo | Notas |
 |---|---|
-| estado | **Pendiente → Finalizada** (aceptada) **/ Anulada** (motivo, usuario, fecha; solo Pendiente) |
-| sustento_tipo, sustento_numero | Nota de crédito o Nota de devolución interna; el número **se escribe** (lo emite el sistema de facturación) |
-| **lleva** (líneas) | «Se lleva»: artículo, um, factor, almacén, cantidad, precio, descuento, total (mismas reglas que la línea de venta); vacío = devolución |
-| lleva_total | Total de lo que se lleva |
-| venta_cambio | Venta nueva que se registra al aceptar (`venta.cambio_de` apunta a la devolución) |
-| dinero | Reparto al aceptar: descuenta (del saldo pendiente de la venta), usa (paga el cambio con saldo), paga (diferencia del cliente, por validar en caja), sobra, modo (SALDO / CAJA) |
-| saldo_movimiento, devolucion_dinero | Abono del saldo a favor y, con el modo CAJA, lo que se devuelve en caja |
-| aceptada_por, aceptada_en | Quién y cuándo aceptó |
+| estado | **Registrada** (efecto inmediato) · Pendiente / Anulada solo en datos de la versión anterior |
+| sustento_tipo, sustento_numero | Nota de crédito (boleta o factura) o Nota de devolución interna (nota de venta); el número **se escribe** (lo emite el sistema de facturación). Una nota por comprobante |
+| motivo | Obligatorio |
+| **línea** | linea_venta, articulo, um, factor, almacen (el de la venta), cantidad ≤ vendido − devuelto, precio, costo, total. Sin tipo ni estado de la prenda |
+| credito | Lo que el cliente pagó de lo devuelto (si la venta tenía saldo por cobrar, primero se descuenta de él) |
+| saldo_movimiento | Abono del crédito del cliente |
 
-### Saldo a favor del cliente *(nuevo, 2026-09-18)*
+### Crédito del cliente (notas de crédito) *(nuevo, 2026-09-18)*
 
 | Campo | Notas |
 |---|---|
 | id | PK `SAF-NNNNNN` |
-| empresa, cliente, moneda | El saldo es por cliente y moneda; **no vence** |
-| tipo | **Abono** (devolución, lo que sobra en un cambio, anulación de una venta pagada con saldo) / **Uso** (pago de una venta) |
+| empresa, cliente, moneda | Por cliente y moneda; **no vence** |
+| tipo | **Abono** (nota de crédito, anulación de una venta pagada con nota) / **Uso** (pago de una venta con el medio NC, o devuelto en caja) |
 | monto | > 0 |
 | origen_tipo, origen_id | Devolución, Venta o Anulación y su número |
 | observacion, usuario, fecha | Auditoría; no se edita ni se borra |
 
-Saldo *(calc)* = Σ Abono − Σ Uso por (empresa, cliente, moneda). El cobro con medio **SALDO** (`pago.medio = SALDO`, `pago.saldo_movimiento`) no tiene sesión de caja y nace Validado.
+Crédito *(calc)* = Σ Abono − Σ Uso por (empresa, cliente, moneda). El cobro con medio **NC «Nota de crédito»** (`pago.medio = NC`, `pago.saldo_movimiento`) no tiene sesión de caja y nace Validado.
 
 ---
 
@@ -322,7 +320,9 @@ Comercial **no toca el Pedido** (OnOrder). Coincide con la hoja *Stock Compromet
 | Anular cobro solo con la venta Pendiente de pago y su caja abierta | Negocio |
 | Anular venta: sin devoluciones; Pagada solo hasta `anulable_hasta` | Negocio |
 | Devolución solo de ventas Pagadas; cantidad ≤ vendido − devuelto | Negocio |
-| Aceptar devolución o cambio: todo o nada (stock, saldo, venta nueva, pago de la diferencia) | Transacción |
-| Uso del saldo a favor ≤ saldo del cliente en esa moneda; nunca negativo | Negocio (bloqueo por cliente) |
-| Pago con saldo a favor: sin caja, Validado al registrarse; no cuenta en el arqueo | Negocio |
+| Nota de crédito: hasta 12 meses desde la venta; una por comprobante; la venta no se anula | Negocio |
+| Anular venta (baja): solo por error, dentro de 7 días | Negocio |
+| Uso del crédito ≤ crédito del cliente en esa moneda; nunca negativo | Negocio (bloqueo por cliente) |
+| Pago con nota de crédito: sin caja, Validado al registrarse; no cuenta en el arqueo | Negocio |
+| Devolver en caja ≤ lo que queda de esa nota y del crédito del cliente; uso + movimiento de caja en una transacción | Transacción |
 | Ingreso/Egreso: monto > 0, descripción ≥ 5 | CHECK |
