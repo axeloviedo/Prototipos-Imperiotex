@@ -298,7 +298,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 ## 12. Listas de precios y ofertas (2026-09-18)
 
 > Pedido del usuario: «trabajar por sedes, opcionalmente por segmento de cliente, por moneda, grupo de artículo y unidad, **creando una lista y agregando artículos**; las ofertas, igual, agregando la validez y un % de descuento o un precio; en una sola vista, más fácil». Referencia: precios múltiples por artículo de `multiservicios-erp-small` (`edit-product` → wallets y `getWalletPrice`), que se cargan artículo por artículo; aquí se cargan **por lista**.
-> Reemplaza a K13. Una versión «como SAP B1» (lista base × factor, redondeos, lista en la ficha del cliente, descuentos por periodo y cantidad en pantallas aparte) quedó en la rama `feat/comercial-cambios-promociones` y **no se usa** por compleja.
+> Reemplaza a K13. Una versión «como SAP B1» (lista base × factor, redondeos, lista en la ficha del cliente, descuentos por periodo y cantidad en pantallas aparte) se hizo en la rama `feat/comercial-cambios-promociones`, se **descartó** por compleja y la rama se eliminó (2026-09-18).
 
 | # | Decisión | Detalle |
 |---|---|---|
