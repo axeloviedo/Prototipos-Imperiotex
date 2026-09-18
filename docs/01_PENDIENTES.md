@@ -20,7 +20,7 @@
 
 - ☐ **N9** Las cuatro pantallas de Compras de arriba. Cada una necesita su documento en la base y su efecto (reclamo → devolución o reposición; nota de crédito → factura y stock; costos de destino → costo promedio; sugerido → stock, consumo y pedidos).
 - ☐ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) cuando CO-11 esté conectado.
-- ☐ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo.
+- ☑ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo. → decisiones **O1–O5** en `00_DECISIONES_CERRADAS.md` (2026-09-17).
 
 ## Mejoras futuras (N12, acordadas pero no ahora)
 

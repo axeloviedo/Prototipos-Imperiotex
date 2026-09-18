@@ -186,6 +186,18 @@
 | N15 | **Moneda libre en la OC** | Soles o dólares con **cualquier** proveedor; elegir el proveedor no cambia la moneda. El IGV sigue dependiendo de si el proveedor es nacional o internacional. |
 | N16 | **La OC no tiene tipo** | Se retira el campo «Bienes / Servicio»: una OC puede llevar bienes y servicios a la vez; los bienes se reciben con ingreso y los servicios con conformidad, línea por línea. |
 
+## O · Servicio de terceros: artículo y recurso (2026-09-17)
+
+> Cierra el pendiente **N13** («el proceso del servicio tercerizado debe quedar documentado»). Ratifica lo que el prototipo ya hace; no cambia código.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| O1 | **Un servicio = un código, dos fichas** | El servicio de terceros se da de alta **una sola vez**, como artículo del grupo **SRV** (`PLANTILLA_Articulos_SERVICIOS.xlsx`), y **ese mismo código `SRV-nnnn` se reutiliza como recurso** de tipo SERVICIO DE TERCEROS. **No se crea un `REC-nnnn` paralelo.** `BD.esServicio(cod)` reconoce las dos caras del mismo código. |
+| O2 | **Artículo SRV = compras · Recurso = producción** | La ficha de **artículo** aporta nombre, UM, categoría, afectación IGV y grupo de compras SRV: es la que viaja en la Solicitud de Materiales, la OC de servicio, la factura y la nota de crédito. La ficha de **recurso** aporta **costo estándar**, **cuenta mayor** (921201) y **proveedor habitual**: es la que entra como línea en la LDM y en la tabla *Recursos* de la OF. Ninguna mueve stock — el grupo SRV es `inv: false` y los recursos no tienen almacén. |
+| O3 | **Un servicio nunca es material de la OF** | Al agregar materiales el núcleo rechaza los no inventariables: *«Solo artículos inventariables: un servicio se agrega como recurso»*. En la OF el servicio va siempre en la tabla de recursos, con método **Notificación**. |
+| O4 | **Proceso del servicio tercerizado** | (a) **Tercerizar** la OF: sus materiales pasan al almacén **en tránsito**, se quitan los recursos propios y se agrega el servicio. (b) **Pedir servicio**: Solicitud de Materiales con la línea del `SRV-nnnn` por la cantidad de la orden, destino el almacén de tránsito. (c) Logística crea la **OC de servicio**, Compras la aprueba y factura (se anotan en `of.compras`). (d) **Enviar al proveedor**: transferencia al almacén en tránsito con GRE «Traslado para transformación» (consolidable por ruta, N5). (e) El **retorno** se registra como recibo de producción. (f) Al cerrar, lo enviado que no retornó queda como **faltante abierto** (N6). (g) La pestaña **Costo** de la orden contrasta **costo estándar vs. OC vs. factura vs. nota de crédito** (`Prod.contrasteServicios`); la nota de crédito se vincula a mano. |
+| O5 | **Alta de un servicio nuevo: orden fijo** | 1) artículo en la plantilla de artículos SERVICIOS (nace el código `SRV-nnnn`, IGV, UM, categoría); 2) proveedor en el grupo **SRV**; 3) ficha de recurso con **el mismo código**, costo estándar, cuenta mayor y proveedor habitual; 4) el almacén en tránsito ya existe y se reutiliza. Si el servicio no se compra (mano de obra propia, máquina, energía), no hay artículo: solo recurso `REC-nnnn`. |
+
 ---
 
 ## Descartado explícitamente
