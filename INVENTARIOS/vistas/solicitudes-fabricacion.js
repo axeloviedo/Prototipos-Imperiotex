@@ -121,7 +121,7 @@ Vistas.pantallas(String.raw`
               <b style="font-size:13px;padding-bottom:6px">Requerimientos de Materia Prima</b>
               <div class="spacer"></div>
             </div>
-            <p class="hint" style="margin-top:5px">Explosión de las listas de materiales (<b>Explosion.bruto</b>): se baja por todas las fases fabricables (producto final → lavado → crudo → piezas cortadas) hasta la materia prima, contra el almacén de cada línea de la lista. Es lo que se <b>compromete</b> al aprobar. <b>Disponible</b> = Actual − Comprometido por otros documentos.</p>
+            <p class="hint" style="margin-top:5px">Explosión de las listas de materiales (<b>Explosion.bruto</b>): se baja por todas las fases fabricables (producto final → lavado → crudo → piezas cortadas) hasta la materia prima, contra el almacén de cada línea de la lista. Es lo que se <b>compromete</b> al aprobar, solo hasta lo disponible (el Disponible nunca queda negativo; lo que falta se compromete cuando llega lo solicitado). <b>Disponible</b> = Actual − Comprometido por otros documentos.</p>
             <table class="grid subtable" style="margin-top:12px">
               <thead><tr><th>Material</th><th style="width:130px">Almacén</th><th style="width:56px">UM</th><th style="width:100px;text-align:right">Requerida</th><th style="width:110px;text-align:right">Disponible</th><th style="width:100px;text-align:right">Diferencia</th><th style="width:170px">Stock en otros almacenes</th><th style="width:130px">Estado</th></tr></thead>
               <tbody id="sp-mp"></tbody>
@@ -155,7 +155,7 @@ Vistas.pantallas(String.raw`
 
           <div class="card" id="sp-comp-card" style="display:none">
             <b style="font-size:13px">Materia prima comprometida por la solicitud</b>
-            <table class="grid subtable" style="margin-top:12px"><thead><tr><th>Material</th><th>Almacén</th><th style="text-align:right">Comprometido</th></tr></thead><tbody id="sp-comp"></tbody></table>
+            <table class="grid subtable" style="margin-top:12px"><thead><tr><th>Material</th><th>Almacén</th><th style="text-align:right">Requerido</th><th style="text-align:right">Comprometido</th><th style="text-align:right">Falta comprometer</th></tr></thead><tbody id="sp-comp"></tbody></table>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@
    - Docs.fac  Factura de proveedor (FC-000001).
    - Docs.trf  Solicitud de Transferencia (ST-000001) en dos pasos (decisiones T2/T7): aprobar compromete origen y suma Pedido en destino; recibir mueve.
    - Docs.gre  Guía de Remisión Electrónica (T001-000001) de traslados (p. ej. envío a un servicio de terceros).
+   - Docs.reserva  Reserva al llegar (Q2): lo recibido por OC o transferencia se compromete para la orden o la SF que lo pidió; el Disponible nunca es negativo.
    Las órdenes de fabricación (BD.d.ofs) las maneja Producción; aquí solo se enlazan. */
 const Docs = (() => {
   const g = () => BD.guardar();
@@ -53,13 +54,18 @@ const Docs = (() => {
       BD.hist(s, 'Enviada a aprobación');
       g(); return s;
     },
+    /* al aprobarse compromete la materia prima bruta SOLO hasta lo disponible (Q2): req = lo que necesita, cant = lo que sí quedó comprometido.
+       La diferencia se pide con una Solicitud de Materiales (GI-23) y se compromete cuando llega la compra o la transferencia (Docs.reserva) */
     _cerrar(s) {
       if (!(s.vb && s.ger)) return;
       s.est = 'Aprobada';
-      s.comprometido = Explosion.bruto(s.lineas);
-      s.comprometido.forEach(r => Stock.comprometer(r.alm, r.art, r.cant));
-      BD.hist(s, 'Aprobada', 'Materia prima comprometida: ' + s.comprometido.length + ' material(es). Las órdenes se crean en Producción (PR-03)');
+      s.comprometido = Explosion.bruto(s.lineas).map(r => ({ alm: r.alm, art: r.art, req: r.cant, cant: Stock.comprometerHasta(r.alm, r.art, r.cant) }));
+      const sinCobertura = s.comprometido.filter(c => c.cant + 0.00005 < c.req).length;
+      BD.hist(s, 'Aprobada', 'Materia prima comprometida: ' + s.comprometido.length + ' material(es)' +
+        (sinCobertura ? ' · ' + sinCobertura + ' sin cobertura completa: se comprometen cuando llegue lo solicitado a Logística' : '') + '. Las órdenes se crean en Producción (PR-03)');
     },
+    /* lo que la solicitud aún no tiene comprometido (por almacén y material) */
+    faltaComprometer(s) { return (s.comprometido || []).map(c => ({ alm: c.alm, art: c.art, cant: BD.r4((c.req != null ? c.req : c.cant) - c.cant) })).filter(x => x.cant > 0.00005); },
     darVB(id) {
       const s = BD.sf(id); exigir(s && s.est === 'Pendiente Aprobar', 'Solo se da V°B° a una solicitud Pendiente Aprobar');
       s.vb = true; BD.hist(s, 'V°B° Logística'); sf._cerrar(s);
@@ -97,6 +103,44 @@ const Docs = (() => {
       g(); return s;
     },
     total(s) { return BD.r4(s.lineas.reduce((t, l) => t + l.cant, 0)); }
+  };
+
+  /* ================= Reserva al llegar (decisión Q2: sin Disponible negativo) =================
+     Lo que una orden de fabricación o una Solicitud de Fabricación no pudo comprometer porque no había stock se pide con una Solicitud de
+     Materiales; la OC o la Solicitud de Transferencia que la atiende hereda el enlace (of / sf). Cuando esa mercadería LLEGA al almacén
+     (Docs.oc.recibir, Docs.trf.recibir) se compromete en ese momento para quien la pidió, solo por lo que aún le falta.
+     Si la orden ya no está abierta o la solicitud ya se convirtió, lo recibido queda disponible para cualquiera. */
+  const reserva = {
+    /* {of, sf} de un documento: el propio o el de la solicitud de materiales que lo originó */
+    origen(doc) { const s = doc && doc.sol ? BD.sol(doc.sol) : null; return { of: (doc && doc.of) || (s && s.of) || '', sf: (doc && doc.sf) || (s && s.sf) || '' }; },
+    /* devuelve lo que se comprometió: primero para la orden liberada, luego para la solicitud aprobada */
+    llegada(alm, art, cant, o) {
+      cant = BD.r4(cant); if (!(cant > 0) || !o) return 0;
+      let hecho = 0;
+      const f = o.of ? BD.of(o.of) : null;
+      if (f && f.estado === 'Liberado') {
+        let paraOF = 0;
+        (f.mats || []).forEach(m => {
+          if (m.fab || m.cod !== art || (m.almPropio || m.alm) !== alm) return;
+          const falta = BD.r4(m.plan - m.consumido - m.comp); if (falta <= 0.00005) return;
+          const c = Stock.comprometerHasta(alm, art, Math.min(falta, BD.r4(cant - hecho)));
+          if (c > 0) { m.comp = BD.r4(m.comp + c); hecho = BD.r4(hecho + c); paraOF = BD.r4(paraOF + c); }
+        });
+        if (paraOF > 0) (f.hist = f.hist || []).push({ f: BD.ahora(), a: 'Material comprometido al llegar', d: BD.nomArt(art) + ' ' + paraOF + ' ' + BD.u(art) + ' en ' + alm, u: BD.usuario });
+      }
+      const s = hecho + 0.00005 < cant && o.sf ? BD.sf(o.sf) : null;
+      if (s && s.est === 'Aprobada') {
+        let paraSF = 0;
+        (s.comprometido || []).forEach(r => {
+          if (r.art !== art || r.alm !== alm) return;
+          const falta = BD.r4((r.req != null ? r.req : r.cant) - r.cant); if (falta <= 0.00005) return;
+          const c = Stock.comprometerHasta(alm, art, Math.min(falta, BD.r4(cant - hecho)));
+          if (c > 0) { r.cant = BD.r4(r.cant + c); hecho = BD.r4(hecho + c); paraSF = BD.r4(paraSF + c); }
+        });
+        if (paraSF > 0) BD.hist(s, 'Material comprometido al llegar', BD.nomArt(art) + ' ' + paraSF + ' ' + BD.u(art) + ' en ' + alm);
+      }
+      return hecho;
+    }
   };
 
   /* ================= Solicitud de Materiales ================= */
@@ -318,11 +362,13 @@ const Docs = (() => {
       const r = Stock.ingreso({ det: intl ? 'Ingreso - Importación' : 'Ingreso - Compra', tipoMov: intl ? 'ING-IMPORT' : 'ING-COMPRA', alm, origen: BD.provNom(o.prov), ndoc: o.id, doc: o.id, modulo: 'Inventarios', obs: d.obs || '',
         lineas: lineas.map(l => ({ art: l.art, cant: l.cant, costo: BD.r4(o.items.find(i => i.art === l.art).pu * factor) })) });
       exigir(r.ok, r.error);
+      const quien = reserva.origen(o);
       lineas.forEach(l => {
         const it = o.items.find(i => i.art === l.art);
         if (o.almDestino) Stock.pedido(o.almDestino, l.art, Math.min(Number(l.cant), BD.r4(it.cant - it.recq)), -1);
         it.recq = BD.r4(it.recq + Number(l.cant));
         if (o.sol) sol._recibido(o.sol, l.art, Number(l.cant), o.id);
+        reserva.llegada(alm, l.art, Number(l.cant), quien);   /* Q2: lo que llega se compromete para la orden o la SF que lo pidió */
       });
       o.recepciones.push({ tipo: 'Ingreso', fecha: BD.ahora(), mov: r.mov.id, alm, lineas: lineas.map(l => ({ art: l.art, cant: BD.r4(l.cant) })) });
       BD.hist(o, 'Ingreso ' + r.mov.id, alm);
@@ -435,10 +481,12 @@ const Docs = (() => {
       const r = Stock.transferencia({ det: 'Transferencia ' + t.id, tipoMov: t.tipoMov, origen: t.origen, destino: t.destino, ndoc: t.of || t.sol || t.id, doc: t.id, obs: obs || t.obs, modulo: t.modulo || 'Inventarios',
         lineas: rec.map(x => ({ art: x.art, cant: Number(x.cant), liberar: Number(x.cant), pedido: Number(x.cant) })) });
       exigir(r.ok, r.error);
+      const quien = reserva.origen(t);
       rec.forEach(x => {
         const l = t.lineas.find(y => y.art === x.art);
         l.recibido = BD.r4((l.recibido || 0) + Number(x.cant));
         if (t.sol) sol._transferido(t.sol, x.art, Number(x.cant), t.id);
+        reserva.llegada(t.destino, x.art, Number(x.cant), quien);   /* Q2: lo que llega al destino se compromete para quien lo pidió */
       });
       t.movs.push(r.mov.id);
       t.estado = t.lineas.every(l => trf.pendiente(l) <= 0.00005) ? 'Recibida' : 'Parcial';
@@ -481,5 +529,5 @@ const Docs = (() => {
     }
   };
 
-  return { sf, sol, oc, fac, trf, gre };
+  return { sf, sol, oc, fac, trf, gre, reserva };
 })();

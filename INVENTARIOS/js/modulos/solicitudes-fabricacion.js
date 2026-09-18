@@ -177,7 +177,7 @@ function renderAvisoSP(){
   else if(e==="Borrador"){const h=ult('Devuelta para modificar');set("var(--borrador)","#F8FAFC",h?'<b style="font-size:12.5px">Devuelta para modificación</b><p class="hint" style="margin-top:5px">'+Fmt.e(h.d||'')+' · Corrija y vuelva a enviar.</p>':'<b style="font-size:12.5px">Borrador</b><p class="hint" style="margin-top:5px">Aún no enviada a revisión. Los requerimientos se muestran como referencia.</p>')}
   else if(e==="Pendiente Aprobar"){
     const f=(SPF.mp||[]).filter(m=>m.falta);
-    set(f.length?"var(--pendiente)":"var(--confirmado)",f.length?"#FFFBEB":"#F0FDF4",f.length?'<b style="font-size:12.5px">⚠ '+f.length+' material(es) sin cobertura</b><p class="hint" style="margin-top:5px">Puede dar el V°B° igualmente (se compromete aunque el disponible quede negativo) y gestionar la compra o transferencia con una Solicitud de Materiales.</p>':'<b style="font-size:12.5px">Materia prima cubierta</b><p class="hint" style="margin-top:5px">Todos los materiales alcanzan con el disponible actual.</p>');
+    set(f.length?"var(--pendiente)":"var(--confirmado)",f.length?"#FFFBEB":"#F0FDF4",f.length?'<b style="font-size:12.5px">⚠ '+f.length+' material(es) sin cobertura</b><p class="hint" style="margin-top:5px">Puede dar el V°B° igualmente: se compromete solo lo que hay (el Disponible nunca queda negativo) y el resto se pide con una Solicitud de Materiales; al llegar la compra o la transferencia se compromete para esta solicitud.</p>':'<b style="font-size:12.5px">Materia prima cubierta</b><p class="hint" style="margin-top:5px">Todos los materiales alcanzan con el disponible actual.</p>');
   }else av.style.display="none";
 }
 function renderValidaciones(){
