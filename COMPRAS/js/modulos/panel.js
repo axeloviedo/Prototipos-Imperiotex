@@ -22,8 +22,8 @@ function renderPanelCompras(){
   document.getElementById('cpk-val-sub').textContent="V°B° Logística o aprobación Gerencia"+(borr?" · "+borr+" en borrador":"");
   const porRec=d.ocs.filter(o=>Docs.oc.recibible(o));
   document.getElementById('cpk-rec').textContent=porRec.length;
-  const nSrv=porRec.filter(o=>o.tipo==="Servicio").length;
-  document.getElementById('cpk-rec-sub').textContent=(porRec.length-nSrv)+" de bienes (ingreso) · "+nSrv+" de servicio (conformidad)";
+  const nBie=porRec.filter(o=>Docs.oc.tieneBienes(o)).length, nSrv=porRec.filter(o=>Docs.oc.tieneServicios(o)).length;
+  document.getElementById('cpk-rec-sub').textContent=nBie+" de bienes (ingreso) · "+nSrv+" de servicio (conformidad)";
   document.getElementById('cpk-fac').textContent=d.ocs.filter(ocFacturable).length;
   const imp=d.facturas.filter(f=>f.est==="Impagado");
   const impS=imp.filter(f=>f.mon!=="USD").reduce((t,f)=>t+Docs.fac.total(f),0), impU=imp.filter(f=>f.mon==="USD").reduce((t,f)=>t+Docs.fac.total(f),0);
@@ -49,7 +49,7 @@ function renderPanelCompras(){
   document.getElementById('cpk-total').textContent=fmtS(total);
   document.getElementById('cpk-total-sub').textContent=esUSD?"montos nativos en dólares":"USD convertidos al TC de cada OC · con IGV";
   document.getElementById('cpk-prom').textContent=fmtS(periodo.length?total/periodo.length:0);
-  document.getElementById('cpk-tipos').textContent=periodo.filter(o=>o.tipo!=="Servicio").length+" / "+periodo.filter(o=>o.tipo==="Servicio").length;
+  document.getElementById('cpk-tipos').textContent=periodo.filter(o=>Docs.oc.tieneBienes(o)).length+" / "+periodo.filter(o=>Docs.oc.tieneServicios(o)).length;
   renderTopCompras(periodo,esUSD,perTxt);
   /* ---- tendencia mensual del año ---- */
   const datos=CPK_MESES_TXT.map((m,i)=>{const mm=String(i+1).padStart(2,'0'); return [m,Math.round(validas.filter(o=>cpkAnio(o.fecha)===anio&&cpkMes(o.fecha)===mm).reduce((a,o)=>a+monto(o),0)),mm]});

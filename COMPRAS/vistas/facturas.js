@@ -85,7 +85,7 @@ Vistas.modales(String.raw`
     <div class="modal-h"><b>Registrar la factura del proveedor contra una OC</b><span class="code" style="font-size:11px;color:var(--texto-sec)">CO-10a</span><span class="x" onclick="closeModal('m-co10a')">✕</span></div>
     <div class="modal-b">
       <table class="grid subtable">
-        <thead><tr><th>OC</th><th>Tipo</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Total</th><th style="text-align:right">% Recibido</th><th style="text-align:right">% Facturado</th><th style="width:100px"></th></tr></thead>
+        <thead><tr><th>OC</th><th>Proveedor</th><th>Fecha</th><th>Estado</th><th style="text-align:right">Total</th><th style="text-align:right">% Recibido</th><th style="text-align:right">% Facturado</th><th style="width:100px"></th></tr></thead>
         <tbody id="co10a-body"></tbody>
       </table>
       <p class="hint" style="margin-top:10px">Solo OCs aprobadas (V°B° de Logística y Gerencia) con cantidades pendientes de facturar. La factura la emite el proveedor: aquí se registra contra su OC.</p>

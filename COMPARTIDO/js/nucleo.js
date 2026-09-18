@@ -20,12 +20,12 @@ function intentar(fn){try{return fn()}catch(e){toast(e.message||String(e));retur
 
 /* ===== Formato ===== */
 const Fmt={
-  /* número con separador es-PE; d = decimales máximos (mínimo 0) */
-  n(v,d){return (Number(v)||0).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:d==null?4:d})},
+  /* número con separador es-PE; d = decimales máximos. Las cantidades se guardan con 4 decimales y se muestran con 2 como máximo */
+  n(v,d){return (Number(v)||0).toLocaleString('es-PE',{minimumFractionDigits:0,maximumFractionDigits:Math.min(2,d==null?2:d)})},
   /* dinero con 2 decimales */
   m(v){return (Number(v)||0).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})},
   /* cantidad con su unidad */
-  q(v,u){return Fmt.n(v,u==='UND'?4:2)+(u?' '+u:'')},
+  q(v,u){return Fmt.n(v,2)+(u?' '+u:'')},
   s(t){return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')},
   e(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')},
   /* dd/mm/aaaa [hh:mm] ⇄ aaaa-mm-dd (inputs date) */
@@ -85,6 +85,7 @@ function grupoNom(cod){const g=M().grupos.find(x=>x.cod===cod);return g?g.nom:(c
 function empresaAbrev(){const s=document.getElementById('selEmpresa');const e=M().empresas.find(x=>x.nom===(s?s.value:'IMPERIOTEX'));return e?e.abrev:'SB'}
 function cambiarEmpresa(e){
   document.getElementById('logoEmp').textContent = e==="IMPERIOTEX" ? "IMPERIOTEX · SARA BQ" : "CATINNA NOW";
+  BD.empresa = empresaAbrev();
   toast("Empresa activa: "+e+" · los almacenes se filtran por empresa");
   if(typeof refrescarTodo==='function')refrescarTodo();
 }

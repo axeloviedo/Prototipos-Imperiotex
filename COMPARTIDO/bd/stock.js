@@ -18,6 +18,39 @@ const Stock = {
     'Ingreso - Recibo de producción': 'P04 · Ingreso de producto en proceso'
   },
 
+  /* ---------- Lotes (decisión I-7) ----------
+     Solo los artículos con control «Lote». Cada INGRESO crea un lote con código automático L<año>-<artículo>-<correlativo>.
+     El lote guarda su saldo por almacén; al salir o transferir se puede elegir el lote y, si no, sale el más antiguo.
+     El costo sigue siendo el promedio del almacén (decisión de valorización): el lote es trazabilidad, no costo. */
+  conLote(art) { return (BD.art(art) || {}).ctrl === 'Lote'; },
+  lotes(art, alm) {
+    return (BD.d.lotes || []).filter(l => l.art === art && (!alm || (l.saldos[alm] || 0) > 0.00005));
+  },
+  lote(id) { return (BD.d.lotes || []).find(l => l.id === id); },
+  saldoLote(id, alm) { const l = Stock.lote(id); return l ? BD.r4(l.saldos[alm] || 0) : 0; },
+  _nuevoLote(art, alm, cant, o, l) {
+    const anio = BD.hoy().slice(6, 10);
+    const id = l && l.lote ? String(l.lote).trim() : 'L' + anio + '-' + art + '-' + BD.sig('lote_' + anio + '_' + art, '', 4);
+    const existente = Stock.lote(id);
+    const x = existente || { id, art, emp: BD.empresaDe(alm), fecha: o.fecha || BD.ahora(), vence: (l && l.vence) || '', origen: o.ndoc || o.doc || '', saldos: {} };
+    x.saldos[alm] = BD.r4((x.saldos[alm] || 0) + cant);
+    if (!existente) (BD.d.lotes = BD.d.lotes || []).push(x);
+    return x;
+  },
+  /* descuenta de los lotes del almacén: el elegido o, si no, el más antiguo primero. Devuelve [{lote, cant}] */
+  _sacarLote(art, alm, cant, elegido) {
+    const out = [];
+    let falta = BD.r4(cant);
+    const lista = (elegido ? [Stock.lote(elegido)].filter(Boolean) : Stock.lotes(art, alm).sort((a, b) => Stock._n(a.fecha) - Stock._n(b.fecha)));
+    lista.forEach(l => {
+      if (falta <= 0.00005) return;
+      const hay = BD.r4(l.saldos[alm] || 0); if (hay <= 0) return;
+      const c = Math.min(hay, falta);
+      l.saldos[alm] = BD.r4(hay - c); falta = BD.r4(falta - c);
+      out.push({ lote: l.id, cant: c });
+    });
+    return out;
+  },
   buscar(alm, art) { return BD.d.stock.find(x => x.alm === alm && x.art === art); },
   fila(alm, art) {
     let f = Stock.buscar(alm, art);
@@ -62,7 +95,7 @@ const Stock = {
     const tm = Stock._tipoMov(tipo, o);
     const mov = {
       tipoMov: tm.cod, grupoMov: tm.grupo, tipoMovNom: tm.nom,
-      id: BD.sig(serie[0], serie[1], 6), tipo, det: o.det, concepto: o.concepto || Stock.CONCEPTO[o.det] || '', fecha: o.fecha || BD.ahora(), usuario: o.usuario || BD.usuario,
+      id: BD.sig(serie[0], serie[1], 6), emp: BD.empresaDe(o.alm), tipo, det: o.det, concepto: o.concepto || Stock.CONCEPTO[o.det] || '', fecha: o.fecha || BD.ahora(), usuario: o.usuario || BD.usuario,
       modulo: o.modulo || '', est: tipo === 'Transferencia' ? 'Completada' : 'Confirmado', alm: o.alm, od: o.od, ndoc: o.ndoc || '', doc: o.doc || '', obs: o.obs || '', lineas: [], valor: 0
     };
     BD.d.movs.unshift(mov);
@@ -94,7 +127,9 @@ const Stock = {
       if (lib > 0) f.comp = BD.r4(Math.max(0, f.comp - lib));
       const v = BD.r2(cant * f.costo);
       mov.valor = BD.r2(mov.valor + v);
-      mov.lineas.push({ art: l.art, cant, costo: f.costo, valor: v, alm: o.alm, signo: -1, saldo: f.act });
+      const linea = { art: l.art, cant, costo: f.costo, valor: v, alm: o.alm, signo: -1, saldo: f.act };
+      if (Stock.conLote(l.art)) { const usados = Stock._sacarLote(l.art, o.alm, cant, l.lote); if (usados.length) linea.lote = usados.map(u => u.lote).join(', '); }
+      mov.lineas.push(linea);
     });
     return { ok: true, mov, valor: mov.valor };
   },
@@ -108,7 +143,9 @@ const Stock = {
       f.act = BD.r4(f.act + cant);
       const v = BD.r2(cant * c);
       mov.valor = BD.r2(mov.valor + v);
-      mov.lineas.push({ art: l.art, cant, costo: c, valor: v, alm: o.alm, signo: 1, saldo: f.act });
+      const linea = { art: l.art, cant, costo: c, valor: v, alm: o.alm, signo: 1, saldo: f.act };
+      if (Stock.conLote(l.art)) linea.lote = Stock._nuevoLote(l.art, o.alm, cant, o, l).id;
+      mov.lineas.push(linea);
     });
     return { ok: true, mov };
   },
@@ -127,12 +164,15 @@ const Stock = {
       const cant = BD.r4(l.cant), fo = Stock.fila(o.origen, l.art), c = fo.costo;
       fo.act = BD.r4(fo.act - cant);
       if (Number(l.liberar) > 0) fo.comp = BD.r4(Math.max(0, fo.comp - Number(l.liberar)));
-      mov.lineas.push({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.origen, signo: -1, saldo: fo.act });
+      const usados = Stock.conLote(l.art) ? Stock._sacarLote(l.art, o.origen, cant, l.lote) : [];
+      const etiqueta = usados.length ? usados.map(u => u.lote).join(', ') : '';
+      usados.forEach(u => { const x = Stock.lote(u.lote); x.saldos[o.destino] = BD.r4((x.saldos[o.destino] || 0) + u.cant); });
+      mov.lineas.push(Object.assign({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.origen, signo: -1, saldo: fo.act }, etiqueta ? { lote: etiqueta } : {}));
       const fd = Stock.fila(o.destino, l.art);
       if (Number(l.pedido) > 0) fd.ped = BD.r4(Math.max(0, (fd.ped || 0) - Number(l.pedido)));
       fd.costo = fd.act > 0 ? BD.r4((fd.act * fd.costo + cant * c) / (fd.act + cant)) : c;
       fd.act = BD.r4(fd.act + cant);
-      mov.lineas.push({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.destino, signo: 1, saldo: fd.act });
+      mov.lineas.push(Object.assign({ art: l.art, cant, costo: c, valor: BD.r2(cant * c), alm: o.destino, signo: 1, saldo: fd.act }, etiqueta ? { lote: etiqueta } : {}));
       mov.valor = BD.r2(mov.valor + cant * c);
     });
     return { ok: true, mov };
@@ -144,7 +184,7 @@ const Stock = {
     const filas = [];
     BD.d.movs.slice().reverse().forEach(m => m.lineas.forEach(l => {
       if (l.art !== art || (alm && l.alm !== alm)) return;
-      filas.push({ fecha: m.fecha, id: m.id, tipo: m.tipo, det: m.det, ndoc: m.ndoc, alm: l.alm, ent: l.signo > 0 ? l.cant : 0, sal: l.signo < 0 ? l.cant : 0, costo: l.costo, valor: l.valor, saldo: l.saldo });
+      filas.push({ fecha: m.fecha, id: m.id, tipo: m.tipo, det: m.det, ndoc: m.ndoc, alm: l.alm, lote: l.lote || '', ent: l.signo > 0 ? l.cant : 0, sal: l.signo < 0 ? l.cant : 0, costo: l.costo, valor: l.valor, saldo: l.saldo });
     }));
     return filas;
   },

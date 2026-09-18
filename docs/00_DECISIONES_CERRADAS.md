@@ -145,7 +145,7 @@
 | K7 | **Transferencia en dos pasos (se ratifican T2 y T7)** | Solicitud de Transferencia **ST-000001**: al **aprobar** compromete el stock en origen y suma **Pedido** en destino; al **confirmar la recepción** (parcial o total) sale del origen y entra al destino; se pueden cancelar los pendientes. La Solicitud de Materiales con propósito Transferencia crea una ST aprobada. Excepción: el **envío al proveedor del servicio** (almacén de tránsito virtual) y los traslados automáticos sin nadie que confirme se registran creando, aprobando y recibiendo en el mismo momento. |
 | K8 | **Pedido (T1)** | Una OC de bienes aprobada suma Pedido en su almacén destino y cada recepción lo descuenta; la ST aprobada suma Pedido en destino. El Pedido es informativo: Disponible = Actual − Comprometido. |
 | K9 | **Familia de trabajo: ZULEIKA** *(corregida 2026-09-16)* | PANTALON WIDE LEG ZULEIKA en azul y negro, tallas 28 y 30. **El color nace en el lavado**: las piezas cortadas y el crudo no tienen color, van **solo por talla** y se usan para cualquier color de esa talla. PIEZAS CORTADAS por talla (PPT-0001..0002) → CRUDO por talla (PPT-0003..0004; fallados PPT-0003F..0004F) → LAVADO tercerizado con SRV-0001 Lavandería Landeo, por color y talla (PPT-0005..0008) → PRODUCTO FINAL (PT-0001..0004). En este prototipo un mismo denim da varios colores: las listas propuestas usan **tela MP-0070, hilos MP-0055/MP-0058 y cierre MP-0003 únicos** (MP-0071, MP-0052, MP-0054 y MP-0009 siguen en el maestro, sin uso en las listas); el motor de listas admite otras configuraciones (p. ej. tela por color). Tallitas reales de la plantilla y avíos de acabado MP-0102..0107 creados para el prototipo. Costos estándar y precios de referencia **a confirmar**. |
-| K10 | **Organización y grupos de compras** *(corregida 2026-09-16)* | La OC lleva organización de compras (SB / CN) y grupo de compras (MP1, SRV, IMP, EE1, MSC, SG1). **Todo está en base al Grupo de Artículo**: el grupo de compras se define en la ficha del Grupo de Artículo (MP → MP1, SRV → SRV, MERC → MSC; PPT y PT no se compran) y los artículos lo heredan (en GI-02 es de solo lectura). La OC propone el grupo que más se repite entre sus artículos (IMP si el proveedor es extranjero) y se puede cambiar en la cabecera. |
+| K10 | **Organización y grupos de compras** *(corregida 2026-09-16; la OC ya no los lleva: N14, 2026-09-17)* | La OC lleva organización de compras (SB / CN) y grupo de compras (MP1, SRV, IMP, EE1, MSC, SG1). **Todo está en base al Grupo de Artículo**: el grupo de compras se define en la ficha del Grupo de Artículo (MP → MP1, SRV → SRV, MERC → MSC; PPT y PT no se compran) y los artículos lo heredan (en GI-02 es de solo lectura). La OC propone el grupo que más se repite entre sus artículos (IMP si el proveedor es extranjero) y se puede cambiar en la cabecera. |
 
 ## L · GI-02 vuelve a V9 y ajustes de maestros (2026-09-16)
 
@@ -163,8 +163,47 @@
 
 ---
 
+## N · Revisión de pendientes (2026-09-17)
+
+> Respuestas del usuario a la revisión de pendientes de todos los `.md`. Lo aplicado está en la rama `feat/pendientes-prototipo`.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| N1 | **Cantidades: 4 decimales guardados, 2 visibles** | Toda cantidad se guarda redondeada a 4 decimales y se muestra con **2 decimales como máximo** en los cuatro módulos. No se limita el número de decimales por unidad de medida. |
+| N2 | **El número de factura es único por proveedor** | Lo valida el núcleo (`Docs.fac.crear`), no solo la pantalla. Una factura anulada libera su número. |
+| N3 | **Todos los documentos llevan empresa** | SF, SOL, OC, factura, ST, GRE, movimiento, orden de fabricación, cotización, venta, devolución y caja guardan `emp`: la empresa de su almacén y, si no tiene, la empresa activa (`BD.empresa`). En la OC coincide con su organización de compras (K10). |
+| N4 | **Venta al crédito: la entrega es opcional** | Revisa R1.b. Al registrar una venta al crédito el usuario puede marcar **«Entregar ahora»** y el stock sale sin esperar el cobro; si no la marca, el stock queda comprometido hasta que el pago confirmado cubra el total, como el contado. También se puede entregar después desde la ficha de la venta. |
+| N5 | **Envío consolidado al proveedor** | Varias órdenes del mismo proveedor de servicio se envían juntas: cada una genera su transferencia y todas comparten **una sola guía de remisión por ruta**. El stock de todas se revisa antes de mover nada. |
+| N6 | **Faltante del servicio tercerizado** | Al cerrar una orden con envíos, lo enviado que no retornó queda registrado como **faltante abierto** en la orden. Al facturar esa OC, Compras **avisa** (no bloquea): el reclamo va por su propio flujo (CO-11). |
+| N7 | **Lotes: uno por ingreso, solo con control «Lote»** | Solo los artículos con control «Lote». Cada ingreso crea el lote **`L<año>-<código de artículo>-<correlativo>`** y guarda su saldo por almacén. Al salir o transferir el lote es **opcional**: si no se elige, sale el más antiguo. El costo sigue siendo el promedio del almacén: el lote es trazabilidad. Las telas MP-0070 y MP-0071 quedan con control Lote como caso de prueba. |
+| N8 | **Rotación y series sobre la base** | GI-18 calcula stock, valor y días sin movimiento de `BD.d.stock` y `BD.d.movs`. GI-19 muestra el correlativo real de cada serie interna y cuántos documentos lleva emitidos. Dejan de ser datos de ejemplo. |
+| N9 | **Reclamos, notas de crédito, costos de destino y sugerido: a la base** | CO-11, CO-12, CO-14 y CO-15 dejan de ser datos de ejemplo y trabajan sobre la base compartida. |
+| N10 | **Descartado: cabecera de la LDM con Tipo y Almacén** | No hay tipos de lista y el almacén se elige por línea de material. Cierra ⚠️-3. |
+| N11 | **Descartado: aprobación de listas de materiales** | No hay estado Borrador/Aprobada en la LDM. |
+| N12 | **Mejoras futuras, no ahora** | Permisos por almacén por rol (L4), filtro de terminados por «se fabrica», lote mínimo o múltiplo de fabricación si planta lo necesita, y lote/vencimiento pedidos a mano en producción. |
+| N13 | **Sin cambio** | El código de proveedor del prototipo (mayor + 1) está bien; los costos, precios y proveedores de servicio inventados están bien como datos de prueba, pero el **proceso** del servicio tercerizado debe quedar documentado; el cobro entra a la caja de la tienda de la venta; los tipos de cliente del prototipo se mantienen. |
+| N14 | **La OC no lleva organización ni grupo de compras** *(corrige K10)* | Son agrupadores (el grupo de compras agrupa proveedores y artículos), no limitan la compra: la OC **no los muestra ni los guarda**. La empresa de la OC sale de su almacén destino (N3). El grupo de compras sigue como dato de consulta en el Grupo de Artículo. |
+| N15 | **Moneda libre en la OC** | Soles o dólares con **cualquier** proveedor; elegir el proveedor no cambia la moneda. El IGV sigue dependiendo de si el proveedor es nacional o internacional. |
+| N16 | **La OC no tiene tipo** | Se retira el campo «Bienes / Servicio»: una OC puede llevar bienes y servicios a la vez; los bienes se reciben con ingreso y los servicios con conformidad, línea por línea. |
+
+## O · Servicio de terceros: artículo y recurso (2026-09-17)
+
+> Cierra el pendiente **N13** («el proceso del servicio tercerizado debe quedar documentado»). Ratifica lo que el prototipo ya hace; no cambia código.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| O1 | **Un servicio = un código, dos fichas** | El servicio de terceros se da de alta **una sola vez**, como artículo del grupo **SRV** (`PLANTILLA_Articulos_SERVICIOS.xlsx`), y **ese mismo código `SRV-nnnn` se reutiliza como recurso** de tipo SERVICIO DE TERCEROS. **No se crea un `REC-nnnn` paralelo.** `BD.esServicio(cod)` reconoce las dos caras del mismo código. |
+| O2 | **Artículo SRV = compras · Recurso = producción** | La ficha de **artículo** aporta nombre, UM, categoría, afectación IGV y grupo de compras SRV: es la que viaja en la Solicitud de Materiales, la OC de servicio, la factura y la nota de crédito. La ficha de **recurso** aporta **costo estándar**, **cuenta mayor** (921201) y **proveedor habitual**: es la que entra como línea en la LDM y en la tabla *Recursos* de la OF. Ninguna mueve stock — el grupo SRV es `inv: false` y los recursos no tienen almacén. |
+| O3 | **Un servicio nunca es material de la OF** | Al agregar materiales el núcleo rechaza los no inventariables: *«Solo artículos inventariables: un servicio se agrega como recurso»*. En la OF el servicio va siempre en la tabla de recursos, con método **Notificación**. |
+| O4 | **Proceso del servicio tercerizado** | (a) **Tercerizar** la OF: sus materiales pasan al almacén **en tránsito**, se quitan los recursos propios y se agrega el servicio. (b) **Pedir servicio**: Solicitud de Materiales con la línea del `SRV-nnnn` por la cantidad de la orden, destino el almacén de tránsito. (c) Logística crea la **OC de servicio**, Compras la aprueba y factura (se anotan en `of.compras`). (d) **Enviar al proveedor**: transferencia al almacén en tránsito con GRE «Traslado para transformación» (consolidable por ruta, N5). (e) El **retorno** se registra como recibo de producción. (f) Al cerrar, lo enviado que no retornó queda como **faltante abierto** (N6). (g) La pestaña **Costo** de la orden contrasta **costo estándar vs. OC vs. factura vs. nota de crédito** (`Prod.contrasteServicios`); la nota de crédito se vincula a mano. |
+| O5 | **Alta de un servicio nuevo: orden fijo** | 1) artículo en la plantilla de artículos SERVICIOS (nace el código `SRV-nnnn`, IGV, UM, categoría); 2) proveedor en el grupo **SRV**; 3) ficha de recurso con **el mismo código**, costo estándar, cuenta mayor y proveedor habitual; 4) el almacén en tránsito ya existe y se reutiliza. Si el servicio no se compra (mano de obra propia, máquina, energía), no hay artículo: solo recurso `REC-nnnn`. |
+
+---
+
 ## Descartado explícitamente
 
+- Cabecera de la lista de materiales con Tipo (Venta/Producción) y Almacén (N10).
+- Estado Borrador / Aprobada en la lista de materiales (N11).
 - Clase de valoración en el artículo o la categoría (L2).
 - Categoría, físico/virtual y contenido del almacén (L3).
 - Control de stock al vender por artículo (L6) y almacén por defecto del artículo (L1).

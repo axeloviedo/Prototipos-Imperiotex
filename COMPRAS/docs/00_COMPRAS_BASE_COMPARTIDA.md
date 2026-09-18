@@ -23,6 +23,11 @@ CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerid
 ## Funciones globales que expone Compras
 `renderProv`, `fillGrupoSelects`, `renderOCS`, `renderFac`, `renderRec`, `renderNC`, `renderPanelCompras`, `renderCCD`, `renderSugerido`, `nuevaOC`, `loadOC(id)` (recibe `OC-000001`), `abrirOC(id)`, `abrirFactura(id)`, `crearFacDesdeOC()`, `elegirProvOC(cod)`, `openCT09()`, `loadProv(cod, modo)`, `eliminarProv(cod)`.
 
+## Revisión N (2026-09-17)
+- **Factura única por proveedor (N2)**: lo valida `Docs.fac.crear`, no solo la pantalla; una factura anulada libera su número.
+- **Faltante del servicio (N6)**: si la orden de fabricación que originó la OC cerró con prendas que no retornaron, CO-10 muestra el aviso y pide confirmar antes de registrar la factura. No bloquea: el reclamo va por CO-11.
+- **Empresa (N3)**: la OC, la factura y sus movimientos guardan `emp` (coincide con la organización de compras).
+
 ## Pendientes y propuestas
-- Contador propio para códigos de proveedor nuevos (hoy: mayor código + 1).
-- Validar en el núcleo que no se repita el número de factura del proveedor (hoy lo valida la pantalla).
+- Conectar CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino y CO-15 sugerido a la base compartida (N9).
+- El código de proveedor sigue siendo «mayor + 1»: el usuario lo dio por bueno para el prototipo (N13).

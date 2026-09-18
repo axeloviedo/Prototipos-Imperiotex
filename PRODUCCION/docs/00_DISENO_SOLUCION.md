@@ -119,3 +119,12 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 - **Crudo sin color**: una orden manual adelanta 10 crudos T28 (con sus piezas cortadas); la SF-000002 los usa y su orden de crudo T28 es solo por 20.
 - **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 enviado a la lavandería con OC aprobada; lavado T30 con el servicio pedido (SOL pendiente en Logística).
 - **SF-000003** (PT-0001..0004 × 20): **aprobada sin órdenes**, con su materia prima comprometida.
+
+## 10. Revisión N (2026-09-17)
+
+- **Envío consolidado (N5)**: en el modal de envío se pueden marcar otras órdenes liberadas del mismo proveedor de servicio. `Prod.enviarConsolidado` revisa el stock de todas juntas antes de mover nada, crea la transferencia de cada orden y **una sola guía de remisión por ruta** (la guía guarda `movs` y `ofs`).
+- **Faltante del proveedor (N6)**: al cerrar una orden con envíos, `enviado − recibido` queda como `of.faltante = {cant, prov, f, u, estado:'Abierto'}` y se ve en la ficha. Compras avisa al facturar esa OC. El cierre del faltante irá con los reclamos (CO-11).
+- **Empresa (N3)**: la orden guarda `emp` (la del almacén donde entra lo producido) y la ficha la muestra.
+- **Lotes (N7)**: el recibo de un artículo con control «Lote» crea su lote; la emisión consume el más antiguo. Los artículos de Zuleika no llevan lote.
+- **Decimales (N1)**: las cantidades se guardan con 4 decimales y se muestran con 2 como máximo.
+

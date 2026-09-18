@@ -29,7 +29,7 @@ const Docs = (() => {
     /* d = {solic, mes, almDestino, fechaReq, obs, lineas:[{art, cant, ldm}]} */
     crear(d) {
       const s = {
-        id: BD.sig('sf', 'SF-', 6), fecha: BD.hoy(), mes: d.mes || '', solic: d.solic || BD.usuario, almDestino: d.almDestino || '', fechaReq: d.fechaReq || '',
+        id: BD.sig('sf', 'SF-', 6), emp: BD.empresaDe(d.almDestino), fecha: BD.hoy(), mes: d.mes || '', solic: d.solic || BD.usuario, almDestino: d.almDestino || '', fechaReq: d.fechaReq || '',
         est: 'Borrador', vb: false, ger: false, obs: d.obs || '', lineas: sf._lineas(d.lineas), ofs: [], ref: '', comprometido: [], hist: []
       };
       BD.d.sfs.unshift(s);
@@ -115,7 +115,7 @@ const Docs = (() => {
       const lineas = sol._lineas(d.lineas);
       exigir(lineas.length, 'Agregue al menos una línea');
       const s = {
-        id: BD.sig('sol', 'SOL-', 6), fecha: BD.ahora(), area: d.area || '', solicita: d.solicita || BD.usuario, destino: d.destino || '', fechaReq: d.fechaReq || '',
+        id: BD.sig('sol', 'SOL-', 6), emp: BD.empresaDe(d.destino), fecha: BD.ahora(), area: d.area || '', solicita: d.solicita || BD.usuario, destino: d.destino || '', fechaReq: d.fechaReq || '',
         obs: d.obs || '', of: d.of || '', ref: d.ref || '', sf: d.sf || '', estado: 'Borrador', lineas, nota: '', hist: []
       };
       exigir(!s.destino || BD.alm(s.destino), 'Almacén destino no válido');
@@ -225,6 +225,9 @@ const Docs = (() => {
   const oc = {
     ESTADOS: ['Borrador', 'Pendiente de Validar', 'Para Recibir y Pagar', 'Para Recibir', 'Para Pagar', 'Completada', 'Cancelada'],
     esServicio(o) { return o.items.length > 0 && o.items.every(it => BD.esServicio(it.art)); },
+    /* la OC no tiene tipo: puede llevar bienes (se reciben con ingreso) y servicios (se da conformidad) a la vez */
+    tieneBienes(o) { return !!o && o.items.some(it => !BD.esServicio(it.art)); },
+    tieneServicios(o) { return !!o && o.items.some(it => BD.esServicio(it.art)); },
     _items(items) {
       const out = (items || []).filter(i => i.art).map(i => ({ art: i.art, cant: BD.r4(num(i.cant)), pu: BD.r4(num(i.pu) || 0), igv: i.igv == null ? 18 : Number(i.igv), recq: 0, facq: 0 }));
       out.forEach(i => { exigir(BD.art(i.art), 'No existe el artículo ' + i.art); exigir(i.cant > 0, 'Cantidad no válida en ' + BD.nomArt(i.art)); });
@@ -236,22 +239,19 @@ const Docs = (() => {
       exigir(!d.prov || BD.prov(d.prov), 'Proveedor no válido');
       const p = BD.prov(d.prov) || {};
       const o = {
-        id: BD.sig('oc', 'OC-', 6), est: 'Borrador', fecha: d.fecha || BD.hoy(), prov: d.prov || '', cond: d.cond || p.cond || 'Contado', mon: d.mon || p.mon || 'S/.', tc: Number(d.tc) || 3.75,
+        id: BD.sig('oc', 'OC-', 6), emp: BD.empresaDe(d.almDestino), est: 'Borrador', fecha: d.fecha || BD.hoy(), prov: d.prov || '', cond: d.cond || p.cond || 'Contado', mon: d.mon || p.mon || 'S/.', tc: Number(d.tc) || 3.75,
         ref: d.ref || '', obs: d.obs || '', sol: d.sol || '', of: d.of || '', sf: d.sf || '', almDestino: d.almDestino || '', valLog: false, valGer: false,
-        orgCompra: d.orgCompra || 'SB', grupoCompra: d.grupoCompra || '',
         items, recepciones: [], facturas: [], hist: []
       };
-      o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
-      if (!o.grupoCompra) o.grupoCompra = p.tipo === 'Internacional' ? 'IMP' : o.tipo === 'Servicio' ? 'SRV' : (BD.grupoCompra(items[0].art) || 'MP1');
       BD.d.ocs.unshift(o);
       BD.hist(o, 'Creada en borrador', (o.sol ? 'desde ' + o.sol : 'OC directa') + (o.of ? ' · ' + o.of : ''));
       g(); return o;
     },
     guardar(id, d) {
       const o = BD.oc(id); exigir(o && o.est === 'Borrador', 'Solo se edita una OC en Borrador');
-      ['prov', 'fecha', 'cond', 'mon', 'tc', 'ref', 'obs', 'almDestino', 'of', 'orgCompra', 'grupoCompra'].forEach(k => { if (d[k] != null) o[k] = d[k]; });
+      ['prov', 'fecha', 'cond', 'mon', 'tc', 'ref', 'obs', 'almDestino', 'of'].forEach(k => { if (d[k] != null) o[k] = d[k]; });
+      o.emp = BD.empresaDe(o.almDestino);
       if (d.items) o.items = oc._items(d.items);
-      o.tipo = oc.esServicio(o) ? 'Servicio' : 'Bienes';
       g(); return o;
     },
     enviar(id) {
@@ -355,14 +355,25 @@ const Docs = (() => {
   /* ================= Factura de proveedor ================= */
   const fac = {
     ESTADOS: ['Impagado', 'Pagado', 'Anulada'],
+    /* avisos antes de facturar (C-4): faltante abierto de la orden tercerizada que originó la OC. Avisa, no bloquea (hay reclamo aparte, CO-11) */
+    avisos(ocId) {
+      const o = BD.oc(ocId); if (!o || !o.of) return [];
+      const of = BD.of(o.of), f = of && of.faltante;
+      if (!f || f.estado !== 'Abierto') return [];
+      return ['La orden ' + of.id + ' tiene ' + f.cant + ' ' + BD.u(of.art) + ' enviadas que no retornaron de ' + BD.provNom(f.prov) + ': revise el importe antes de registrar la factura o abra un reclamo'];
+    },
     /* d = {oc, ndoc, fecha, lineas:[{art, cant, pu}], obs}; sin lineas factura lo pendiente de facturar de la OC */
     crear(d) {
       const o = BD.oc(d.oc); exigir(o && !['Borrador', 'Pendiente de Validar', 'Cancelada'].includes(o.est), 'La OC no está aprobada');
-      exigir(String(d.ndoc || '').trim(), 'Indique el número de la factura del proveedor');
+      const ndoc = String(d.ndoc || '').trim();
+      exigir(ndoc, 'Indique el número de la factura del proveedor');
+      /* el número de factura es único por proveedor (C-2) */
+      exigir(!BD.d.facturas.some(x => x.prov === o.prov && String(x.ndoc).trim() === ndoc && x.est !== 'Anulada'),
+        'Ya existe una factura de ' + (BD.prov(o.prov) || {}).nom + ' con el comprobante ' + ndoc);
       const lineas = (d.lineas || o.items.map(i => ({ art: i.art, cant: BD.r4(i.cant - i.facq), pu: i.pu }))).filter(l => Number(l.cant) > 0);
       exigir(lineas.length, 'La OC ya está facturada');
       lineas.forEach(l => { const it = o.items.find(i => i.art === l.art); exigir(it, BD.nomArt(l.art) + ' no está en la OC'); exigir(it.facq + Number(l.cant) <= it.cant + 0.00005, 'No se factura más de lo pedido: ' + BD.nomArt(l.art)); });
-      const f = { id: BD.sig('fac', 'FC-', 6), oc: o.id, prov: o.prov, ndoc: d.ndoc, fecha: d.fecha || BD.hoy(), cond: o.cond, mon: o.mon, tc: o.tc, est: 'Impagado', obs: d.obs || '',
+      const f = { id: BD.sig('fac', 'FC-', 6), emp: o.emp || BD.empresaDe(o.almDestino), oc: o.id, prov: o.prov, ndoc: d.ndoc, fecha: d.fecha || BD.hoy(), cond: o.cond, mon: o.mon, tc: o.tc, est: 'Impagado', obs: d.obs || '',
         items: lineas.map(l => { const it = o.items.find(i => i.art === l.art); return { art: l.art, cant: BD.r4(l.cant), pu: BD.r4(l.pu != null ? l.pu : it.pu), igv: it.igv }; }), hist: [] };
       f.items.forEach(l => { const it = o.items.find(i => i.art === l.art); it.facq = BD.r4(it.facq + l.cant); });
       BD.d.facturas.unshift(f);
@@ -395,7 +406,7 @@ const Docs = (() => {
       const lineas = (d.lineas || []).filter(l => l.art).map(l => ({ art: l.art, cant: BD.r4(num(l.cant)), recibido: 0 }));
       exigir(lineas.length, 'Agregue al menos un artículo');
       lineas.forEach(l => { exigir(Stock.inventariable(l.art), BD.nomArt(l.art) + ' no maneja stock'); exigir(l.cant > 0, 'Cantidad no válida en ' + BD.nomArt(l.art)); });
-      const t = { id: BD.sig('st', 'ST-', 6), fecha: d.fecha || BD.ahora(), origen: d.origen, destino: d.destino, tipoMov, estado: 'Borrador', obs: d.obs || '', sol: d.sol || '', of: d.of || '', modulo: d.modulo || 'Inventarios', movs: [], lineas, hist: [] };
+      const t = { id: BD.sig('st', 'ST-', 6), emp: BD.empresaDe(d.origen), fecha: d.fecha || BD.ahora(), origen: d.origen, destino: d.destino, tipoMov, estado: 'Borrador', obs: d.obs || '', sol: d.sol || '', of: d.of || '', modulo: d.modulo || 'Inventarios', movs: [], lineas, hist: [] };
       (BD.d.trfs = BD.d.trfs || []).unshift(t);
       BD.hist(t, 'Creada', d.origen + ' → ' + d.destino);
       g(); return t;
@@ -460,8 +471,10 @@ const Docs = (() => {
     crear(d) {
       exigir(gre.MOTIVOS.includes(d.motivo), 'Elija el motivo de traslado');
       exigir(BD.alm(d.origen), 'Almacén de origen no válido');
-      const x = { id: BD.sig('gre', 'T001-', 6), fecha: d.fecha || BD.ahora(), motivo: d.motivo, origen: d.origen, destino: d.destino || '', prov: d.prov || '',
-        transportista: d.transportista || '', mov: d.mov || '', of: d.of || '', estado: 'Aceptada SUNAT', obs: d.obs || '', lineas: (d.lineas || []).map(l => ({ art: l.art, cant: BD.r4(l.cant) })), hist: [] };
+      /* una guía puede cubrir varios movimientos y varias órdenes (envío consolidado, P-2) */
+      const movs = (d.movs || [d.mov]).filter(Boolean), ofs = (d.ofs || [d.of]).filter(Boolean);
+      const x = { id: BD.sig('gre', 'T001-', 6), emp: BD.empresaDe(d.origen), fecha: d.fecha || BD.ahora(), motivo: d.motivo, origen: d.origen, destino: d.destino || '', prov: d.prov || '',
+        transportista: d.transportista || '', mov: movs[0] || '', movs, ofs, of: ofs[0] || '', estado: 'Aceptada SUNAT', obs: d.obs || '', lineas: (d.lineas || []).map(l => ({ art: l.art, cant: BD.r4(l.cant) })), hist: [] };
       BD.d.gres.unshift(x);
       BD.hist(x, 'Emitida', d.motivo);
       g(); return x;

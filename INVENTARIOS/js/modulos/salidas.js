@@ -9,7 +9,8 @@ function nuevaSalida(){
   go('gi10'); renderSalida();
 }
 function renderSalida(){
-  tablaLineas(SAL,{thead:'gi10-head',tbody:'gi10-items',tfoot:'gi10-foot',alm:document.getElementById('gi10-alm').value,disp:true,avisar:true,estVar:'SAL',render:'renderSalida'});
+  const alm=document.getElementById('gi10-alm').value;
+  tablaLineas(SAL,{thead:'gi10-head',tbody:'gi10-items',tfoot:'gi10-foot',alm:alm,disp:true,avisar:true,lote:SAL.lineas.some(l=>Stock.conLote(l.art)),estVar:'SAL',render:'renderSalida'});
 }
 BUSCADOR_CTX.gi10={etiqueta:"el almacén origen",soloInv:true,requiereAlm:true,avisaSinStock:true,alm:()=>document.getElementById('gi10-alm').value,
   agregar:cod=>{if(agregarLinea(SAL,cod))renderSalida()}};
@@ -26,7 +27,7 @@ function completarSalida(){
   if(/REGULARIZ|FALLADO/.test(tipo)&&!document.getElementById('gi10-obs').value.trim()){toast("Indique en Observaciones el motivo de la "+(/FALLADO/.test(tipo)?"salida por producto fallado":"regularización"));return}
   const r=intentar(()=>Stock.salida({det:'Salida - '+(t.nom||tipo),tipoMov:tipo,alm:document.getElementById('gi10-alm').value,destino:document.getElementById('gi10-dest').value.trim()||'Salida manual',
     ndoc:document.getElementById('gi10-ndoc').value.trim(),obs:document.getElementById('gi10-obs').value.trim(),modulo:'Inventarios',
-    lineas:SAL.lineas.map(l=>({art:l.art,cant:l.cant,bloquear:bloq}))}));
+    lineas:SAL.lineas.map(l=>({art:l.art,cant:l.cant,lote:l.lote||'',bloquear:bloq}))}));
   if(!r)return;
   if(!r.ok){toast(r.error);return}
   BD.guardar();

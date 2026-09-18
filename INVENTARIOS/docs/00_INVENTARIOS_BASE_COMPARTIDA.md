@@ -30,7 +30,7 @@ Selector **Datos** de la barra superior (`BDSelector`):
 | GI-20 Saldos por fecha | `Stock.kardex` | Saldo y costo promedio reconstruidos al cierre de la fecha; comprometido solo para hoy. |
 | GI-21/22/23 Solicitudes de Fabricación | `Docs.sf` | `lineas[].cant`, `ldm`, `almDestino` código. Requerimientos con `Explosion.bruto` (todas las fases), servicios con `Explosion.servicios`, existencias de los PT, V°B° (`darVB`) y aprobación (`aprobar`, compromete), rechazo, devolución, guardar cambios, SOL del déficit (una por almacén, con `sf`). Vista comercial `?vista=comercial&usuario=…`. |
 | Configuraciones | `maestros.grupos` (+ `finanzasGrupo` y `grupoCompra`, K10), `categorias`, `subcategorias`, `unidades`, `conversiones`, `atributos`, `tiposCodigoBarra`, `sedes`, `tiposMovimiento` (solo lectura), `configLogistica`, `seriesInternas`, `seriesGRE` | No se elimina un registro en uso. |
-| GI-18 Rotación | — | **Datos de ejemplo · no conectado a la base.** |
+| GI-18 Rotación | `BD.d.stock` · `BD.d.movs` | Stock con Actual > 0 por almacén y artículo, valor al costo promedio, días desde el último movimiento y semáforo (N8). |
 
 ## 3. Reglas de los indicadores del almacén (L3, L4)
 
@@ -61,3 +61,10 @@ Hash: `#gi23=SF-000001`, `#gi13=SOL-000001`, `#gi08=ING-000001`, `#gi11=ST-00000
 ## 6. Datos propios (`COMPARTIDO/bd/datos/maestros-logistica.js`)
 
 `configLogistica` (sin campos de usuario, L8), `conceptosFinanzas` (28), `finanzasGrupo`, `seriesInternas`, `seriesGRE`, `transportistas`, `ubigeos`; colección `notasInternas`.
+
+## 7. Lotes y empresa (revisión N3 / N7, 2026-09-17)
+
+- **Lotes**: solo los artículos con control «Lote» (hoy las telas MP-0070 y MP-0071). Cada ingreso —manual (GI-09), por recepción de OC o por recibo de producción— crea `L<año>-<artículo>-<correlativo>` con su saldo por almacén. En GI-10 la salida puede elegir el lote; vacío = el más antiguo. El lote se ve en el Kardex (GI-06) y en el detalle del movimiento (GI-08). El costo sigue siendo el promedio del almacén.
+- **Empresa**: todo movimiento y todo documento guarda `emp` (la del almacén; si no tiene, la empresa activa de la barra superior).
+- **GI-19 Series**: el «próximo correlativo» es el real de la base (`BD.d.seq`) y se muestra cuántos documentos lleva emitidos cada serie; al cambiarlo no se permite un número ya usado.
+

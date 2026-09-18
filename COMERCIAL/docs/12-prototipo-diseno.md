@@ -192,11 +192,11 @@ Escenario (versión anterior a la base compartida; la historia vigente está en 
 | # | Pregunta |
 |---|---|
 | Q-C1 | ✅ **Resuelta (2026-09-15):** cuatro documentos. La orden compromete, la venta es el comprobante y el cobro completo saca el stock (K1–K8). |
-| Q-C2 | Si una orden de venta mayorista no tiene producto terminado, ¿se genera la **Solicitud de Fabricación** (GI-21) desde la orden? |
-| Q-C3 | ¿La **reposición a tienda** (transferencia GI-11 pedida por la tienda) se prototipa aquí o en GI? |
+| Q-C2 | ⛔ **Resuelta (2026-09-17):** no. La Solicitud de Fabricación se crea aparte (CL-30). |
+| Q-C3 | ✅ **Resuelta (2026-09-17):** la pide Comercial desde su pantalla, con una Solicitud de Materiales (CL-31) que Logística atiende como Transferencia. |
 | Q-C4 | ¿Se prototipan SUNAT, envíos, cambios y liquidaciones que ya existen en el backend? |
-| Q-C5 | ¿Un cliente puede pagar en la caja de **otra tienda**? Hoy el cobro entra a la caja de la tienda de la venta. |
-| Q-C6 | Tipos de cliente: el prototipo usa 4 y el backend tiene 7 (incluye los de servicios). ¿Se unifican? |
+| Q-C5 | ⛔ **Resuelta (2026-09-17):** el cobro entra a la caja de la tienda de la venta; queda así. |
+| Q-C6 | ⛔ **Resuelta (2026-09-17):** se mantienen los 4 del prototipo. |
 | Q-C7 | ✅ **Resuelta:** no hay validación de pagos; registrar el cobro es cobrado (K8). |
 
 ---
@@ -209,7 +209,7 @@ Escenario (versión anterior a la base compartida; la historia vigente está en 
 |---|---|---|
 | R1 | **DECISIÓN CERRADA · la venta pendiente compromete y el pago confirmado completo saca el stock** | Al registrar la venta, cada línea inventariable **compromete** su cantidad (UM de inventario) en su almacén: sube el Comprometido y baja el Disponible (Disponible = Actual − Comprometido). No se crea ningún movimiento. El pago confirmado es el pago **validado** en caja. Cuando la suma de pagos validados cubre el total, se registra la **Salida** GI-10 («Venta al por menor / al por mayor», concepto 21), una por almacén. La Salida baja el Actual, libera lo comprometido de la venta y guarda el costo. Un pago parcial validado no mueve stock. Un pago por validar tampoco. |
 | R1.a | Avisos y bloqueo al registrar | El control de stock del artículo se revisa contra el **Disponible**, que ya descuenta lo comprometido por otras ventas pendientes. *Bloquear* impide registrar. *Avisar y permitir* deja registrar con aviso (CL-08): el comprometido puede superar al Actual y, al salir, el Actual puede quedar negativo. La Salida no vuelve a bloquear, porque dispararla es validar un pago en caja. |
-| R1.b | Crédito | Misma regla que el contado. La condición de pago solo fija el vencimiento del saldo: el stock queda comprometido hasta que lo validado cubra el total. Si el negocio necesita entregar mercadería a crédito antes de cobrar, queda como pregunta abierta (Q-C8). |
+| R1.b | Crédito *(revisada 2026-09-17, N4)* | La condición de pago fija el vencimiento del saldo. En una venta al crédito el usuario **decide si entrega**: al registrar puede marcar «Entregar ahora» (sale el stock, sin esperar el cobro) o dejarlo comprometido hasta que lo validado cubra el total, como el contado. También se entrega después con el botón **Entregar** de la ficha. La salida guarda su motivo (pago confirmado o entrega a crédito). Cierra Q-C8. |
 | R1.c | Anular venta | Sin salida: **libera lo comprometido**, sin plazo y sin movimientos. Con salida: solo dentro del plazo (`plazoAnular`) y devuelve el stock con un Ingreso «Devoluciones de Clientes», como antes. En ambos casos los pagos por validar se anulan y lo validado queda **por devolver** en caja. |
 | R1.d | Rechazar pago | Anula el pago y no toca el stock: la venta sigue con su stock comprometido. |
 | R1.e | Devoluciones | Solo de lo que **ya salió**: la venta debe tener su Salida. Mientras el stock está comprometido no hay nada que devolver; si la venta ya no va, se anula. |
@@ -223,7 +223,7 @@ Escenario (versión anterior a la base compartida; la historia vigente está en 
 
 | # | Pregunta abierta |
 |---|---|
-| Q-C8 | ¿Una venta a crédito debe entregar (sacar stock) antes de cobrar? Hoy sigue la misma regla que el contado (R1.b). |
+| Q-C8 | ✅ **Resuelta (2026-09-17, N4):** la entrega de una venta al crédito es opcional y la decide el usuario (R1.b). |
 
 ---
 

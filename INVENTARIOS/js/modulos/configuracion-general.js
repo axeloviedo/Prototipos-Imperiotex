@@ -23,13 +23,26 @@ function guardarCfg(){
 RENDER.mcfg=renderCfg;
 
 /* ===== GI-19 · Series ===== */
+/* cada serie interna numera un tipo de movimiento de la base: el próximo correlativo sale de BD.d.seq */
+const SERIE_SEQ={NI:'ing',NS:'sal',NT:'trf'};
+const SERIE_PREF={NI:'ING-',NS:'SAL-',NT:'TRF-'};
+function serieEmitidos(k){return BD.d.movs.filter(m=>String(m.id).startsWith(SERIE_PREF[k])).length}
 function renderSeries(){
   const s=mLog('seriesInternas'), tb=document.getElementById('series-body'); if(!tb)return;
   tb.innerHTML=Object.keys(s).map(k=>'<tr><td>'+s[k].nom+'</td><td><b>'+k+'-</b></td>'+
-    '<td><input value="'+String(s[k].prox).padStart(6,"0")+'" style="text-align:right" onchange="serieProx(\''+k+'\',this.value)"></td>'+
+    '<td><input value="'+String(BD.d.seq[SERIE_SEQ[k]]||1).padStart(6,"0")+'" style="text-align:right" onchange="serieProx(&quot;'+k+'&quot;,this.value)"></td>'+
+    '<td style="text-align:right">'+Fmt.n(serieEmitidos(k),0)+'</td>'+
     '<td class="hint">'+s[k].desde+'</td></tr>').join('');
 }
-function serieProx(k,v){const n=parseInt(v,10);if(!(n>0)){toast("Correlativo no válido");renderSeries();return}mLog('seriesInternas')[k].prox=n;BD.guardar();toast("Próximo correlativo "+k+"-"+String(n).padStart(6,"0"))}
+function serieProx(k,v){
+  const n=parseInt(v,10);
+  if(!(n>0)){toast("Correlativo no válido");renderSeries();return}
+  const emitidos=serieEmitidos(k);
+  if(n<=emitidos){toast("Ya hay "+emitidos+" documentos de esta serie: el próximo correlativo debe ser mayor");renderSeries();return}
+  BD.d.seq[SERIE_SEQ[k]]=n; mLog('seriesInternas')[k].prox=n; BD.guardar();
+  toast("Próximo correlativo "+k+"-"+String(n).padStart(6,"0"));
+  renderSeries();
+}
 function renderSeriesGRE(){
   const tb=document.getElementById('series-gre-body'); if(!tb)return;
   const prox=String(BD.d.seq.gre||1).padStart(6,'0');

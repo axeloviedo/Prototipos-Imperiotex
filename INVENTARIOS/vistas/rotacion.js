@@ -5,7 +5,6 @@ Vistas.pantallas(String.raw`
     <div class="screen-head">
       <h1>Rotación de Artículos</h1><span class="code">GI-18</span>
       <div class="spacer"></div>
-    <div class="card" style="border-left:4px solid var(--pendiente);background:#FFFBEB;padding:10px 14px"><b style="font-size:12.5px">Datos de ejemplo · no conectado a la base</b> <span class="hint">La rotación se calculará de los movimientos de la base en una siguiente etapa; los artículos y almacenes de esta tabla son ilustrativos.</span></div>
       <button class="btn btn-secondary" onclick="toast('Exportar a Excel (prototipo)')">Exportar <span class="warn" title="Formato de exportación a definir">⚠</span></button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:16px">
@@ -15,10 +14,10 @@ Vistas.pantallas(String.raw`
     </div>
     <div class="card">
       <div class="filters">
-        <div class="field"><label>Almacén</label><select id="f-rot-alm" onchange="renderRot()"><option value="">Todos</option></select></div>
+        <div class="field"><label>Almacén</label><select id="f-rot-alm" data-todos="Todos" onchange="renderRot()"><option value="">Todos</option></select></div>
         <div class="field"><label>Artículo</label><input id="f-rot-q" placeholder="Buscar artículo…" oninput="renderRot()"></div>
-        <div class="field"><label>Grupo de Artículo</label><select id="f-rot-g" onchange="renderRot()"><option value="">Todos</option></select></div>
-        <div class="field"><label>Categoría</label><select id="f-rot-sg" onchange="renderRot()"><option value="">Todas</option></select></div>
+        <div class="field"><label>Grupo de Artículo</label><select id="f-rot-g" data-todos="Todos" onchange="renderRot()"><option value="">Todos</option></select></div>
+        <div class="field"><label>Categoría</label><select id="f-rot-sg" data-todos="Todas" onchange="renderRot()"><option value="">Todas</option></select></div>
         <div class="field"><label>Sin movimiento hace más de</label><select id="f-rot-d" onchange="renderRot()"><option value="">Cualquier antigüedad</option><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option><option value="180">180 días</option></select></div>
       </div>
     </div>

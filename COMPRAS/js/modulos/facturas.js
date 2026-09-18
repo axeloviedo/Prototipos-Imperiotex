@@ -44,7 +44,7 @@ function abrirFacOC(){
   let html="";
   coD().ocs.filter(ocFacturable).forEach(o=>{
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
-    html+='<tr><td>'+o.id+'</td><td>'+o.tipo+'</td><td>'+coEsc(coProvTxt(o.prov))+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td>'+
+    html+='<tr><td>'+o.id+'</td><td>'+coEsc(coProvTxt(o.prov))+'</td><td>'+o.fecha+'</td><td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td>'+
      '<td style="text-align:right">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
      '<td style="text-align:right">'+a.rec+'%</td><td style="text-align:right;color:var(--confirmado)">'+a.fac+'%</td>'+
      '<td><button class="btn btn-primary btn-sm" onclick="crearFacDesdeOCk(\''+o.id+'\')">Facturar</button></td></tr>';
@@ -92,6 +92,13 @@ function loadFacForm(sinIr){
     av.style.display="block";
     av.innerHTML='<b style="font-size:12.5px">Servicio de la orden de fabricación '+coEsc(o.of)+'</b><p class="hint" style="margin-top:5px">'+(FAC.nuevo?'Al registrarla, esta factura pasa':'Esta factura pasó')+' a la <b>pestaña Costo de la orden</b>, donde el importe real se contrasta con el costo estándar del servicio.'+(BD.of(o.of)?'':' <span style="color:var(--pendiente)">La orden '+coEsc(o.of)+' no existe en la base: no se registra en ninguna orden.</span>')+' <button class="btn-link" onclick="verOFdeOC(\''+coEsc(o.of)+'\')">Abrir la orden en Producción</button></p>';
   }else av.style.display="none";
+  /* C-4: si la orden tercerizada dejó un faltante abierto, se avisa (no bloquea: el reclamo va por CO-11) */
+  const avFalta=Docs.fac.avisos(FAC.oc);
+  if(avFalta.length){
+    av.style.display="block";
+    av.style.borderLeftColor="var(--pendiente)";
+    av.innerHTML=(av.innerHTML||"")+'<p class="hint" style="margin-top:6px"><b>Faltante del servicio:</b> '+coEsc(avFalta.join(" · "))+'</p>';
+  }else av.style.borderLeftColor="var(--primario-claro)";
   renderFacForm();
   if(!sinIr)go('co10');
 }
@@ -154,7 +161,7 @@ function renderFacDocs(){
   const fila=h=>'<div style="padding:6px 0;border-bottom:1px solid var(--borde)">'+h+'</div>';
   if(o){
     const a=Docs.oc.avance(o);
-    filas.push(fila('Orden de compra <button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button> · '+o.tipo+' · <span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span> · recibido '+a.rec+'% · facturado '+a.fac+'%'));
+    filas.push(fila('Orden de compra <button class="btn-link" onclick="abrirOC(\''+o.id+'\')">'+o.id+'</button> · <span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span> · recibido '+a.rec+'% · facturado '+a.fac+'%'));
     o.recepciones.filter(r=>r.tipo==="Ingreso").forEach(r=>filas.push(fila('Ingreso relacionado: '+((typeof abrirMov==='function')?'<button class="btn-link" onclick="abrirMov(\''+r.mov+'\')">'+r.mov+'</button>':'<b>'+r.mov+'</b>')+((BD.mov(r.mov)||{}).tipoMov?' · '+coEsc(BD.mov(r.mov).tipoMov):'')+' · '+r.fecha+' · '+coEsc(r.alm))));
     o.recepciones.filter(r=>r.tipo==="Conformidad").forEach(r=>filas.push(fila('Conformidad del servicio · '+r.fecha+(r.conforme===false?' · con observaciones':''))));
     o.facturas.filter(id=>id!==FAC.id).forEach(id=>{const f=BD.fac(id); if(f)filas.push(fila('Otra factura de la misma OC: <button class="btn-link" onclick="abrirFactura(\''+f.id+'\')">'+f.id+'</button> · '+coEsc(f.ndoc)+' · '+f.est))});
@@ -173,6 +180,8 @@ function registrarFac(){
   if(!lineas.length){toast("Indique al menos una cantidad a facturar");return}
   if(FAC.items.some(it=>it.pu<=0 && it.cant>0)){toast("Todas las líneas facturadas deben tener precio");return}
   const fecha=coDMY(document.getElementById('fac-fecha').value)||BD.hoy();
+  const avisos=Docs.fac.avisos(FAC.oc);
+  if(avisos.length&&!FAC.avisado){FAC.avisado=true;toast(avisos[0]+". Vuelva a pulsar Registrar factura para continuar");return}
   const f=coTry(()=>Docs.fac.crear({oc:FAC.oc,ndoc:nd,fecha:fecha,lineas:lineas,obs:document.getElementById('fac-obs').value}));
   if(!f)return;
   const o=BD.oc(f.oc), a=Docs.oc.avance(o);
