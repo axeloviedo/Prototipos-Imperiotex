@@ -433,3 +433,23 @@ Dónde se ve: CL-13 (columna Dinero: «Crédito S/ … · devuelto en caja S/ �
 - El crédito del cliente se calcula de sus movimientos (Σ abonos − Σ usos por empresa, cliente y moneda); un uso no lo deja negativo (bloqueo por cliente).
 - El pago con «Nota de crédito» no tiene caja (`caja_sesion_id` nulo), nace Validado y no cuenta en el arqueo.
 - «Devolver en caja» es una transacción: uso del crédito + movimiento de caja tipo Devolución.
+
+### 14.4 ⏳ Pendiente: consultar con el contador (21/09/2026)
+
+> El usuario decidió (2026-09-18) **dejar el prototipo como está** hasta la reunión con el contador del **21/09/2026**. No cambiar esta sección sin esa respuesta.
+
+**Qué ya cumple:** nota de crédito por ítem sobre un solo comprobante (la boleta o factura no se anula), comprobante nuevo por lo que se lleva, cobros originales intactos, crédito del cliente usado como pago (equivale a un anticipo), stock con su documento en cada movimiento.
+
+**Qué preguntar:**
+
+| # | Punto | Detalle |
+|---|---|---|
+| P1 | **¿Nota de crédito o cambio directo?** | **A.** Dejar la nota de crédito por ítem + venta nueva (este prototipo, formal completo). **B.** Cambio directo al **mismo precio** como el sistema real (`comercial`, `ProductExchangeBusinessImpl`): solo mueve stock (sale la nueva, entra la devuelta), no toca dinero ni comprobante y queda «Por revisar» para contabilidad; la nota de crédito solo para anular fuera de plazo. ¿Es aceptable que la boleta describa la prenda original, o hace falta nota por error en la descripción (motivo 03)? |
+| P2 | Motivo del catálogo 09 | Hoy es texto libre; la nota electrónica exige código: **07** devolución por ítem / **06** devolución total. |
+| P3 | Baja solo sin entregar | SUNAT permite la comunicación de baja (7 días) solo si el comprobante **no se entregó** al cliente; hoy el prototipo deja anular dentro de 7 días aunque ya se entregó. |
+| P4 | Plazo de 12 meses para la nota | No se encontró en la norma: ¿se deja como política de la empresa o se quita? |
+| P5 | «Devolver en caja» (CL-52) | Contradice «no devolvemos dinero» (en el sistema real `DEVOLUCION_HABILITADA` está apagado): ¿se quita y lo que sobra queda siempre como vale? |
+| P6 | Crédito del cliente | Cuenta contable del crédito (anticipos de clientes) y si debe vencer. |
+| P7 | Reglas de cambio del sistema real | Mismo precio, plazo 7 días, «prenda sin uso», oferta → oferta: ¿se llevan al prototipo? |
+
+Huecos vistos en el sistema real (para su equipo, fuera de este punto): permiso de confirmar cambios distinto entre front (`EXCHANGES:APPROVE`) y back (`EXCHANGES:CREATE`); si falla el ingreso de la prenda devuelta tras la salida de la nueva, el stock queda a medias; las boletas se dan de baja por comunicación de baja (RA) en vez de resumen diario: confirmar con el proveedor.
