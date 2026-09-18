@@ -21,14 +21,19 @@ const Precios = {
   verificaMin(a) { return !!((BD.d.maestros.configLogistica || {}).precioMinGlobal || (a && a.verifMin)); },
 
   /* ===== LISTAS DE PRECIOS Y OFERTAS (decisiones LP1–LP5, 12-prototipo-diseno.md §12) =====
-     Store.d.listasPrecio = [{ cod, nom, mon, sede ('' = todas), tipo ('' = todos los segmentos), desde, hasta, activa,
+     Store.d.listasPrecio = [{ cod, nom, mon, sede (sede del maestro compartido BD.d.maestros.sedes; '' = todas), tipo ('' = todos los segmentos), desde, hasta, activa,
                                filas: [{ art, um, precio | pct }  ó  { grupo, pct }] }]
      Una lista SIN fechas es una lista de precios; CON fechas es una oferta. Cada fila lleva precio fijo O % de descuento. */
   listas() { return Store.d.listasPrecio || (Store.d.listasPrecio = []); },
   lista(cod) { return Precios.listas().find(l => l.cod === cod); },
   esOferta(L) { return !!(L && (L.desde || L.hasta)); },
-  /* 0 = tienda y segmento · 1 = tienda · 2 = segmento · 3 = general (de lo más específico a lo general) */
-  NIVELES: ['Tienda y segmento', 'Tienda', 'Segmento', 'General'],
+  /* 0 = sede y segmento · 1 = sede · 2 = segmento · 3 = general (de lo más específico a lo general) */
+  NIVELES: ['Sede y segmento', 'Sede', 'Segmento', 'General'],
+  /* sedes del maestro compartido (Gamarra, Galería «Ya», Damero…) */
+  sedes() { return (BD.d.maestros && BD.d.maestros.sedes) || []; },
+  sedeNom(cod) { const s = Precios.sedes().find(x => x.cod === cod); return s ? s.nom : cod; },
+  /* el documento trae su tienda (punto de venta, TDA-01): la lista se busca por la sede de esa tienda (YA). Si ya es una sede, queda igual */
+  sedeDe(cod) { const t = M.SEDES.find(x => x.cod === cod); return t ? t.sede || '' : cod || ''; },
   espec(L) { return L.sede && L.tipo ? 0 : L.sede ? 1 : L.tipo ? 2 : 3; },
   nivel(L) { return Precios.NIVELES[Precios.espec(L)]; },
   enFechas(L, fecha) {
@@ -44,7 +49,7 @@ const Precios = {
     if (L.hasta && f > UI.aFecha(L.hasta)) return 'Vencida';
     return 'Vigente';
   },
-  /* ¿la lista vale para este documento? misma moneda, su tienda (o todas), su segmento (o todos), activa y en fecha */
+  /* ¿la lista vale para este documento? misma moneda, su sede (o todas), su segmento (o todos), activa y en fecha */
   aplica(L, sede, tipo, mon, fecha) {
     return !!L.activa && L.mon === mon && (!L.sede || L.sede === sede) && (!L.tipo || L.tipo === tipo) && Precios.enFechas(L, fecha);
   },
@@ -65,6 +70,7 @@ const Precios = {
   pctTxt(p) { return '−' + UI.n(p, Number.isInteger(p) ? 0 : 2) + ' %'; },
   /* listas y ofertas que tienen el artículo para ese documento, de la más específica a la general */
   candidatos(art, um, sede, tipo, mon, fecha) {
+    sede = Precios.sedeDe(sede);
     return Precios.listas().filter(L => Precios.aplica(L, sede, tipo, mon, fecha))
       .map(L => ({ L, x: Precios.filaDe(L, art, um) })).filter(c => c.x)
       .sort((p, q) => Precios.espec(p.L) - Precios.espec(q.L));

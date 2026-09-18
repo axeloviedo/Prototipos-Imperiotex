@@ -32,6 +32,8 @@ const Store = {
       d.listasPrecio = BD.copia((X.colecciones || {}).listasPrecio || []);
       ['precios', 'dctosPC'].forEach(k => { delete d[k]; });
     }
+    /* listas guardadas con la tienda (TDA-02) en lugar de la sede (DAM) */
+    d.listasPrecio.forEach(l => { const t = M.SEDES.find(x => x.cod === l.sede); if (t) l.sede = t.sede || ''; });
     const cfg0 = ((X.colecciones || {}).comercial || {}).cfg || {};
     d.comercial = d.comercial || {};
     d.comercial.cfg = Object.assign(BD.copia(cfg0), d.comercial.cfg || {});

@@ -43,7 +43,7 @@ prueba('lista inactiva no se usa', () => {
 });
 
 prueba('mantenimiento: nueva oferta, agregar artículos y grupo, precio o %', () => {
-  const L = Listas.guardar({ nom: 'Prueba Cyber', mon: 'PEN', sede: 'TDA-01', tipo: '', oferta: true, desde: '01/11/2026', hasta: '03/11/2026', activa: true });
+  const L = Listas.guardar({ nom: 'Prueba Cyber', mon: 'PEN', sede: 'YA', tipo: '', oferta: true, desde: '01/11/2026', hasta: '03/11/2026', activa: true });
   igual(Precios.esOferta(L), true, 'es oferta');
   igual(Listas.agregarArts(L.cod, ['PT-0003', 'PT-0004'], { pct: 30 }), 2, 'agregados');
   igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 87.43, '124.90 − 30 %');
@@ -51,7 +51,7 @@ prueba('mantenimiento: nueva oferta, agregar artículos y grupo, precio o %', ()
   Listas.fila(L.cod, i, 'um', 'UND'); Listas.fila(L.cod, i, 'precio', 80);
   igual([L.filas[i].precio, L.filas[i].pct], [80, undefined], 'el precio borra el %');
   igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 80, 'precio fijo');
-  igual(P('PT-0004', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '02/11/2026'), 124.90, 'solo en Tienda #1');
+  igual(P('PT-0004', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '02/11/2026'), 124.90, 'solo en la sede Galería Ya');
   falla(() => Listas.agregarGrupo(L.cod, 'PT', 0), '% de descuento');
   Listas.agregarGrupo(L.cod, 'PT', 5);
   igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 113.91, 'grupo −5 %');
@@ -106,4 +106,14 @@ prueba('una base guardada con las listas de otra versión (sin filas) se repara 
     igual([BD.d.listasPrecio.every(l => Array.isArray(l.filas)), BD.d.precios], [true, undefined], 'reparada');
     igual(P('PT-0001', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026'), 89.00, 'precio con las listas iniciales');
   } finally { BD.d.listasPrecio = antes; }
+});
+
+prueba('la lista es por sede: el documento lleva su tienda a la sede; no se acepta una tienda como sede', () => {
+  igual([Precios.lista('LP-05').sede, Precios.lista('LP-06').sede], ['DAM', 'YA'], 'sedes de los datos de ejemplo');
+  igual(P('PT-0001', 'UND', 'DAM', 'MINORISTA', 'PEN', '15/08/2026'), 115.00, 'sede Damero directo');
+  igual(P('PT-0001', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '15/08/2026'), 115.00, 'tienda #2 → sede Damero');
+  falla(() => Listas.guardar({ nom: 'Con tienda', mon: 'PEN', sede: 'TDA-01' }), 'Sede no válida');
+  const L = Precios.lista('LP-05'); L.sede = 'TDA-02';
+  Store.completarBase();
+  igual(L.sede, 'DAM', 'una base guardada con la tienda pasa a la sede');
 });

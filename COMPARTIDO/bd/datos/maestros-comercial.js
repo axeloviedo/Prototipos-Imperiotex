@@ -111,7 +111,7 @@ const BD_COMERCIAL = (() => {
     cli(8, 'DNI', '41236987', 'CARLOS ENRIQUE SALAZAR DÍAZ', 'MINORISTA', '923 551 208', '', '', '150101', 'CONTADO', 'Sin compras recientes', '06/04/2026 10:00', false)
   ];
 
-  /* listas de precios y ofertas (12-prototipo-diseno.md §12): la lista tiene moneda y, opcionales, tienda y segmento de cliente; con fechas es una oferta.
+  /* listas de precios y ofertas (12-prototipo-diseno.md §12): la lista tiene moneda y, opcionales, sede (maestro compartido) y segmento de cliente; con fechas es una oferta.
      Cada fila: artículo + unidad con precio fijo, o artículo / grupo con % de descuento. Precios con IGV */
   const LP = (n, nom, mon, sede, tipo, filas, desde, hasta) => ({ cod: 'LP-' + String(n).padStart(2, '0'), nom, mon, sede, tipo, desde: desde || '', hasta: hasta || '', activa: true, filas, aConfirmar: true });
   const P = (art, um, precio) => ({ art, um, precio }), D = (art, pct, um) => ({ art, um: um || '', pct }), G = (grupo, pct) => ({ grupo, pct });
@@ -122,8 +122,8 @@ const BD_COMERCIAL = (() => {
     LP(3, 'Mayorista', 'PEN', '', 'MAYORISTA', [P('PT-0001', 'UND', 89.00), P('PT-0001', 'DOC', 1020.00), P('PT-0002', 'UND', 89.00), P('PT-0002', 'DOC', 1020.00),
       P('PT-0003', 'UND', 92.00), P('PT-0003', 'DOC', 1060.00), P('PT-0004', 'UND', 92.00), P('PT-0004', 'DOC', 1060.00)]),
     LP(4, 'Exportación', 'USD', '', 'EXPORTACIÓN', [P('PT-0001', 'UND', 24.50), P('PT-0002', 'UND', 24.50)]),
-    LP(5, 'Tienda Damero', 'PEN', 'TDA-02', '', [P('PT-0001', 'UND', 115.00)]),
-    LP(6, 'Mayorista Tienda #1', 'PEN', 'TDA-01', 'MAYORISTA', [P('PT-0004', 'UND', 90.00)]),
+    LP(5, 'Galería Damero', 'PEN', 'DAM', '', [P('PT-0001', 'UND', 115.00)]),
+    LP(6, 'Mayorista Galería Ya', 'PEN', 'YA', 'MAYORISTA', [P('PT-0004', 'UND', 90.00)]),
     /* ofertas: vencida, vigente en setiembre y programada para diciembre */
     LP(7, 'Día del Padre', 'PEN', '', '', [G('PT', 10)], '10/06/2026', '21/06/2026'),
     LP(8, 'Primavera', 'PEN', '', 'MINORISTA', [D('PT-0003', 20)], '01/09/2026', '30/09/2026'),

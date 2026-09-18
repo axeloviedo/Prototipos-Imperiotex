@@ -1,41 +1,39 @@
-/* COMERCIAL V9 · CL-40 Listas de precios y ofertas: una sola vista (listado, detalle de la lista elegida y «Probar precio»; modales CL-41, CL-42, CL-49)
+/* COMERCIAL V9 · CL-40 Listas de precios y ofertas: listado y «Probar precio»; el detalle de cada lista se abre en el modal CL-50 (modales CL-41, CL-42, CL-49, CL-50)
    · CL-43 Artículos de venta (datos de la pestaña Venta de GI-02; modal CL-44) */
 const CM08 = {
   sel: 'LP-01', f: { q: '', tipo: '', mon: '' },
-  sim: { art: 'PT-0001', um: 'UND', sede: 'TDA-01', tipo: 'MINORISTA', mon: 'PEN', fecha: '' },
-  sedeNom(c) { const s = Store.sede(c); return s ? s.nom : c; },
+  sim: { art: 'PT-0001', um: 'UND', sede: 'YA', tipo: 'MINORISTA', mon: 'PEN', fecha: '' },
+  sedeNom(c) { return Precios.sedeNom(c); },
+  sedesOpts() { return Precios.sedes().map(x => ({ v: x.cod, t: x.nom })); },
   vigencia(L) { return Precios.esOferta(L) ? (L.desde || '…') + ' al ' + (L.hasta || 'sin fin') : '<span class="mini">Siempre</span>'; },
   render() {
     const f = CM08.f, q = f.q.toLowerCase(), ed = Store.puede('editar_precios');
     const todas = Precios.listas().slice().sort((x, y) => Precios.esOferta(x) - Precios.esOferta(y) || x.cod.localeCompare(y.cod));
     const listas = todas.filter(L => (!f.tipo || (f.tipo === 'OF') === Precios.esOferta(L)) && (!f.mon || L.mon === f.mon) &&
       (!q || (L.cod + ' ' + L.nom + ' ' + L.filas.map(x => x.art || x.grupo).join(' ')).toLowerCase().includes(q)));
-    if (!Precios.lista(CM08.sel)) CM08.sel = (listas[0] || {}).cod || '';
 
     let html = '<div class="screen-head"><h1>Listas de precios y ofertas</h1><span class="code">CL-40</span><div class="spacer"></div>' +
       (ed ? '<button class="btn btn-secondary" onclick="CM08.editar(\'\',false)">+ Nueva lista</button><button class="btn btn-primary" onclick="CM08.editar(\'\',true)">+ Nueva oferta</button>' : '') +
       '<button class="btn btn-secondary" onclick="CM08.excel()">⇩ Excel</button></div>';
-    html += UI.aviso('<b>Cómo se elige el precio</b> en la cotización y la venta: se miran las listas <b>activas</b> de la <b>moneda</b> del documento que valen para su <b>tienda</b> y para el <b>segmento</b> del cliente (vacío = todas / todos). ' +
-      '<b>1.</b> Una <b>oferta</b> vigente (lista con fechas) manda. <b>2.</b> Si no, la lista más específica: tienda y segmento → tienda → segmento → general. <b>3.</b> Si ninguna tiene el artículo, el precio sugerido de GI-02 (solo S/). ' +
+    html += UI.aviso('<b>Cómo se elige el precio</b> en la cotización y la venta: se miran las listas <b>activas</b> de la <b>moneda</b> del documento que valen para la <b>sede</b> de su tienda y para el <b>segmento</b> del cliente (vacío = todas / todos). ' +
+      '<b>1.</b> Una <b>oferta</b> vigente (lista con fechas) manda. <b>2.</b> Si no, la lista más específica: sede y segmento → sede → segmento → general. <b>3.</b> Si ninguna tiene el artículo, el precio sugerido de GI-02 (solo S/). ' +
       'Cada fila lleva <b>precio fijo</b> o <b>% de descuento</b>; el % se aplica sobre el precio que el artículo tendría sin esa lista. La oferta no se suma al descuento manual de la línea. ' +
-      'Las listas están en la base compartida y cada venta guarda en su línea la lista u oferta con que se vendió.', 'info');
+      'Las listas están en la base compartida y cada venta guarda en su línea la lista u oferta con que se vendió. <b>Haga clic en una lista</b> para ver y editar sus artículos.', 'info');
 
     html += '<div class="card"><div class="filters">' + UI.campo('Buscar', '<input value="' + UI.esc(f.q) + '" onchange="CM08.f.q=this.value;App.refrescar()" placeholder="Nombre, código o artículo">') +
       UI.campo('Tipo', '<select onchange="CM08.f.tipo=this.value;App.refrescar()">' + UI.opts([{ v: 'LP', t: 'Listas de precios' }, { v: 'OF', t: 'Ofertas' }], f.tipo, 'Todas') + '</select>') +
       UI.campo('Moneda', '<select onchange="CM08.f.mon=this.value;App.refrescar()">' + UI.opts(M.MONEDAS.map(m => m.cod), f.mon, 'Todas') + '</select>') + '</div>' +
-      UI.tabla(['Código', 'Nombre', 'Tipo', 'Moneda', 'Tienda', 'Segmento', 'Vigencia', 'Estado', ['Filas', 'num']], listas.map(L =>
-        '<tr class="clickable"' + (L.cod === CM08.sel ? ' style="background:#eaf1fb"' : '') + ' onclick="CM08.sel=\'' + L.cod + '\';App.refrescar()"><td>' + L.cod + '</td><td><b>' + UI.esc(L.nom) + '</b></td>' +
+      UI.tabla(['Código', 'Nombre', 'Tipo', 'Moneda', 'Sede', 'Segmento', 'Vigencia', 'Estado', ['Filas', 'num']], listas.map(L =>
+        '<tr class="clickable" onclick="CM08.ver(\'' + L.cod + '\')"><td>' + L.cod + '</td><td><b>' + UI.esc(L.nom) + '</b></td>' +
         '<td>' + (Precios.esOferta(L) ? '<b class="ok-t">Oferta</b>' : 'Lista') + '</td><td>' + L.mon + '</td><td>' + (L.sede ? UI.esc(CM08.sedeNom(L.sede)) : '<span class="mini">Todas</span>') + '</td>' +
         '<td>' + (L.tipo || '<span class="mini">Todos</span>') + '</td><td>' + CM08.vigencia(L) + '</td><td>' + UI.estado(Precios.estado(L)) + '</td><td class="num">' + L.filas.length + '</td></tr>'),
         { vacio: 'Sin listas con ese filtro' }) + '</div>';
 
-    const L = Precios.lista(CM08.sel);
-    if (L) html += CM08.detalle(L, ed);
     html += CM08.probar();
     return html;
   },
 
-  /* precio que resulta de una fila con la tienda, el segmento y la moneda de la lista (una oferta, en su primer día).
+  /* precio que resulta de una fila con la sede, el segmento y la moneda de la lista (una oferta, en su primer día).
      El % de una lista se aplica sobre las listas menos específicas; el de una oferta, sobre el precio de lista */
   resulta(L, f) {
     if (f.grupo) return null;
@@ -48,6 +46,16 @@ const CM08 = {
     const b = Precios._normal(otras, 0, f.art, um, L.mon);
     return b ? { precio: UI.r2(b.precio * (1 - f.pct / 100)), um, base: b.precio } : null;
   },
+  /* CL-50: detalle de la lista u oferta en un modal (datos, artículos o grupos con precio o %, agregar y quitar) */
+  ver(cod) {
+    const L = Precios.lista(cod);
+    if (!L) { UI.cerrar(); return; }
+    CM08.sel = cod;
+    UI.modal({ ancho: '1080px', titulo: (Precios.esOferta(L) ? 'Oferta ' : 'Lista ') + L.cod + ' · ' + UI.esc(L.nom), code: 'CL-50',
+      cuerpo: CM08.detalle(L, Store.puede('editar_precios')), pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cerrar</button>' });
+  },
+  /* después de un cambio: refresca el listado y vuelve a pintar el modal de la lista */
+  _otraVez() { App.refrescar(); CM08.ver(CM08.sel); },
   detalle(L, ed) {
     const of = Precios.esOferta(L);
     const inp = (i, campo, v, w) => '<input class="celda" type="number" min="0" step="any" style="width:' + w + 'px" value="' + (v == null ? '' : v) + '" onchange="CM08.fila(' + i + ',\'' + campo + '\',this.value)">';
@@ -65,15 +73,15 @@ const CM08 = {
           (bajoMin ? '<br><span class="warn-t">⚠ bajo el mínimo ' + UI.s(a.precioMin) + '</span>' : '') : f.grupo ? '<span class="mini">según cada artículo</span>' : '<span class="mini">sin precio base</span>') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" onclick="CM08.quitarFila(' + i + ')">Quitar</button>' : '') + '</td></tr>';
     });
-    return '<div class="card"><div class="sec">' + (of ? 'Oferta' : 'Lista') + ' ' + L.cod + ' · ' + UI.esc(L.nom) + ' ' + UI.estado(Precios.estado(L)) + '<div class="spacer"></div>' +
+    return '<div class="sec" style="margin-top:0">' + UI.estado(Precios.estado(L)) + ' ' + (of ? '<b class="ok-t">Oferta</b>' : 'Lista de precios') + '<div class="spacer"></div>' +
       (ed ? '<button class="btn btn-secondary btn-sm" onclick="CM08.editar(\'' + L.cod + '\',' + of + ')">Editar datos</button> <button class="btn btn-secondary btn-sm" onclick="CM08.quitar()">Quitar</button> ' +
         '<button class="btn btn-primary btn-sm" onclick="CM08.agregar()">+ Agregar artículos</button>' : '') + '</div>' +
-      '<div class="formgrid c4">' + UI.dato('Moneda', L.mon) + UI.dato('Tienda', L.sede ? UI.esc(CM08.sedeNom(L.sede)) : 'Todas') + UI.dato('Segmento de cliente', L.tipo || 'Todos') +
+      '<div class="formgrid c4">' + UI.dato('Moneda', L.mon) + UI.dato('Sede', L.sede ? UI.esc(CM08.sedeNom(L.sede)) : 'Todas') + UI.dato('Segmento de cliente', L.tipo || 'Todos') +
       UI.dato('Vigencia', of ? (L.desde || '…') + ' al ' + (L.hasta || 'sin fecha final') : 'Siempre (lista de precios)') + '</div>' +
       UI.tabla(['Artículo o grupo', 'Unidad', ['Precio fijo', 'num'], ['% descuento', 'num'], ['Resulta', 'num'], ['', '', '70px']], filas,
         { vacio: 'La lista no tiene artículos: use «+ Agregar artículos»', estilo: 'margin-top:10px' }) +
       '<p class="hint">Escriba el <b>precio fijo</b> o el <b>% de descuento</b> (uno borra el otro). Un precio en la unidad de inventario sirve también para las unidades mayores (× conversión). ' +
-      'Un % con unidad «Todas» y un grupo valen para cualquier unidad. «Resulta» se calcula con la tienda, el segmento y la moneda de la lista' + (of ? ', en el primer día de la oferta' : '') + '.</p></div>';
+      'Un % con unidad «Todas» y un grupo valen para cualquier unidad. «Resulta» se calcula con la sede, el segmento y la moneda de la lista' + (of ? ', en el primer día de la oferta' : '') + '.</p>';
   },
 
   probar() {
@@ -93,7 +101,7 @@ const CM08 = {
     filas.push('<tr><td>Precio sugerido del artículo (GI-02)</td><td></td><td class="mini">si nada aplica</td><td class="num">' + (s.mon === 'PEN' && a.precioVenta > 0 ? UI.s(a.precioVenta * Precios.factor(s.art, s.um)) : '<span class="mini">solo S/</span>') + '</td><td>' + (r && !r.lista ? '<b class="ok-t">✓ se usa</b>' : '') + '</td></tr>');
     return '<div class="card"><div class="sec">Probar precio</div><div class="formgrid c4">' +
       UI.campo('Artículo', sel('art', arts.map(x => ({ v: x.cod, t: x.cod + ' · ' + x.nom })), s.art), { estilo: 'grid-column:span 2' }) + UI.campo('Unidad', sel('um', ums, s.um)) + UI.campo('Moneda', sel('mon', M.MONEDAS.map(m => m.cod), s.mon)) +
-      UI.campo('Tienda', sel('sede', M.SEDES.map(x => ({ v: x.cod, t: x.nom })), s.sede, 'Sin tienda')) + UI.campo('Segmento de cliente', sel('tipo', M.TIPOS_CLIENTE, s.tipo, 'Sin segmento')) +
+      UI.campo('Sede', sel('sede', CM08.sedesOpts(), s.sede, 'Sin sede')) + UI.campo('Segmento de cliente', sel('tipo', M.TIPOS_CLIENTE, s.tipo, 'Sin segmento')) +
       UI.campo('Fecha', '<input type="date" value="' + UI.dIso(fecha) + '" onchange="CM08.sim.fecha=UI.dTxt(this.value);App.refrescar()">', { hint: 'para probar una oferta antes de que empiece' }) + '</div>' +
       '<div style="display:flex;gap:18px;align-items:flex-start;margin-top:12px;flex-wrap:wrap"><div style="flex:1;min-width:320px">' +
       UI.tabla(['Lista u oferta que aplica', 'Tipo', 'Nivel', ['Precio o %', 'num'], ''], filas) + '</div>' +
@@ -108,28 +116,28 @@ const CM08 = {
       titulo: cod ? 'Editar ' + cod : oferta ? 'Nueva oferta' : 'Nueva lista de precios', code: 'CL-41',
       cuerpo: '<div class="formgrid">' + UI.campo('Nombre', '<input id="lp-nom" value="' + UI.esc(L.nom) + '" placeholder="' + (oferta ? 'Ej. Fiestas Patrias' : 'Ej. Mayorista Damero') + '">', { req: true, full: true }) +
         UI.campo('Moneda', '<select id="lp-mon">' + UI.opts(M.MONEDAS.map(m => m.cod), L.mon) + '</select>', { req: true }) +
-        UI.campo('Tienda', '<select id="lp-sede">' + UI.opts([{ v: '', t: 'Todas' }].concat(M.SEDES.map(x => ({ v: x.cod, t: x.nom }))), L.sede) + '</select>') +
+        UI.campo('Sede', '<select id="lp-sede">' + UI.opts([{ v: '', t: 'Todas' }].concat(CM08.sedesOpts()), L.sede) + '</select>') +
         UI.campo('Segmento de cliente', '<select id="lp-tipo">' + UI.opts([{ v: '', t: 'Todos' }].concat(M.TIPOS_CLIENTE.map(t => ({ v: t, t }))), L.tipo) + '</select>') +
         (oferta ? UI.campo('Desde', '<input id="lp-desde" type="date" value="' + UI.dIso(L.desde) + '">', { req: true }) +
           UI.campo('Hasta', '<input id="lp-hasta" type="date" value="' + UI.dIso(L.hasta) + '">', { hint: 'vacío = sin fecha final' }) : '') +
         '<div class="field full"><label class="check"><input type="checkbox" id="lp-activa"' + (L.activa ? ' checked' : '') + '> Activa</label></div></div>' +
         '<p class="hint" style="margin-top:8px">' + (oferta ? 'Una oferta es una lista con fechas: mientras esté vigente manda sobre las listas de precios. Luego agregue artículos o grupos con su precio o % de descuento.'
-          : 'Sin fechas: es una lista de precios permanente. Deje Tienda y Segmento en «Todas / Todos» para que valga en general.') + '</p>',
-      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM08.guardar(\'' + (cod || '') + '\',' + !!oferta + ')">Guardar</button>'
+          : 'Sin fechas: es una lista de precios permanente. Deje Sede y Segmento en «Todas / Todos» para que valga en general.') + '</p>',
+      pie: '<button class="btn btn-secondary" onclick="' + (cod ? 'CM08.ver(\'' + cod + '\')' : 'UI.cerrar()') + '">Cancelar</button><button class="btn btn-primary" onclick="CM08.guardar(\'' + (cod || '') + '\',' + !!oferta + ')">Guardar</button>'
     });
   },
   guardar(cod, oferta) {
     const x = { nom: UI.v('lp-nom'), mon: UI.v('lp-mon'), sede: UI.v('lp-sede'), tipo: UI.v('lp-tipo'), oferta, desde: UI.dTxt(UI.v('lp-desde')), hasta: UI.dTxt(UI.v('lp-hasta')), activa: UI.chk('lp-activa') };
     let hecha = null;
-    if (App.accion(() => (hecha = Listas.guardar(x, cod || null)), L => (oferta ? 'Oferta ' : 'Lista ') + L.cod + ' guardada')) { CM08.sel = hecha.cod; UI.cerrar(); App.refrescar(); }
+    if (App.accion(() => (hecha = Listas.guardar(x, cod || null)), L => (oferta ? 'Oferta ' : 'Lista ') + L.cod + ' guardada')) { CM08.sel = hecha.cod; CM08._otraVez(); }
   },
   quitar() {
     const L = Precios.lista(CM08.sel);
     UI.confirmar('Quitar ' + L.cod + ' · ' + UI.esc(L.nom), '<p>Los documentos ya emitidos conservan su precio; los nuevos tomarán la siguiente lista que aplique. Para dejar de usarla un tiempo, desmarque «Activa».</p>',
-      () => { if (App.accion(() => Listas.quitar(L.cod), L.cod + ' quitada')) { CM08.sel = ''; App.refrescar(); } }, 'Quitar', 'CL-42');
+      () => { if (App.accion(() => Listas.quitar(L.cod), L.cod + ' quitada')) { CM08.sel = ''; App.refrescar(); } else CM08.ver(L.cod); }, 'Quitar', 'CL-42');
   },
-  fila(i, campo, val) { if (App.accion(() => Listas.fila(CM08.sel, i, campo, val))) App.refrescar(); },
-  quitarFila(i) { if (App.accion(() => Listas.quitarFila(CM08.sel, i), 'Fila quitada')) App.refrescar(); },
+  fila(i, campo, val) { App.accion(() => Listas.fila(CM08.sel, i, campo, val)); CM08._otraVez(); },
+  quitarFila(i) { if (App.accion(() => Listas.quitarFila(CM08.sel, i), 'Fila quitada')) CM08._otraVez(); },
 
   /* CL-49: agregar artículos (varios a la vez) o un grupo entero, con un precio o % para todos (opcional) */
   agregar() {
@@ -145,7 +153,7 @@ const CM08 = {
         UI.campo('Precio fijo para todos', '<input id="ag-precio" type="number" min="0" step="any" placeholder="opcional">') +
         UI.campo('o % de descuento', '<input id="ag-pct" type="number" min="0" max="99.99" step="any" placeholder="opcional">') + '</div>' +
         '<div id="ag-body"></div><p class="hint">Si deja precio y % vacíos, los artículos entran sin valor y los completa en la tabla. Un grupo completo entra con su % y vale para todos sus artículos, también los que se creen después.</p>',
-      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM08.agregarOk()">Agregar</button>'
+      pie: '<button class="btn btn-secondary" onclick="CM08.ver(CM08.sel)">Volver</button><button class="btn btn-primary" onclick="CM08.agregarOk()">Agregar</button>'
     });
     CM08.pintarAg();
   },
@@ -174,13 +182,13 @@ const CM08 = {
       const n = Listas.agregarArts(CM08.sel, arts, v);
       return n + (n === 1 ? ' artículo agregado' : ' artículos agregados');
     }, m => m);
-    if (ok) { UI.cerrar(); App.refrescar(); }
+    if (ok) CM08._otraVez();
   },
   excel() {
     const filas = [];
     Precios.listas().forEach(L => L.filas.forEach(f => filas.push([L.cod, L.nom, Precios.esOferta(L) ? 'Oferta' : 'Lista', L.mon, L.sede ? CM08.sedeNom(L.sede) : 'Todas', L.tipo || 'Todos',
       L.desde, L.hasta, Precios.estado(L), f.art || 'Grupo ' + M.grupoNom(f.grupo), f.art ? M.nomArt(f.art) : '', f.um || 'Todas', f.precio || '', f.pct || ''])));
-    UI.csv('listas-de-precios-y-ofertas', ['Código', 'Nombre', 'Tipo', 'Moneda', 'Tienda', 'Segmento', 'Desde', 'Hasta', 'Estado', 'Artículo o grupo', 'Descripción', 'Unidad', 'Precio fijo', '% descuento'], filas);
+    UI.csv('listas-de-precios-y-ofertas', ['Código', 'Nombre', 'Tipo', 'Moneda', 'Sede', 'Segmento', 'Desde', 'Hasta', 'Estado', 'Artículo o grupo', 'Descripción', 'Unidad', 'Precio fijo', '% descuento'], filas);
   }
 };
 App.pantalla('cm08', { titulo: 'Listas de precios y ofertas', permiso: 'ver_venta', render: CM08.render });

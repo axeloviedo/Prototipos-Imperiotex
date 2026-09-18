@@ -55,7 +55,7 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | codigo | PK | `LP-01` | — |
 | nombre | texto, único | | — |
 | moneda | enum | PEN / USD | `coin_id` |
-| sede | FK → Sede, nulo | Nulo = todas las tiendas | `sucursale_id` |
+| sede | FK → Sede (maestro compartido), nulo | Nulo = todas. El documento usa la sede de su tienda | `sucursale_id` |
 | tipo_cliente | FK, nulo | Segmento; nulo = todos | `client_segment_id` |
 | valida_desde · valida_hasta | fecha, nulo | Con fechas es una **oferta**; hasta nulo = sin fin | — |
 | activa | bool | | — |

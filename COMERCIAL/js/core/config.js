@@ -1,5 +1,5 @@
 /* COMERCIAL V9 — reglas de los maestros propios: listas de precios, datos de venta del artículo y parámetros */
-/* Listas de precios y ofertas (LP1–LP5): se crea la lista (moneda, tienda y segmento opcionales; con fechas = oferta) y se le agregan artículos o grupos.
+/* Listas de precios y ofertas (LP1–LP5): se crea la lista (moneda, sede y segmento opcionales; con fechas = oferta) y se le agregan artículos o grupos.
    Cada fila lleva precio fijo O % de descuento. Permiso editar_precios. */
 const Listas = {
   _ed() { Store.exigir('editar_precios', 'modificar listas de precios y ofertas'); },
@@ -10,7 +10,7 @@ const Listas = {
     if (nom.length < 3) throw new Error('Escriba el nombre de la lista');
     if (Precios.listas().some(l => l.cod !== cod && l.nom.toLowerCase() === nom.toLowerCase())) throw new Error('Ya existe una lista con ese nombre');
     if (!M.MONEDAS.find(m => m.cod === x.mon)) throw new Error('Elija la moneda');
-    if (x.sede && !Store.sede(x.sede)) throw new Error('Tienda no válida');
+    if (x.sede && !Precios.sedes().some(s => s.cod === x.sede)) throw new Error('Sede no válida');
     if (x.tipo && M.TIPOS_CLIENTE.indexOf(x.tipo) < 0) throw new Error('Segmento de cliente no válido');
     if (x.oferta && !x.desde) throw new Error('Una oferta necesita la fecha de inicio');
     if (x.desde && x.hasta && UI.aFecha(x.hasta) < UI.aFecha(x.desde)) throw new Error('La fecha final no puede ser anterior a la inicial');
