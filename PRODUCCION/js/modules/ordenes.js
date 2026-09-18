@@ -70,10 +70,16 @@ const PR01N = {
       UI.campo('Cantidad', '<input id="n-cant" type="number" min="0" step="any" value="' + (p.cant || 1) + '" oninput="PR01N.prev()">', { req: true }) +
       UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
       UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'Solo almacenes de ' + UI.esc(BD.empNom(BD.empresa)) + ' (empresa activa)' }) +
-      UI.campo(R, '<input id="n-ref" value="' + UI.esc(p.ref || '') + '" placeholder="Nuevo">') +
+      UI.campo(R, PR01N.selRef('n-ref', p.ref), { hint: '«Nueva» asigna un número al crear. Vincular a una existente agrupa la orden con esas órdenes para el listado por fase y el recosteo' }) +
       UI.campo('Observación', '<input id="n-obs">') +
       '</div></div>' +
       '<div class="card" id="n-sugcard" style="display:none"><label class="check"><input type="checkbox" id="n-sug" checked onchange="PR01N.prev()"> <b>Crear también las órdenes de lo que se fabrica antes</b></label><div id="n-prev" style="margin-top:8px"></div></div>';
+  },
+  /* Q1: selector de referencia: nueva o una existente con órdenes abiertas (también lo usa PR-03) */
+  selRef(id, sel, todas) {
+    const R = Prod.nombreRef();
+    const lista = Prod.refsAbiertas(todas).map(x => ({ v: x.ref, t: 'Vincular a ' + R + ' ' + x.ref + ' · ' + (x.sf ? x.sf : 'creada en Producción') + ' · ' + x.n + ' orden(es), ' + x.abiertas + ' abierta(s) · ' + x.arts.slice(0, 2).join(', ') + (x.arts.length > 2 ? '…' : '') }));
+    return '<select id="' + id + '">' + UI.opts([{ v: '', t: 'Nueva (se asigna al crear)' }].concat(lista), sel || '') + '</select>';
   },
   despues() { PR01N.pintarArt(); },
   buscar() {

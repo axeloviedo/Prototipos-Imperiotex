@@ -27,6 +27,20 @@ const Prod = {
   /* el nombre de la referencia es solo la etiqueta del campo (un texto por empresa): se edita desde PR-04 */
   renombrarRef(nom) { nom = String(nom || '').trim(); if (!nom) throw new Error('Indique el nombre'); (BD.d.config = BD.d.config || {}).nombreRef = nom; return nom; },
   nuevaRef() { return BD.sig('ref', '', 4); },
+  /* Q1: referencias a las que se puede vincular una orden nueva: las que tienen al menos una orden abierta, con su origen y avance */
+  refsAbiertas(todas) {
+    return Explosion.refs().map(ref => {
+      const ofs = BD.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado'), sf = ofs.find(o => o.sf);
+      return { ref, sf: sf ? sf.sf : '', n: ofs.length, abiertas: ofs.filter(o => Prod.abierta(o)).length, arts: [...new Set(ofs.map(o => M.nomArt(o.art)))] };
+    }).filter(x => todas || x.abiertas > 0);
+  },
+  /* referencia elegida por el usuario: vacía = nueva; si indica una debe existir (no se crean referencias «a mano») */
+  _ref(ref) {
+    ref = String(ref || '').trim();
+    if (!ref) return Prod.nuevaRef();
+    if (!Explosion.refs().includes(ref)) throw new Error('No existe ' + Prod.nombreRef() + ' ' + ref + ': elija una referencia existente o deje «Nueva»');
+    return ref;
+  },
   operario(cod) { return BD.operario(cod); },
   abierta(of) { return of.estado === 'Planificado' || of.estado === 'Liberado'; },
   editable(of) { return of.origen !== 'Solicitud' && of.estado === 'Planificado'; },
@@ -96,7 +110,7 @@ const Prod = {
   crearManual(o) {
     if (!o.art) throw new Error('Elija el artículo');
     if (!(o.cant > 0)) throw new Error('Indique la cantidad a fabricar');
-    const ref = String(o.ref || '').trim() || Prod.nuevaRef();
+    const ref = Prod._ref(o.ref);
     const nec = o.ldm && o.sugeridas ? Explosion.necesidades([{ art: o.art, cant: o.cant, ldm: o.ldm }]) : [];
     const base = { ref, origen: 'Manual', fechaFin: o.fechaFin, obs: o.obs };
     return [Prod.crearOF(Object.assign({}, base, { art: o.art, ldm: o.ldm, cant: o.cant, alm: o.alm }))].concat(o.ldm ? Prod._crearSugeridas(o.sugeridas, nec, base, o.alms) : []);
@@ -105,7 +119,8 @@ const Prod = {
   /* ---------- Solicitud de Fabricación (aprobada en Inventarios GI-23): sus órdenes nacen Liberadas ---------- */
   sfsProduccion() { return BD.d.sfs.filter(s => s.est === 'Aprobada' || s.est === 'Convertida en Orden' || s.est === 'Fabricada'); },
   firmasSF(sf) { return (sf.hist || []).filter(h => /V°B°|Aprobación/.test(h.a)).map(h => h.a + ' ' + String(h.f).slice(0, 10)).join(' · '); },
-  generarDesdeSF(sfId, sugeridas, alms) {
+  /* ref (Q1): vacío crea una referencia nueva; con una existente las órdenes se suman a esa referencia (p. ej. otra SF de la misma campaña) */
+  generarDesdeSF(sfId, sugeridas, alms, ref) {
     const sf = BD.sf(sfId);
     if (!sf) throw new Error('Solicitud no encontrada');
     if (sf.est !== 'Aprobada') throw new Error('La solicitud ' + sf.id + ' está ' + sf.est + ': solo se crean órdenes de una solicitud Aprobada');
@@ -116,7 +131,7 @@ const Prod = {
     const alm = sf.almDestino && M.alm(sf.almDestino) ? sf.almDestino : '';
     const sinLista = sf.lineas.filter(l => !l.ldm || !M.ldm(l.ldm));
     if (sinLista.length) throw new Error('Sin lista de materiales: ' + sinLista.map(l => M.nomArt(l.art)).join(', '));
-    const ref = Prod.nuevaRef();
+    ref = Prod._ref(ref);
     const base = { ref, origen: 'Solicitud', sf: sf.id, fechaFin: sf.fechaReq || '' };
     const creadas = sf.lineas.map(l => Prod.crearOF(Object.assign({}, base, { art: l.art, ldm: l.ldm, cant: l.cant, alm: alm || Prod.almRecibo(l.art) }))).concat(Prod._crearSugeridas(sug, nec, base, alms));
     /* la solicitud libera lo que comprometió al aprobarse; cada orden compromete lo suyo al liberarse (sin duplicar ni perder compromiso) */

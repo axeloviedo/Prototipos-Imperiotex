@@ -75,7 +75,7 @@ const PR08 = {
         '<div class="card" style="margin-top:10px;padding:10px 14px"><label class="check"><input type="checkbox" id="fa-rep"> <b>Crear orden de reproceso</b> (vuelve a fabricar ' + UI.esc(M.nomArt(art)) + ' consumiendo el fallado; solo mano de obra)</label>' +
         '<div class="formgrid c3" style="margin-top:8px">' + UI.campo('Mano de obra', sel('fa-rec', M.recActivos(r => r.tipo === 'RECURSO HUMANO').map(r => ({ v: r.cod, t: r.nom })), '', '—')) +
         UI.campo('Horas por unidad', '<input id="fa-h" type="number" min="0" step="any">') +
-        UI.campo(Prod.nombreRef(), '<input id="fa-ref" value="' + (ult ? ult.ref : '') + '">', { hint: 'Para recostear con las demás órdenes' }) + '</div></div>' +
+        UI.campo(Prod.nombreRef(), PR01N.selRef('fa-ref', ult ? ult.ref : '', true), { hint: 'Para recostear con las demás órdenes del artículo' }) + '</div></div>' +
         '<p class="hint">Se registra una salida del artículo (SAL-FALLADO) y un ingreso del artículo fallado (ING-FALLADO) al mismo costo, con motivo «Producto fallado». No existe el tipo Ajuste. Si el defecto es de un servicio de terceros, vincule la nota de crédito o devolución de compra en la pestaña Costo de la orden del servicio.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PR08.guardarFallado(\'' + alm + '\',\'' + art + '\')">Registrar</button>'
     });
