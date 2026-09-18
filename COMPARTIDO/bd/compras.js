@@ -165,9 +165,38 @@
     ESTADOS: ['Registrada', 'Anulada'],
     /* notas vigentes de una factura y lo que queda de ella */
     deFactura(facId) { return (BD.d.ncs || []).filter(n => n.fac === facId && n.estado !== 'Anulada'); },
-    saldoFactura(facId) { const f = BD.fac(facId); if (!f) return 0; return BD.r2(fac.total(f) - nc.deFactura(facId).reduce((t, n) => t + n.total, 0)); },
-    /* saldo a favor de un proveedor: notas de facturas ya pagadas que aún no se usan */
-    saldoFavor(prov) { return BD.r2((BD.d.ncs || []).filter(n => n.prov === prov && n.estado !== 'Anulada' && n.aplicacion === 'Saldo a favor' && !n.usada).reduce((t, n) => t + n.total, 0)); },
+    /* lo que queda por pagar de una factura: total − sus notas de crédito − el saldo a favor aplicado a ella */
+    saldoFactura(facId) {
+      const f = BD.fac(facId); if (!f) return 0;
+      return BD.r2(fac.total(f) - nc.deFactura(facId).reduce((t, n) => t + n.total, 0) - (f.creditos || []).reduce((t, c) => t + c.monto, 0));
+    },
+    /* lo que queda sin usar de una nota que quedó como saldo a favor */
+    disponible(n) { return n && n.estado !== 'Anulada' && n.aplicacion === 'Saldo a favor' ? BD.r2(n.total - (n.usos || []).reduce((t, u) => t + u.monto, 0)) : 0; },
+    /* saldo a favor de un proveedor (en una moneda): notas de facturas ya pagadas que aún no se usan del todo */
+    favorDe(prov, mon) { return (BD.d.ncs || []).filter(n => n.prov === prov && (!mon || n.mon === mon) && nc.disponible(n) > 0.004); },
+    saldoFavor(prov, mon) { return BD.r2(nc.favorDe(prov, mon).reduce((t, n) => t + nc.disponible(n), 0)); },
+    /* aplica el saldo a favor del proveedor a una factura impaga suya (la siguiente factura): usa las notas más antiguas primero,
+       hasta cubrir lo que falta pagar. La factura guarda de qué notas vino el crédito; si queda en cero, pasa a Pagado. */
+    aplicarSaldo(facId, d) {
+      const f = BD.fac(facId); exigir(f && f.est === 'Impagado', 'El saldo a favor se aplica a una factura impaga');
+      let falta = nc.saldoFactura(f.id), tope = d && d.monto != null ? BD.r2(d.monto) : falta;
+      exigir(falta > 0.004, 'La factura ya no tiene saldo por pagar');
+      const notas = nc.favorDe(f.prov, f.mon).filter(n => n.fac !== f.id).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)) || a.id.localeCompare(b.id));
+      exigir(notas.length, BD.provNom(f.prov) + ' no tiene saldo a favor en ' + f.mon);
+      let usado = 0;
+      f.creditos = f.creditos || [];
+      notas.forEach(n => {
+        const m = BD.r2(Math.min(nc.disponible(n), falta - usado, tope - usado)); if (m <= 0.004) return;
+        (n.usos = n.usos || []).push({ fac: f.id, monto: m, fecha: BD.ahora() });
+        f.creditos.push({ nc: n.id, monto: m, fecha: BD.ahora() });
+        BD.hist(n, 'Saldo a favor aplicado', 'Factura ' + f.ndoc + ' · ' + m);
+        usado = BD.r2(usado + m);
+      });
+      exigir(usado > 0, 'No hay saldo a favor que aplicar');
+      BD.hist(f, 'Saldo a favor aplicado', f.creditos.slice(-notas.length).map(c => c.nc + ' ' + c.monto).join(', ') + ' · queda por pagar ' + nc.saldoFactura(f.id));
+      if (nc.saldoFactura(f.id) <= 0.01) { f.est = 'Pagado'; BD.hist(f, 'Cancelada con saldo a favor', ''); }
+      g(); return { usado, saldo: nc.saldoFactura(f.id) };
+    },
     /* d = {fac, ndoc, fecha, motivo, rec, recLinea, obs, lineas:[{art, cant, pu}]} (pu sin IGV, en la moneda de la factura) */
     crear(d) {
       const f = BD.fac(d.fac); exigir(f && f.est !== 'Anulada', 'Elija la factura del proveedor');
@@ -211,6 +240,7 @@
       const n = BD.nc(id); exigir(n && n.estado === 'Registrada', 'La nota no está registrada');
       exigir(!n.movs.length, 'La nota ya bajó el costo del stock (' + n.movs.join(', ') + '): no se anula; registre el ajuste que corresponda');
       exigir(!n.rec, 'La nota resolvió el reclamo ' + n.rec + ': no se anula');
+      exigir(!(n.usos || []).length, 'El saldo a favor de la nota ya se usó en ' + n.usos.map(u => u.fac).join(', ') + ': no se anula');
       exigir(String(motivo || '').trim(), 'Indique el motivo');
       n.estado = 'Anulada'; BD.hist(n, 'Anulada', motivo, 'no');
       g(); return n;
