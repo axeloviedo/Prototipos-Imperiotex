@@ -168,10 +168,13 @@ const Doc = {
     if (!l.obsequio && l.precio > 0 && !l.oferta) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');
-      if (a.precioMin > 0 && Precios.verificaMin(a)) {
-        const neto = Precios.netoEnSoles(l, d.mon);
-        if (neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
-      }
+    }
+    /* LP12: el vendedor NUNCA vende debajo del precio mínimo (siempre, sin depender de «Verificar el precio mínimo»), tampoco con descuento manual;
+       sin mínimo, el neto debe ser mayor que cero. Solo el obsequio (con motivo) queda fuera */
+    if (!l.obsequio && l.precio > 0) {
+      const neto = Precios.netoEnSoles(l, d.mon);
+      if (a.precioMin > 0 && neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
+      else if (!(neto > 0)) e.push('el precio neto debe ser mayor que cero (para regalarlo marque Obsequio)');
     }
     /* L6: sin stock disponible no se vende (bloquea siempre); la cotización solo avisa porque no reserva stock */
     if (a.inv && l.alm && l.cant > 0) {

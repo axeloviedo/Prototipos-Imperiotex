@@ -220,7 +220,7 @@ const CM09 = {
       UI.campo('Grupo de Artículo', '<select onchange="CM09.f.grupo=this.value;App.refrescar()">' + UI.opts([...new Set(Store.arts().map(a => a.grupo))].map(g => ({ v: g, t: M.grupoNom(g) })), f.grupo, 'Todos') + '</select>') + '</div></div>' +
       UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio sugerido', 'num'], ['Precio mínimo', 'num'], ['Descuento', 'num'], 'IGV', ['Disponible', 'num'], ['', '', '70px']], arts.map(a =>
         '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + (a.origen === 'comercial' ? '<br><span class="mini">servicio de Comercial</span>' : '') + '</td><td>' + (a.uVenta || a.u) + '</td>' +
-        '<td class="num">' + UI.s(a.precioVenta) + '</td><td class="num">' + (a.precioMin ? UI.s(a.precioMin) + '<br><span class="mini">' + (Precios.verificaMin(a) ? 'se verifica' : 'no se verifica') + '</span>' : '—') + '</td>' +
+        '<td class="num">' + UI.s(a.precioVenta) + '</td><td class="num">' + (a.precioMin ? UI.s(a.precioMin) + '<br><span class="mini">' + 'se exige siempre' + '</span>' : '—') + '</td>' +
         '<td class="num">' + (a.dctoMin || 0) + '% – ' + (a.dctoMax || 0) + '%</td><td class="mini">' + a.igv + '</td>' +
         '<td class="num">' + (a.inv ? UI.n(Stock.totalDisp(a.cod), 0) : '—') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" onclick="CM09.editar(\'' + a.cod + '\')">Editar</button>' : '') + '</td></tr>'), { vacio: 'Sin artículos' }) +
@@ -234,7 +234,7 @@ const CM09 = {
       cuerpo: '<div class="formgrid">' + UI.dato('Artículo', UI.esc(a.nom), { full: true }) +
         UI.campo('Precio sugerido (S/, por ' + a.u + ')', '<input id="av-precio" type="number" min="0" step="any" value="' + (a.precioVenta || 0) + '">', { req: true }) +
         UI.campo('Precio mínimo de venta (S/)', '<input id="av-min" type="number" min="0" step="any" value="' + (a.precioMin || 0) + '">', { hint: '0 = sin mínimo' }) +
-        '<div class="field full"><label class="check"><input type="checkbox" id="av-verif"' + (a.verifMin ? ' checked' : '') + '> Verificar el precio mínimo en este artículo <span class="hint">(la Configuración General de Inventarios puede exigirlo para toda la empresa)</span></label></div>' +
+        '<div class="field full"><span class="hint">En Comercial el precio mínimo <b>se exige siempre</b>: ninguna lista, oferta, precio a mano ni descuento lo puede bajar (LP8, LP12). 0 = sin mínimo (el precio debe ser mayor que cero).</span><input type="hidden" id="av-verif" value="' + (a.verifMin ? '1' : '') + '"></div>' +
         UI.campo('Descuento mínimo (%)', '<input id="av-dmin" type="number" min="0" max="100" step="any" value="' + (a.dctoMin || 0) + '">') +
         UI.campo('Descuento máximo (%)', '<input id="av-dmax" type="number" min="0" max="100" step="any" value="' + (a.dctoMax || 0) + '">') +
         UI.campo('Afectación IGV', '<select id="av-igv">' + UI.opts(M.AFECTACION, a.igv) + '</select>', { req: true }) +
@@ -243,7 +243,7 @@ const CM09 = {
     });
   },
   guardar(cod) {
-    const x = { precio: UI.v('av-precio'), precioMin: UI.v('av-min'), verifMin: UI.chk('av-verif'), dctoMin: UI.v('av-dmin'), dctoMax: UI.v('av-dmax'), igv: UI.v('av-igv') };
+    const x = { precio: UI.v('av-precio'), precioMin: UI.v('av-min'), verifMin: !!UI.v('av-verif'), dctoMin: UI.v('av-dmin'), dctoMax: UI.v('av-dmax'), igv: UI.v('av-igv') };
     if (App.accion(() => Arts.guardar(cod, x), cod + ' actualizado')) { UI.cerrar(); App.refrescar(); }
   }
 };

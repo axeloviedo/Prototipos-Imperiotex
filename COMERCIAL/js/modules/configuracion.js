@@ -22,7 +22,7 @@ const CM10 = {
       UI.campo('Validez de la cotización (días)', '<input id="cf-dv" type="number" min="1" max="90" value="' + c.diasValidez + '"' + dis + '>') +
       UI.campo('Plazo para anular una venta (días)', '<input id="cf-da" type="number" min="0" max="30" value="' + c.diasAnulacion + '"' + dis + '>', { hint: 'Se congela en cada venta al registrarla; pasado el plazo se corrige con una devolución' }) +
       UI.campo('Almacén para devoluciones en mal estado', '<select id="cf-alm"' + dis + '>' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), c.almMalEstado) + '</select>') +
-      UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo)' }) +
+      UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo). En Comercial el mínimo se exige siempre en listas, ofertas y precio a mano (LP8, LP12)' }) +
       '</div></div>';
 
     const cat = (tipo, lista) => '<div style="flex:1;min-width:280px"><div class="sec">Categorías de ' + tipo.toLowerCase() + '</div>' +

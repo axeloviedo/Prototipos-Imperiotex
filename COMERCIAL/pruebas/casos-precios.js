@@ -216,3 +216,19 @@ prueba('el precio es referencial: el vendedor lo cambia y queda la referencia; l
     igual([l.origen, l.precio], ['Precio modificado a mano', UI.r2(100 / Store.cfg().tc)], 'el precio a mano se convierte, no se pisa');
   } finally { BD.reloj = null; UI.reloj = null; }
 });
+
+prueba('el vendedor nunca vende debajo del precio mínimo, aunque se apague «Verificar el precio mínimo»', () => {
+  const cfg = BD.d.maestros.configLogistica, antes = cfg.precioMinGlobal, a = Store.art('PT-0001'), vf = a.verifMin;
+  cfg.precioMinGlobal = false; a.verifMin = false;
+  dia('15/08/2026');
+  try {
+    const d = Ventas.borrador('TDA-01'); Doc.cambiarCliente(d, 'CLI-000001');
+    const l = Doc.agregar(d, 'PT-0001');
+    Doc.cambiar(d, 0, 'precio', 70);
+    igual(Doc.revisarLinea(d, l, 'venta').e.some(x => x.indexOf('precio mínimo') >= 0), true, 'precio a mano 70 < 79');
+    Doc.cambiar(d, 0, 'precio', 90); Doc.cambiar(d, 0, 'dcto', 12);
+    igual(Doc.revisarLinea(d, l, 'venta').e.some(x => x.indexOf('precio mínimo') >= 0), true, 'neto 78 con descuento manual < 79');
+    Doc.cambiar(d, 0, 'dcto', 11);
+    igual(Doc.revisarLinea(d, l, 'venta').e.some(x => x.indexOf('precio mínimo') >= 0), false, 'neto 79 sí');
+  } finally { cfg.precioMinGlobal = antes; a.verifMin = vf; BD.reloj = null; UI.reloj = null; }
+});
