@@ -13,7 +13,7 @@ const localStorage = {
   key: i => Object.keys(almacen)[i], get length() { return Object.keys(almacen).length; }, clear: () => Object.keys(almacen).forEach(k => delete almacen[k])
 };
 const NUCLEO = ['COMPARTIDO/bd/datos/maestros-plantillas.js', 'COMPARTIDO/bd/datos/maestros-complementos.js', 'COMPARTIDO/bd/datos/maestros-logistica.js',
-  'COMPARTIDO/bd/datos/maestros-comercial.js', 'COMPARTIDO/bd/bd.js', 'COMPARTIDO/bd/stock.js', 'COMPARTIDO/bd/explosion.js', 'COMPARTIDO/bd/documentos.js'];
+  'COMPARTIDO/bd/datos/maestros-comercial.js', 'COMPARTIDO/bd/bd.js', 'COMPARTIDO/bd/stock.js', 'COMPARTIDO/bd/explosion.js', 'COMPARTIDO/bd/documentos.js', 'COMPARTIDO/bd/compras.js'];
 
 function contexto(archivos) {
   const nodo = () => ({ style: {}, classList: { add() { }, remove() { }, toggle() { }, contains: () => false }, appendChild() { }, addEventListener() { }, setAttribute() { }, querySelector: () => null, querySelectorAll: () => [], innerHTML: '', value: '' });
