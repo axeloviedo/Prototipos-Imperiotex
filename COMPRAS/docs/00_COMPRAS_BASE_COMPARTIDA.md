@@ -34,5 +34,5 @@ Se elige en la barra superior («Datos») y **↺ Reiniciar** deja los 4 módulo
 - **Empresa (N3)**: la OC, la factura y sus movimientos guardan `emp` (coincide con la organización de compras).
 
 ## Pendientes y propuestas
-- El saldo a favor del proveedor se muestra en CO-12; aplicarlo en el pago es de Tesorería.
+- Saldo a favor (P3): CO-10 avisa en la ficha de una factura impaga si el proveedor tiene saldo a favor y lo aplica con un botón (`Docs.nc.aplicarSaldo`); CO-12 muestra en qué factura se usó cada nota.
 - El código de proveedor sigue siendo «mayor + 1»: el usuario lo dio por bueno para el prototipo (N13).

@@ -163,7 +163,7 @@ Todas las pantallas trabajan sobre la base: GI-18 rotación y GI-19 series (N8) 
 
 **Postventa de Compras** (`COMPARTIDO/bd/compras.js`, se carga después de `documentos.js`):
 - `recs` · `Docs.rec`: `{id:'RCL-000001', emp, fecha, prov, oc, of, obs, estado, lineas:[{art, cant, motivo, resol:'Reposición'|'Devolución'|'Nota de crédito', estado, alm, costo, docs:[]}], hist}` — `crear`, `resolver(id, i, {resol, alm?})`, `reponer(id, i)`, `anular`, `reclamable(oc, art)`.
-- `ncs` · `Docs.nc`: `{id:'NC-000001', emp, prov, fac, oc, ndoc, fecha, motivo:'07'|'05'|'09', rec, recLinea, mon, tc, lineas:[{art, cant, pu, igv}], total, aplicacion:'Factura'|'Saldo a favor', estado, movs, variacion}` — `crear`, `anular`, `saldoFactura(fac)`, `saldoFavor(prov)`.
+- `ncs` · `Docs.nc`: `{id:'NC-000001', emp, prov, fac, oc, ndoc, fecha, motivo:'07'|'05'|'09', rec, recLinea, mon, tc, lineas:[{art, cant, pu, igv}], total, aplicacion:'Factura'|'Saldo a favor', usos:[{fac, monto}], estado, movs, variacion}` — `crear`, `anular`, `saldoFactura(fac)` (descuenta notas y créditos aplicados), `saldoFavor(prov, mon)`, `aplicarSaldo(fac)`; la factura guarda `creditos:[{nc, monto}]`.
 - `ccds` · `Docs.ccd`: `{id:'CD-000001', emp, fecha, ocs:[], base:'Valor'|'Cantidad', costos:[{tipo:'05'..'09', prov, ndoc, mon, tc, monto}], estado, reparto, movs, variacion}` — `crear`, `guardar`, `registrar`, `anular`, `repartir`.
 - `Docs.sug.calcular()` → filas `{art, min, ordenes, ofs, disp, ped, sug, prov, alm}`; `Docs.sug.crearOC(prov, filas, alm)`.
 

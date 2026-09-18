@@ -19,7 +19,7 @@
 ## Prototipo · pendiente
 
 - ☑ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) con su nota de crédito.
-- ☐ Saldo a favor del proveedor: hoy se muestra en CO-12; descontarlo en el pago es de Tesorería.
+- ☑ Saldo a favor del proveedor: se aplica a su siguiente factura desde CO-10 (P3).
 - ☑ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo. → decisiones **O1–O5** en `00_DECISIONES_CERRADAS.md` (2026-09-17).
 
 ## Mejoras futuras (N12, acordadas pero no ahora)
