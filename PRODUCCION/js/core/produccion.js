@@ -54,7 +54,7 @@ const Prod = {
      En una fase tercerizada a mano el compromiso está en el almacén propio, no en el de tránsito donde se consume. */
   dispPara(m) { return UI.r4(Math.max(0, Stock.disp(m.alm, m.cod)) + (m.almPropio ? 0 : m.comp)); },
   /* lo que a la línea le falta reservar y aún no se pidió a Logística: planificado − consumido − comprometido − pedido (en camino) */
-  faltaPedir(of, m) { return UI.r4(Math.max(0, m.plan - m.consumido - m.comp - Prod.pedido(of, m.cod, m.alm))); },
+  faltaPedir(of, m) { return m.fab ? 0 : UI.r4(Math.max(0, m.plan - m.consumido - m.comp - Prod.pedido(of, m.cod, m.alm))); },
   pendiente(of) { return UI.r4(Math.max(0, of.cant - of.prod)); },
   tieneMovimientos(of) { return of.emisiones.length > 0 || of.recibos.length > 0; },
   esServicio(cod) { return BD.esServicio(cod); },
