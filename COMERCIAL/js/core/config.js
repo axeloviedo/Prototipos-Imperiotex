@@ -8,6 +8,27 @@ const Listas = {
   _abierta(cod) { const L = Listas.get(cod); if (L.cancelada) throw new Error('La lista ' + L.cod + ' está cancelada: no se modifica'); return L; },
   _desc(f) { return f.grupo ? 'grupo ' + M.grupoNom(f.grupo) : f.art + ' ' + (f.um || 'todas las unidades'); },
   _val(f) { return f.precio > 0 ? 'precio ' + UI.n(f.precio) : f.pct > 0 ? UI.n(f.pct) + ' %' : 'sin valor'; },
+  /* LP9: sin ambigüedad. Dos listas de precios (sin fechas) activas del MISMO nivel (misma moneda, sede y segmento) no pueden tener el mismo artículo,
+     ni el mismo grupo, ni un artículo y el grupo al que pertenece. -> texto del conflicto o '' */
+  conflicto(L, f) {
+    if (Precios.esOferta(L) || !L.activa || L.cancelada) return '';
+    const grupoDe = art => (Store.art(art) || {}).grupo;
+    const choca = (x, y) => (x.art && y.art && x.art === y.art) || (x.grupo && y.grupo && x.grupo === y.grupo) ||
+      (x.art && y.grupo && grupoDe(x.art) === y.grupo) || (x.grupo && y.art && grupoDe(y.art) === x.grupo);
+    for (const O of Precios.listas()) {
+      if (O.cod === L.cod || Precios.esOferta(O) || !O.activa || O.cancelada || O.mon !== L.mon || (O.sede || '') !== (L.sede || '') || (O.tipo || '') !== (L.tipo || '')) continue;
+      const y = (O.filas || []).find(y => choca(f, y));
+      if (y) return 'Conflicto de precios: ' + Listas._desc(f) + ' ya tiene precio en «' + O.nom + '» (' + O.cod + ', ' + Listas._desc(y) + ') para la misma moneda, sede y segmento. ' +
+        'Cambie ese precio allá, o use otra sede o segmento';
+    }
+    return '';
+  },
+  /* LP8: un precio fijo no puede quedar debajo del precio mínimo del artículo (en la moneda de la lista, por su unidad) */
+  _piso(L, f) {
+    if (!(f.precio > 0) || !f.art || !f.um) return;
+    const min = Precios.minimo(f.art, f.um, L.mon);
+    if (min > 0 && f.precio < min) throw new Error(f.art + ': ' + UI.m(f.precio, L.mon) + ' por ' + f.um + ' está debajo del precio mínimo del artículo (' + UI.m(min, L.mon) + '). Ninguna lista ni oferta puede bajar del mínimo');
+  },
   /* precio fijo O % de descuento, nunca ninguno (LP7) */
   _valor(v) {
     const pct = v.pct === '' || v.pct == null ? null : Number(v.pct), precio = v.precio === '' || v.precio == null ? null : Number(v.precio);
@@ -27,11 +48,13 @@ const Listas = {
     if (x.tipo && M.TIPOS_CLIENTE.indexOf(x.tipo) < 0) throw new Error('Segmento de cliente no válido');
     if (x.oferta && !x.desde) throw new Error('Una oferta necesita la fecha de inicio');
     if (x.desde && x.hasta && UI.aFecha(x.hasta) < UI.aFecha(x.desde)) throw new Error('La fecha final no puede ser anterior a la inicial');
-    const datos = { nom, mon: x.mon, sede: x.sede || '', tipo: x.tipo || '', desde: x.oferta ? x.desde || '' : '', hasta: x.oferta ? x.hasta || '' : '', activa: x.activa !== false };
+    const datos = { nom, mon: x.mon, sede: x.sede || '', tipo: x.tipo || '', desde: x.oferta ? x.desde || '' : '', hasta: x.oferta ? x.hasta || '' : '', activa: x.activa !== false, forzado: !!(x.oferta && x.forzado) };
     if (cod) {
       const L = Listas._abierta(cod);
       if (L.mon !== datos.mon && L.filas.some(f => f.precio > 0)) throw new Error('La lista ya tiene precios en ' + L.mon + ': cree otra lista para ' + datos.mon);
-      const cambios = Object.keys(datos).filter(k => String(L[k]) !== String(datos[k])).map(k => k + ': ' + (L[k] === '' ? '—' : L[k]) + ' → ' + (datos[k] === '' ? '—' : datos[k]));
+      const prueba = Object.assign({}, L, datos);
+      for (const f of L.filas) { const c = Listas.conflicto(prueba, f); if (c) throw new Error(c); Listas._piso(prueba, f); }
+      const cambios = Object.keys(datos).filter(k => String(L[k] == null ? '' : L[k]) !== String(datos[k])).map(k => k + ': ' + (L[k] === '' ? '—' : L[k]) + ' → ' + (datos[k] === '' ? '—' : datos[k]));
       Object.assign(L, datos);
       if (cambios.length) Store.hist(L, 'Datos modificados', cambios.join(' · '));
       return L;
@@ -65,6 +88,8 @@ const Listas = {
       if (L.filas.some(f => f.art === art && (f.um || '') === um)) return;
       const f = { art, um };
       if (pct != null) f.pct = UI.r2(pct); else f.precio = UI.r2(precio);
+      const c = Listas.conflicto(L, f); if (c) throw new Error(c);
+      Listas._piso(L, f);
       L.filas.push(f); nuevos.push(f);
     });
     if (!nuevos.length) throw new Error('No hay artículos nuevos que agregar con esa selección');
@@ -79,6 +104,7 @@ const Listas = {
     if (!(p > 0) || p >= 100) throw new Error('Un grupo entra con % de descuento: mayor que 0 y menor que 100 %');
     if (L.filas.some(f => f.grupo === grupo)) throw new Error('El grupo ya está en la lista: cambie su %');
     const f = { grupo, pct: UI.r2(p) };
+    const c = Listas.conflicto(L, f); if (c) throw new Error(c);
     L.filas.push(f);
     Store.hist(L, 'Grupo agregado', Listas._desc(f) + ' · ' + Listas._val(f));
     return L;
@@ -93,6 +119,7 @@ const Listas = {
       if (f.grupo) throw new Error('Un grupo vale para todas las unidades');
       if (val === '' && !(f.pct > 0)) throw new Error('«Todas las unidades» solo con % de descuento');
       if (L.filas.some((x, k) => k !== i && x.art === f.art && (x.um || '') === val)) throw new Error('El artículo ya está en la lista con esa unidad');
+      Listas._piso(L, Object.assign({}, f, { um: val }));
       f.um = val;
     } else {
       const n = val === '' || val == null ? 0 : Number(val);
@@ -101,6 +128,7 @@ const Listas = {
       if (campo === 'precio') {
         if (f.grupo) throw new Error('Un grupo lleva % de descuento, no precio');
         if (!f.um) throw new Error('Elija la unidad del precio');
+        const nf = Object.assign({}, f, { precio: UI.r2(n) }); delete nf.pct; Listas._piso(L, nf);
         delete f.pct; f.precio = UI.r2(n);
       } else if (campo === 'pct') {
         if (n >= 100) throw new Error('El descuento debe ser menor que 100 %');

@@ -44,7 +44,7 @@
 | Cambiar / retirar fila | `PUT` · `DELETE /price-lists/{code}/rows/{id}` | editar_precios | Sin dejar la fila en 0; el retiro queda en el historial con usuario y valor anterior; los documentos creados no cambian | 400, 404, 409 CANCELLED |
 | **Cancelar** lista u oferta (no se borra) | `POST /price-lists/{code}/cancel` `{reason}` | editar_precios | Motivo obligatorio; guarda usuario (del token) y fecha; deja de aplicarse; no se reactiva | 400, 404, 409 CANCELLED |
 | Historial | `GET /price-lists/{code}/history` | ver_venta | Acción, detalle, usuario, fecha | 404 |
-| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Oferta vigente → sede+tipo → sede → tipo → general → sugerido (solo PEN); `&date=` opcional. Devuelve `{price, source, list, offer, listPrice}` | 404 NO-PRICE |
+| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Motor en fases (§12.1 del diseño): base → ofertas → mejor precio (salvo precio obligatorio) → piso del precio mínimo; `&date=` opcional. Devuelve `{price, source, list, offer, listPrice, trace: {base, offers[], winner, minimum, adjustedToMinimum}}` | 404 NO-PRICE |
 | Datos de venta del artículo | `PUT /sale-articles/{code}` | editar_precios | precioMínimo ≤ sugerido; dctoMín ≤ dctoMáx ≤ 100 | 400, 422 |
 | Disponibilidad | `GET /stock/availability?article=&warehouse=&quantity=` | ver_existencias | `{onHand, committed, available, control}` desde logística | 503 |
 

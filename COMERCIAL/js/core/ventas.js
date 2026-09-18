@@ -71,8 +71,10 @@ const Doc = {
     const r = Precios.resolver(l.art, l.um, d.sede, Doc.tipoCli(d), d.mon);
     l.precio = r ? r.precio : 0;
     l.origen = r ? r.origen : 'Sin precio en ' + d.mon;
-    delete l.oferta; delete l.precioLista; delete l.lista;
+    delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo;
     if (r && r.lista) l.lista = r.lista;
+    /* LP5/LP8: evidencia de cómo se llegó al precio (base, ofertas encontradas, ganadora, ajuste al mínimo) */
+    if (r) l.calculo = { base: r.base, ofertas: r.ofertas, gana: r.oferta ? r.oferta.cod : (r.lista || 'sugerido'), minimo: r.minimo, ajusteMin: r.ajusteMin, fecha: UI.hoy() };
     /* LP4: la oferta no se suma al descuento manual de la línea */
     if (r && r.oferta) { l.oferta = r.oferta; l.precioLista = r.precioLista; l.dcto = 0; }
     return r;
@@ -105,7 +107,7 @@ const Doc = {
       if (campo === 'dcto' && n > 0 && l.oferta) throw new Error('La línea tiene la oferta «' + l.oferta.nom + '»: no se suma un descuento manual (cambie el precio a mano si hace falta)');
       l[campo] = n;
       /* LP4: el precio escrito a mano quita la oferta */
-      if (campo === 'precio') { l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista; delete l.lista; }
+      if (campo === 'precio') { l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo; }
     } else if (campo === 'obsequio') l.obsequio = !!val;
     else if (campo === 'um') { l.um = val; l.factor = Precios.factor(l.art, val); Doc.precio(d, l); }
     else if (campo === 'alm') l.alm = val;
@@ -154,7 +156,7 @@ const Doc = {
     if (!(l.cant > 0)) e.push('la cantidad debe ser mayor que cero');
     if (!l.obsequio && !(l.precio > 0)) e.push('no tiene precio en ' + d.mon);
     if (a.inv && !l.alm) e.push('elija el almacén');
-    /* LP4: la línea con oferta no revisa el rango de descuento ni el precio mínimo (la oferta la configura quien tiene editar_precios; CL-40 avisa si queda bajo el mínimo) */
+    /* LP4/LP8: la línea con oferta no revisa el rango del descuento manual (no lo admite); su precio ya viene con el piso del precio mínimo */
     if (!l.obsequio && l.precio > 0 && !l.oferta) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');

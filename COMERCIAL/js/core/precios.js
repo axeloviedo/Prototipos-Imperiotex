@@ -89,23 +89,51 @@ const Precios = {
     const b = Precios._normal(cands, i + 1, art, um, mon);
     return b ? { precio: UI.r2(b.precio * (1 - f.pct / 100)), origen: c.L.nom + ' ' + Precios.pctTxt(f.pct), lista: c.L.cod } : null;
   },
-  /* -> {precio, origen («de dónde sale el precio»), lista, oferta: {cod, nom, pct} | null, precioLista} o null si no hay precio en esa moneda.
-     Una oferta vigente manda sobre la lista; su % se aplica sobre el precio de lista. Entre ofertas: la más específica y, a igual nivel, el menor precio. */
+  /* soles ↔ dólares con el tipo de cambio de la configuración comercial */
+  convertir(v, de, a) { const tc = Store.cfg().tc || 1; return de === a ? v : UI.r2(de === 'USD' ? v * tc : v / tc); },
+  /* PISO del precio (LP8): el precio mínimo del artículo (S/ por UM de inventario) × conversión, en la moneda del documento.
+     Siempre se aplica a listas y ofertas. Con mínimo 0 el piso es «mayor que cero»: ningún precio de lista u oferta puede ser 0 o negativo */
+  minimo(art, um, mon) {
+    const a = Store.art(art);
+    return a && a.precioMin > 0 ? UI.r2(Precios.convertir(a.precioMin, 'PEN', mon) * Precios.factor(art, um)) : 0;
+  },
+  /* MOTOR DE PRECIOS en fases (LP8–LP10, 12-prototipo-diseno.md §12.2):
+     1. PRECIO BASE: la lista más específica sin ofertas (sede+segmento → sede → segmento → general) → precio sugerido (solo PEN).
+     2. OFERTAS: todas las vigentes que aplican (sede, segmento, moneda, artículo, unidad), cada una con su precio.
+     3. RESOLUCIÓN: MEJOR PRECIO = el menor entre el base y las ofertas (una oferta no empeora el precio).
+        Una oferta con «Precio obligatorio» aplica aunque sea más cara (si hay varias obligatorias, la de menor precio).
+     4. PISO: nunca debajo del precio mínimo del artículo; si queda debajo se AJUSTA al mínimo. Nunca 0 o menos.
+     -> {precio, origen, lista, oferta {cod, nom, pct, forzado} | null, precioLista, base {precio, origen, lista}, ofertas [{cod, nom, precio, forzado}], minimo, ajusteMin}
+        o null si no hay precio en esa moneda. La línea del documento guarda todo esto como evidencia (LP5). */
   resolver(art, um, sede, tipo, mon, fecha) {
     const cands = Precios.candidatos(art, um, sede, tipo, mon, fecha);
-    const normal = Precios._normal(cands.filter(c => !Precios.esOferta(c.L)), 0, art, um, mon);
+    const base = Precios._normal(cands.filter(c => !Precios.esOferta(c.L)), 0, art, um, mon);
     const ofertas = cands.filter(c => Precios.esOferta(c.L)).map(c => {
       const f = c.x.f;
-      const precio = f.precio > 0 ? UI.r2(f.precio * c.x.factor) : normal ? UI.r2(normal.precio * (1 - f.pct / 100)) : 0;
-      return { c, precio };
-    }).filter(o => o.precio > 0).sort((p, q) => Precios.espec(p.c.L) - Precios.espec(q.c.L) || p.precio - q.precio);
-    const o = ofertas[0];
-    if (o) {
-      const L = o.c.L, f = o.c.x.f;
-      return { precio: o.precio, origen: 'Oferta ' + L.nom + (f.pct > 0 ? ' ' + Precios.pctTxt(f.pct) : ''), lista: L.cod,
-        oferta: { cod: L.cod, nom: L.nom, pct: f.pct > 0 ? f.pct : null }, precioLista: normal ? normal.precio : null };
+      const precio = f.precio > 0 ? UI.r2(f.precio * c.x.factor) : base ? UI.r2(base.precio * (1 - f.pct / 100)) : 0;
+      return { L: c.L, f, precio, forzado: !!c.L.forzado };
+    }).filter(o => o.precio > 0);
+    if (!base && !ofertas.length) return null;
+    /* resolución */
+    const forzadas = ofertas.filter(o => o.forzado).sort((p, q) => p.precio - q.precio);
+    let gana = forzadas[0] || null;
+    if (!gana) {
+      const mejor = ofertas.slice().sort((p, q) => p.precio - q.precio || Precios.espec(p.L) - Precios.espec(q.L))[0];
+      if (mejor && (!base || mejor.precio < base.precio)) gana = mejor;
     }
-    return normal ? Object.assign(normal, { oferta: null, precioLista: normal.precio }) : null;
+    const r = gana
+      ? { precio: gana.precio, origen: 'Oferta ' + gana.L.nom + (gana.f.pct > 0 ? ' ' + Precios.pctTxt(gana.f.pct) : '') + (gana.forzado ? ' (precio obligatorio)' : ''), lista: gana.L.cod,
+          oferta: { cod: gana.L.cod, nom: gana.L.nom, pct: gana.f.pct > 0 ? gana.f.pct : null, forzado: gana.forzado } }
+      : { precio: base.precio, origen: base.origen, lista: base.lista, oferta: null };
+    r.precioLista = base ? base.precio : null;
+    r.base = base ? { precio: base.precio, origen: base.origen, lista: base.lista || '' } : null;
+    r.ofertas = ofertas.map(o => ({ cod: o.L.cod, nom: o.L.nom, precio: o.precio, forzado: o.forzado }));
+    /* piso: precio mínimo del artículo; con mínimo 0, mayor que cero */
+    r.minimo = Precios.minimo(art, um, mon);
+    r.ajusteMin = false;
+    if (r.minimo > 0 && r.precio < r.minimo) { r.precio = r.minimo; r.ajusteMin = true; r.origen += ' · ajustado al precio mínimo'; }
+    if (!(r.precio > 0)) return null;
+    return r;
   },
 
   tasa(art) {

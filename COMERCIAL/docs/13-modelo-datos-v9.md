@@ -58,6 +58,7 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | sede | FK → Sede (maestro compartido), nulo | Nulo = todas. El documento usa la sede de su tienda | `sucursale_id` |
 | tipo_cliente | FK, nulo | Segmento; nulo = todos | `client_segment_id` |
 | valida_desde · valida_hasta | fecha, nulo | Con fechas es una **oferta**; hasta nulo = sin fin | — |
+| precio_obligatorio | bool | Solo ofertas: se aplica aunque sea más cara (LP10) | — |
 | activa | bool | | — |
 | creada_por · creada_en | usuario · fecha | | — |
 | cancelada_por · cancelada_en · motivo_cancelacion | usuario · fecha · texto, nulos | **No se borra: se cancela** (LP6) | — |
@@ -75,7 +76,7 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | precio | decimal, nulo | Incluye IGV. Precio **o** %: uno de los dos es obligatorio (LP7) | `price_general` |
 | pct_descuento | decimal, nulo | Sobre el precio de la lista menos específica (o de lista, en una oferta) | — |
 
-Resolución: oferta vigente → sede+tipo → sede → tipo → general → `articulo.precio_sugerido` (solo PEN). La línea del documento guarda `precio`, `origen`, `lista`, `oferta` y `precio_lista`.
+Resolución (motor en fases, `12-prototipo-diseno.md` §12.1): precio base (sede+tipo → sede → tipo → general → `articulo.precio_sugerido`, solo PEN) → ofertas vigentes → **mejor precio** (salvo precio obligatorio) → **piso** = `articulo.precio_minimo` (o > 0). La línea del documento guarda `precio`, `origen`, `lista`, `oferta`, `precio_lista` y la evidencia `calculo` (base, ofertas encontradas, ganadora, mínimo, ajuste).
 
 ### Artículo: datos de venta (pestaña Venta de GI-02)
 

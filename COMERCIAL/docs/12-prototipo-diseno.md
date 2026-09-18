@@ -304,27 +304,76 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 |---|---|---|
 | LP1 | **La lista se crea y se le agregan artículos** | Cabecera: nombre, **moneda**, **sede** (del maestro compartido: Gamarra, Galería «Ya», Damero…; vacío = todas), **segmento de cliente** (el tipo de cliente; vacío = todos) y **Activa**. Filas: artículo + **unidad** con **precio fijo** o **% de descuento** (uno u otro), o un **grupo de artículos** entero con %. «Agregar artículos» por grupo o búsqueda, varios a la vez, con un precio o % para todos (opcional). Un precio en la unidad de inventario sirve para las mayores (× conversión); un % puede valer para «Todas» las unidades. |
 | LP2 | **El documento no elige lista** | La cotización y la venta toman el precio según la **sede** de su tienda (TDA-01 → YA), el **segmento** del cliente y su **moneda**: sede y segmento → sede → segmento → general → precio sugerido de GI-02 (solo PEN). El % de una lista se aplica sobre la siguiente menos específica. Sin precio en la moneda, el cambio de moneda se revierte (no se convierte). |
-| LP3 | **Oferta = lista con fechas** | Mismo formulario con **Desde** (obligatoria) y **Hasta** (vacío = sin fin): Programada · Vigente · Vencida. Mientras está vigente **manda sobre las listas**; su % se aplica sobre el precio de lista del cliente. Entre ofertas: la más específica y, a igual nivel, el menor precio. |
-| LP4 | **La oferta no se suma al descuento manual** | La línea con oferta no admite descuento manual y no revisa el rango de descuento ni el precio mínimo (la configura quien tiene `editar_precios`; CL-40 avisa «bajo el mínimo»). Un precio escrito a mano quita la oferta. |
-| LP5 | **El precio queda en la base compartida** | Las listas viven en `BD.d.listasPrecio` (base compartida, se guardan al editar). Cada línea de cotización y venta guarda `precio`, `origen` (de dónde sale: «Mayorista», «Oferta Primavera −20 %», «Precio sugerido del artículo», «Precio modificado a mano»), `lista` y, si hubo oferta, `oferta {cod, nom, pct}` y `precioLista`. Cambiar o cancelar una lista no toca lo ya cotizado o vendido; la venta desde cotización respeta el precio cotizado. |
+| LP3 | **Oferta = lista con fechas** | Mismo formulario con **Desde** (obligatoria) y **Hasta** (vacío = sin fin): Programada · Vigente · Vencida. Su % se aplica sobre el **precio base** del cliente. ~~Mientras está vigente manda sobre las listas~~ → desde el 2026-09-18 se aplica solo si **mejora** el precio (LP10). |
+| LP4 | **La oferta no se suma al descuento manual** | La línea con oferta no admite descuento manual (no se revisa el rango del descuento). Un precio escrito a mano quita la oferta. ~~No revisa el precio mínimo~~ → **el precio mínimo se aplica siempre** (LP8). |
+| LP5 | **El precio queda en la base compartida** | Las listas viven en `BD.d.listasPrecio` (base compartida, se guardan al editar). Cada línea de cotización y venta guarda `precio`, `origen` (de dónde sale: «Mayorista», «Oferta Primavera −20 %», «Precio sugerido del artículo», «Precio modificado a mano»), `lista` y, si hubo oferta, `oferta {cod, nom, pct, forzado}` y `precioLista`; además `calculo` con la **evidencia**: precio base y su lista, ofertas encontradas con su precio, la ganadora, el mínimo y si se ajustó. Cambiar o cancelar una lista no toca lo ya cotizado o vendido; la venta desde cotización respeta el precio cotizado. |
 | LP6 | **Una lista u oferta no se borra: se cancela** *(2026-09-18)* | «Cancelar lista / oferta» pide **motivo** y guarda **quién** la canceló y **cuándo** (`cancelada {u, f, motivo}`). Queda en el listado con estado **Cancelada**, deja de aplicarse y ya no se modifica. Para dejar de usarla un tiempo se desmarca «Activa». Toda la vida de la lista queda en su **historial** (creada, datos modificados con valor anterior → nuevo, artículos o grupos agregados, precio o % cambiado, artículo retirado con el valor que tenía, cancelada), con usuario y fecha. |
 | LP7 | **Todo artículo lleva precio fijo o % de descuento** *(2026-09-18)* | No se agrega un artículo sin precio ni %, ni se puede dejar una fila en 0: la lista **no se guarda** con precio 0 y descuento 0. Al agregar varios artículos el precio o % es obligatorio (uno de los dos) y vale para todos; después se cambia artículo por artículo. Un grupo entra siempre con %. |
+| LP8 | **Piso: el precio mínimo del artículo, siempre** *(2026-09-18)* | Ninguna lista, oferta ni descuento deja el precio debajo del **precio mínimo** del artículo (S/ por unidad de inventario × conversión de la unidad; en US$ con el tipo de cambio), tenga o no marcado «Verificar el precio mínimo». Al guardar, un **precio fijo** debajo del mínimo se rechaza; un **%** que al calcular queda debajo **se ajusta al mínimo** («… · ajustado al precio mínimo»). Si el mínimo es **0**, el piso es **mayor que cero**: ningún precio de lista u oferta puede ser 0 o negativo (el precio fijo debe ser > 0, el % < 100, y una oferta que daría 0.00 no cuenta). El obsequio de la línea sigue aparte (motivo, K13). |
+| LP9 | **Sin ambigüedad entre listas** *(2026-09-18)* | Dos listas de precios (sin fechas) **activas** del **mismo nivel** (misma moneda, sede y segmento) no pueden tener el mismo artículo, el mismo grupo, ni un artículo y el grupo al que pertenece: se rechaza con «Conflicto de precios: … ya tiene precio en «…»». Se revisa al agregar artículos o grupos y al cambiar la moneda, sede, segmento o «Activa» de una lista. Así nunca decide el orden de creación. Las ofertas pueden cruzarse: las resuelve LP10. |
+| LP10 | **Mejor precio entre base y ofertas; «Precio obligatorio»** *(2026-09-18)* | Se reúnen **todas** las ofertas vigentes que aplican (la especificidad solo decide si aplican, no quién gana) y gana el **menor precio** entre el precio base y esas ofertas: una oferta **no empeora** el precio. Una oferta con el check **«Precio obligatorio»** se aplica aunque sea más cara (liquidación, precio único); si hay varias obligatorias, la de menor precio. El piso LP8 vale también para ella. |
 
 **Datos de ejemplo (a confirmar):** LP-01 Precios generales S/ · LP-02 Precios generales US$ · LP-03 Mayorista (UND y docena) · LP-04 Exportación (US$) · LP-05 Galería Damero (sede DAM) · LP-06 Mayorista Galería Ya (sede YA + MAYORISTA) · ofertas LP-07 Día del Padre (grupo PT −10 %, vencida), LP-08 Primavera (PT-0003 −20 % solo MINORISTA, setiembre), LP-09 Navidad (grupo PT −15 % y PT-0001 a 99.90, programada). Las ventas de la historia de julio no cambian de precio.
 
 | Qué | Dónde |
 |---|---|
-| Cálculo | `js/core/precios.js` (`Precios.resolver`, `candidatos`, `filaDe`, `estado`) |
-| Mantenimiento | `js/core/config.js` (`Listas.guardar`, `agregarArts`, `agregarGrupo`, `fila`, `quitarFila`, `quitar`) |
+| Cálculo | `js/core/precios.js` (`Precios.resolver` en fases, `minimo`, `candidatos`, `filaDe`, `estado`) |
+| Mantenimiento | `js/core/config.js` (`Listas.guardar`, `agregarArts`, `agregarGrupo`, `fila`, `quitarFila`, `cancelar`, `conflicto`, `_piso`) |
 | Documento | `js/core/ventas.js` (`Doc.precio`, `Doc.cambiar`, `Doc.revisarLinea`) |
 | Pantalla | `js/modules/listas.js` (CL-40; modales CL-41 datos, CL-42 cancelar, CL-49 agregar artículos, CL-50 detalle, CL-51 agregar grupo) |
 | Pruebas sin navegador | `node COMERCIAL/pruebas/probar-comercial.js` (`casos-precios.js`) |
 
 > 2026-09-18 (pedido del usuario): el detalle de la lista se ve en un **modal** (CL-50), no debajo del listado; y la lista es por **sede** (maestro compartido `BD.d.maestros.sedes`), no por tienda. Una base guardada con una tienda en la lista pasa sola a la sede de esa tienda.
 
-### 12.1 Para el desarrollo (listas de precios y ofertas)
+### 12.1 Motor de precios · especificación (2026-09-18)
+
+Acordado con el usuario tras revisar una propuesta externa de «motor en fases» inspirada en SAP B1 (precios especiales → grupos de descuento → periodo y cantidad → lista del cliente; políticas menor, mayor, promedio, suma, multiplicación). **Se adopta** la separación en fases, la regla «una oferta no empeora el precio salvo precio obligatorio», el rechazo de ambigüedades y guardar la explicación en la línea. **No se adopta** (por simplicidad, pedido del usuario): lista asignada a cada cliente (el precio sigue por sede + segmento, LP2), prioridades numéricas y políticas EXCLUSIVO / ACUMULABLE / RECARGO / MAYOR_DESCUENTO (con todas las ofertas sobre el mismo precio base, mejor precio y mayor descuento dan lo mismo; un recargo es otra lista). Si luego hace falta un precio pactado con un cliente, entra como nivel «Precio especial del cliente» por encima de todo.
+
+**Entrada:** artículo, unidad, sede (la de la tienda del documento), segmento (tipo de cliente; sin cliente = ninguno), moneda, fecha (hoy).
+
+```
+1. PRECIO BASE   listas activas, no canceladas, sin fechas, de la moneda, que valen para la sede y el segmento
+                 → la más específica: sede+segmento → sede → segmento → general (LP9: una sola por nivel)
+                 · fila precio fijo: ese precio · fila %: sobre el precio del nivel siguiente
+                 → si ninguna tiene el artículo: precio sugerido de GI-02 × conversión (solo S/)
+2. OFERTAS       todas las ofertas vigentes (Desde ≤ hoy ≤ Hasta) que aplican; cada una con su precio
+                 (fijo, o % sobre el precio base)
+3. RESOLUCIÓN    si hay oferta con «Precio obligatorio» → la de menor precio entre ellas
+                 si no → el menor entre el precio base y las ofertas (la oferta gana solo si es MENOR)
+4. PISO          si el resultado < precio mínimo × conversión → se ajusta al mínimo
+                 con mínimo 0: debe ser > 0; si no hay precio > 0 → «sin precio»
+5. EVIDENCIA     la línea guarda precio, origen, lista, oferta, precioLista y calculo {base, ofertas, gana, minimo, ajusteMin, fecha}
+```
+
+**Fila que se usa dentro de una lista** (en este orden): el artículo en esa unidad → el artículo en su unidad de inventario × conversión → el artículo con % en «Todas» las unidades → el grupo del artículo con %.
+
+| # | Caso | Resultado |
+|---|---|---|
+| C1 | Ninguna lista ni oferta tiene el artículo, en S/ | Precio sugerido de GI-02 × conversión |
+| C2 | Igual, en US$ | **Sin precio**: la línea no se registra; al cambiar la moneda del documento, el cambio se revierte |
+| C3 | Lista de la sede y lista del segmento tienen el artículo | Gana la de la sede (más específica) |
+| C4 | Fila con % en una lista | Se aplica sobre el precio del nivel siguiente (o el sugerido) |
+| C5 | Venta en docena y la lista solo tiene la unidad | Precio de la unidad × 12 |
+| C6 | Oferta con precio **mayor** que el base (Navidad 99.90 vs mayorista 89) | Se queda el base 89; la oferta figura en la evidencia como «no mejora el precio» |
+| C7 | Oferta con precio menor | Gana la oferta |
+| C8 | Varias ofertas (sede −5 % y general −20 %) | Gana la de menor precio (−20 %) |
+| C9 | Oferta con «Precio obligatorio» más cara que el base | Se aplica la oferta |
+| C10 | Resultado debajo del mínimo (mayorista 89 − 15 % = 75.65, mínimo 79) | Se ajusta a 79 · «ajustado al precio mínimo» |
+| C11 | Mínimo 0 y una oferta daría 0.00 | La oferta no cuenta; queda el precio base |
+| C12 | Guardar precio fijo debajo del mínimo | Se rechaza al guardar |
+| C13 | Segunda lista del mismo nivel con el mismo artículo o grupo | Se rechaza al guardar (conflicto) |
+| C14 | Lista inactiva, cancelada; oferta programada o vencida | No participa |
+| C15 | Precio escrito a mano | «Precio modificado a mano»; ya no se recalcula; pierde la oferta; lo controlan el rango de descuento y el mínimo (si se verifica) |
+| C16 | Descuento manual en una línea con oferta | No se permite |
+| C17 | Cambio de cliente o unidad | Se recalcula (salvo lo escrito a mano) · cambio de cantidad: no |
+| C18 | Venta desde cotización | Respeta el precio cotizado aunque la oferta ya venció |
+| C19 | Obsequio | Precio 0 con motivo (fuera del motor) |
+
+### 12.2 Para el desarrollo (listas de precios y ofertas)
 
 - **No hay DELETE** de listas ni ofertas: se **cancelan** con motivo. Guardar en la cabecera `cancelada_por` (usuario), `cancelada_en` (fecha y hora del servidor) y `motivo_cancelacion`; una lista cancelada no se edita ni se reactiva, y el resolvedor de precios la ignora.
 - **Auditoría de cada cambio** (tabla `lista_precio_historial`): lista, acción (creada, datos modificados, artículo agregado / modificado / retirado, grupo agregado, cancelada), detalle con valor anterior → nuevo, usuario y fecha. El retiro de un artículo o grupo no borra evidencia: queda en el historial con el precio o % que tenía (o se implementa como baja lógica de la fila).
 - **Validación en el back**, no solo en la pantalla: cada fila con `precio > 0` **o** `pct_descuento` entre 0 y 100 (exclusivos), nunca los dos ni ninguno; grupo solo con %. Rechazar con 400 cualquier fila con precio 0 y descuento 0.
 - Permiso `editar_precios` para crear, modificar y cancelar; el usuario sale del token, no del cuerpo de la petición.
+- El **motor de precios** vive en el back (un solo servicio `resolverPrecio`), con las fases de §12.1; la pantalla solo lo consulta. Validar en el back LP8 (piso al guardar un precio fijo) y LP9 (conflictos).
+- Guardar en la línea del documento la **evidencia** del cálculo (`calculo`: base, ofertas encontradas con su precio, ganadora, mínimo y ajuste), no solo el precio final.

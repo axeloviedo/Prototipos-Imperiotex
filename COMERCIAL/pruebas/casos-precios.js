@@ -33,7 +33,7 @@ prueba('oferta vigente con % para un segmento', () => {
 });
 prueba('oferta programada por grupo y con precio fijo; el % va sobre la lista de cada cliente', () => {
   igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '10/12/2026'), 101.92, 'grupo PT −15 %');
-  igual(P('PT-0002', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026'), 75.65, 'mayorista −15 %');
+  igual(P('PT-0002', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026'), 79.00, 'mayorista −15 % = 75.65, ajustado al mínimo 79');
   igual(P('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '10/12/2026'), 99.90, 'precio fijo de la oferta');
   igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '30/11/2026'), 119.90, 'todavía no empieza');
 });
@@ -48,9 +48,9 @@ prueba('mantenimiento: nueva oferta, agregar artículos y grupo, precio o %', ()
   igual(Listas.agregarArts(L.cod, ['PT-0003', 'PT-0004'], { pct: 30 }), 2, 'agregados');
   igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 87.43, '124.90 − 30 %');
   const i = L.filas.findIndex(f => f.art === 'PT-0004');
-  Listas.fila(L.cod, i, 'um', 'UND'); Listas.fila(L.cod, i, 'precio', 80);
-  igual([L.filas[i].precio, L.filas[i].pct], [80, undefined], 'el precio borra el %');
-  igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 80, 'precio fijo');
+  Listas.fila(L.cod, i, 'um', 'UND'); falla(() => Listas.fila(L.cod, i, 'precio', 80), 'precio mínimo'); Listas.fila(L.cod, i, 'precio', 85);
+  igual([L.filas[i].precio, L.filas[i].pct], [85, undefined], 'el precio borra el %');
+  igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 85, 'precio fijo');
   igual(P('PT-0004', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '02/11/2026'), 124.90, 'solo en la sede Galería Ya');
   falla(() => Listas.agregarGrupo(L.cod, 'PT', 0), '% de descuento');
   Listas.agregarGrupo(L.cod, 'PT', 5);
@@ -119,7 +119,7 @@ prueba('la lista es por sede: el documento lleva su tienda a la sede; no se acep
 });
 
 prueba('un artículo no entra ni queda con precio 0 y descuento 0', () => {
-  const L = Listas.guardar({ nom: 'Prueba sin valor', mon: 'PEN' });
+  const L = Listas.guardar({ nom: 'Prueba sin valor', mon: 'PEN', sede: 'PAR' });
   falla(() => Listas.agregarArts(L.cod, ['PT-0001'], {}), 'precio fijo o el % de descuento');
   falla(() => Listas.agregarArts(L.cod, ['PT-0001'], { precio: 0 }), 'mayor que cero');
   falla(() => Listas.agregarArts(L.cod, ['PT-0001'], { precio: 100, pct: 10 }), 'no los dos');
@@ -131,14 +131,69 @@ prueba('un artículo no entra ni queda con precio 0 y descuento 0', () => {
 });
 prueba('la lista no se borra: se cancela con motivo y queda quién, cuándo y por qué', () => {
   const L = Listas.guardar({ nom: 'Prueba cancelar', mon: 'PEN', sede: 'YA' });
-  Listas.agregarArts(L.cod, ['PT-0003'], { precio: 50 });
-  igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 50, 'aplica antes de cancelar');
+  Listas.agregarArts(L.cod, ['PT-0003'], { precio: 90 });
+  igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 90, 'aplica antes de cancelar');
   falla(() => Listas.cancelar(L.cod, ''), 'motivo');
   Listas.cancelar(L.cod, 'Precio equivocado');
   igual([L.cancelada.u, L.cancelada.motivo, Precios.estado(L), !!Precios.lista(L.cod)], [Store.usuario().nom, 'Precio equivocado', 'Cancelada', true], 'evidencia');
   igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 124.90, 'ya no aplica');
-  falla(() => Listas.agregarArts(L.cod, ['PT-0004'], { precio: 50 }), 'cancelada');
+  falla(() => Listas.agregarArts(L.cod, ['PT-0004'], { precio: 90 }), 'cancelada');
   falla(() => Listas.guardar({ nom: 'Prueba cancelar', mon: 'PEN', activa: true }, L.cod), 'cancelada');
   igual(L.hist.map(h => h.a), ['Lista creada', 'Artículos agregados', 'Cancelada'], 'historial');
   igual(typeof Listas.quitar, 'undefined', 'no existe borrar');
+});
+
+prueba('caso 1 · una oferta no empeora el precio: mayorista en Navidad sigue con 89', () => {
+  const r = R('PT-0001', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026');
+  igual([r.precio, r.oferta, r.origen], [89.00, null, 'Mayorista'], 'mayorista');
+  igual(r.ofertas.map(o => o.nom + ' ' + o.precio), ['Navidad 99.9'], 'la oferta se encontró pero no conviene');
+  igual(P('PT-0001', 'DOC', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026'), 1020.00, 'docena mayorista');
+  igual(P('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '10/12/2026'), 99.90, 'minorista sí la aprovecha');
+});
+prueba('caso 2 · sin ambigüedad: dos listas del mismo nivel no pueden tener el mismo artículo o grupo', () => {
+  const L = Listas.guardar({ nom: 'General B', mon: 'PEN' });
+  falla(() => Listas.agregarArts(L.cod, ['PT-0003'], { precio: 100 }), 'Conflicto de precios');
+  falla(() => Listas.agregarGrupo(L.cod, 'PT', 10), 'Conflicto de precios');
+  const S = Listas.guardar({ nom: 'Solo Paraíso', mon: 'PEN', sede: 'PAR' });
+  Listas.agregarArts(S.cod, ['PT-0003'], { precio: 100 });
+  falla(() => Listas.guardar({ nom: 'Solo Paraíso', mon: 'PEN', sede: '' }, S.cod), 'Conflicto de precios');
+  Listas.guardar({ nom: 'Otra oferta', mon: 'PEN', oferta: true, desde: '01/08/2026' });
+  Listas.cancelar(L.cod, 'Prueba terminada'); Listas.cancelar(S.cod, 'Prueba terminada');
+  Listas.cancelar(Precios.listas().find(x => x.nom === 'Otra oferta').cod, 'Prueba terminada');
+});
+prueba('caso 3 · entre ofertas gana el mejor precio, no la más específica', () => {
+  const A = Listas.guardar({ nom: 'Of sede', mon: 'PEN', sede: 'YA', oferta: true, desde: '01/08/2026', hasta: '31/08/2026' }); Listas.agregarArts(A.cod, ['PT-0004'], { pct: 5 });
+  const B = Listas.guardar({ nom: 'Of general', mon: 'PEN', oferta: true, desde: '01/08/2026', hasta: '31/08/2026' }); Listas.agregarArts(B.cod, ['PT-0004'], { pct: 20 });
+  const r = R('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026');
+  igual([r.precio, r.oferta.nom, r.ofertas.length], [99.92, 'Of general', 2], 'gana −20 %');
+  Listas.cancelar(A.cod, 'Prueba terminada'); Listas.cancelar(B.cod, 'Prueba terminada');
+});
+prueba('precio obligatorio: la oferta aplica aunque sea más cara, pero nunca debajo del mínimo', () => {
+  const F = Listas.guardar({ nom: 'Precio único', mon: 'PEN', oferta: true, forzado: true, desde: '01/08/2026', hasta: '31/08/2026' });
+  Listas.agregarArts(F.cod, ['PT-0003'], { precio: 130 });
+  igual(R('PT-0003', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026').origen, 'Oferta Precio único (precio obligatorio)', 'aplica al mayorista');
+  igual(P('PT-0003', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026'), 130, 'más cara que 92');
+  Listas.fila(F.cod, 0, 'pct', 50);
+  const r = R('PT-0003', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026');
+  igual([r.precio, r.ajusteMin], [82.00, true], '92 − 50 % = 46 → mínimo 82');
+  Listas.cancelar(F.cod, 'Prueba terminada');
+});
+prueba('precio mínimo: se aplica siempre; con mínimo 0 ningún precio queda en 0', () => {
+  igual(Precios.minimo('PT-0001', 'DOC', 'PEN'), 948.00, 'mínimo de la docena = 79 × 12');
+  const r = R('PT-0002', 'DOC', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026');
+  igual([r.precio, r.ajusteMin], [948.00, true], 'docena mayorista −15 % = 867 → 948');
+  const L = Listas.guardar({ nom: 'Casi gratis', mon: 'PEN', oferta: true, desde: '01/08/2026', hasta: '31/08/2026' });
+  Listas.agregarArts(L.cod, ['SERV-VTA-0002'], { pct: 99.99 });
+  igual(Store.art('SERV-VTA-0002').precioMin, 0, 'sin mínimo');
+  igual(P('SERV-VTA-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 10.00, 'la oferta daría 0.00: no cuenta');
+  falla(() => Listas.agregarArts(L.cod, ['SERV-VTA-0001'], { precio: 0 }), 'mayor que cero');
+  Listas.cancelar(L.cod, 'Prueba terminada');
+});
+prueba('la línea guarda la evidencia del cálculo', () => {
+  dia('10/12/2026');
+  try {
+    const d = Cot.borrador('MAY-01'); Doc.cambiarCliente(d, 'CLI-000002');
+    const l = Doc.agregar(d, 'PT-0002');
+    igual([l.precio, l.calculo.base.precio, l.calculo.base.origen, l.calculo.ofertas.map(o => o.nom), l.calculo.ajusteMin, l.calculo.minimo], [79, 89, 'Mayorista', ['Navidad'], true, 79], 'evidencia');
+  } finally { BD.reloj = null; UI.reloj = null; }
 });
