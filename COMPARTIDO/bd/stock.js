@@ -67,6 +67,14 @@ const Stock = {
   deAlmacen(alm) { return BD.d.stock.filter(s => s.alm === alm && (s.act || s.comp)); },
 
   comprometer(alm, art, cant) { if (!(cant > 0)) return; const f = Stock.fila(alm, art); f.comp = BD.r4(f.comp + cant); },
+  /* compromete solo hasta lo Disponible (decisión Q2: el Disponible nunca queda negativo). Devuelve lo que sí se comprometió;
+     lo que no alcanzó no se reserva: se pide con una Solicitud de Materiales y se compromete cuando llega (Docs.reserva) */
+  comprometerHasta(alm, art, cant) {
+    if (!(cant > 0)) return 0;
+    const c = BD.r4(Math.min(cant, Math.max(0, Stock.disp(alm, art))));
+    if (c > 0) Stock.comprometer(alm, art, c);
+    return c;
+  },
   liberar(alm, art, cant) { if (!(cant > 0)) return; const f = Stock.fila(alm, art); f.comp = BD.r4(Math.max(0, f.comp - cant)); },
   /* Pedido (T1): signo +1 suma mercadería en camino al almacén, −1 la descuenta (nunca queda negativo) */
   pedido(alm, art, cant, signo) { if (!(cant > 0) || !alm) return; const f = Stock.fila(alm, art); f.ped = BD.r4(Math.max(0, (f.ped || 0) + (signo < 0 ? -1 : 1) * cant)); },

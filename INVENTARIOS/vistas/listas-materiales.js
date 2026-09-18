@@ -41,6 +41,8 @@ Vistas.pantallas(String.raw`
         <div class="field full"><label>Descripción (opcional)</label><input id="ldm-desc" placeholder="Ej. versión sin parche"></div>
         <div class="field"><label>Cantidad base <span class="hint">(las cantidades de las líneas son para esta cantidad)</span></label><input id="ldm-cant" value="1" style="text-align:right"></div>
         <div class="field"><div class="check" style="margin-top:24px"><input type="checkbox" id="ldm-pred"> Predeterminada del artículo <span class="warn" title="Solo una LDM por artículo puede ser la predeterminada: al marcarla, la anterior pasa a alternativa">⚠</span></div></div>
+        <div class="field"><label>Almacén donde entra lo producido (opcional) <span class="hint">(Producción lo propone al crear la orden)</span></label><select id="ldm-almprod"></select></div>
+        <div class="field full"><label>Observación (opcional)</label><input id="ldm-obs" placeholder="Ej. el lavado se terceriza con Lavandería Landeo; el crudo va al almacén en tránsito"></div>
       </div>
       <p class="hint" style="margin-top:8px" id="ldm-otras"></p>
     </div>

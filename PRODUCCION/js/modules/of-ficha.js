@@ -37,9 +37,9 @@ const PR02 = {
       UI.dato('Empresa', UI.esc(BD.empNom(of.emp || BD.empresaDe(of.alm)))) +
       (of.faltante ? UI.dato('Faltante del proveedor', '<b class="err-t">' + UI.q(of.faltante.cant, M.u(of.art)) + '</b><br><span class="mini">' + UI.esc(M.provNom(of.faltante.prov) || '') + ' · ' + of.faltante.f.slice(0, 10) + ' · ' + of.faltante.estado + '</span>') : '') +
       (ed ? UI.campo('Lista de materiales (opcional)', PR02.sel('<select onchange="PR02.ldm(this.value)">' + UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), of.ldm) + '</select>'), { hint: 'Al elegir una lista se copian sus líneas' })
-        : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) : 'Sin lista')) +
+        : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) + (L.obs ? '<br><span class="mini">' + UI.esc(L.obs) + '</span>' : '') : 'Sin lista')) +
       UI.dato('Origen', of.sf ? 'Solicitud <button class="btn-link" onclick="App.go(\'pr03d\',{id:\'' + of.sf + '\'})">' + of.sf + '</button>' : 'Creada en Producción') +
-      UI.dato('Fechas', 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
+      UI.dato('Fechas', (of.fechaFin ? '<b>Requerida ' + UI.esc(of.fechaFin) + '</b><br>' : '') + 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
       UI.dato('Observación', UI.esc(of.obs)) +
       (servs.length ? UI.dato('Servicio de terceros', UI.esc(M.provNom(Prod.provServicio(of))) + '<br><span class="mini">' + servs.map(c => UI.esc(Prod.nomItem(c))).join(', ') + ' · ' + UI.esc(Prod.almTercero(of)) + '</span>') : '') +
       '</div></div>' +
@@ -75,7 +75,7 @@ const PR02 = {
       cuerpo: '<div class="formgrid">' +
         UI.campo('Servicio', '<select id="te-rec" onchange="PR02.tercProv()">' + UI.opts(servs.map(r => ({ v: r.cod, t: r.cod + ' · ' + r.nom + ' · ' + UI.s(r.costo) + ' / ' + r.u })), recSel) + '</select>', { req: true, full: true }) +
         UI.campo('Proveedor', '<select id="te-prov">' + UI.opts(provs.map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), provSel) + '</select>', { req: true, hint: 'El habitual del servicio; Logística lo confirma al crear la OC' }) +
-        UI.campo('Almacén de tránsito', '<select id="te-alm">' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom + (a.transito ? ' (en tránsito)' : '') })), Prod.almTercero(of)) + '</select>', { req: true }) +
+        UI.campo('Almacén de tránsito', '<select id="te-alm">' + UI.opts(M.opcionesAlm(of.emp || BD.empresaDe(of.alm), Prod.almTercero(of)), Prod.almTercero(of)) + '</select>', { req: true, hint: 'Almacenes de la empresa de la orden; debe estar marcado «en tránsito»' }) +
         '<div class="field full"><label class="check"><input type="checkbox" id="te-sol" checked> Pedir el servicio a Logística (Solicitud de materiales)</label></div></div>' +
         '<p class="hint">' + (actual.length ? 'La orden ya lleva el servicio de su lista de materiales: se reemplaza el servicio o el proveedor (si la solicitud del servicio aún está pendiente, se anula).' :
           'Los materiales de la orden pasan al almacén de tránsito (se mandan con «Enviar al proveedor»), se quitan los recursos propios y se agrega el servicio.') + ' Lo producido vuelve a ' + of.alm + ' con el recibo. La orden pasa a Especial.</p>',

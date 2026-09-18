@@ -13,7 +13,7 @@ function renderLDM(){
   const lista=M().ldms.filter(l=>{const a=BD.art(l.art)||{};return (!g||a.grupo===g)&&(!q||Fmt.s([l.id,l.art,a.nom,l.nom,l.desc].join(' ')).includes(q))});
   document.getElementById('ldm-body').innerHTML=lista.map(d=>{
     const nA=d.items.filter(i=>i.tipo==='Artículo').length, nR=d.items.filter(i=>i.tipo==='Recurso').length;
-    return '<tr class="clickable" onclick="loadLDM(\''+d.id+'\')"><td>'+d.id+'</td><td>'+d.art+' · '+Fmt.e(BD.nomArt(d.art))+'</td><td>'+Fmt.e(d.nom||'')+'<br><span class="hint">'+Fmt.e(d.desc||'')+'</span></td>'+
+    return '<tr class="clickable" onclick="loadLDM(\''+d.id+'\')"><td>'+d.id+'</td><td>'+d.art+' · '+Fmt.e(BD.nomArt(d.art))+(d.almProd?'<br><span class="hint">entra en '+Fmt.e(d.almProd)+'</span>':'')+'</td><td>'+Fmt.e(d.nom||'')+'<br><span class="hint">'+Fmt.e(d.desc||'')+(d.obs?' · <i>'+Fmt.e(d.obs)+'</i>':'')+'</span></td>'+
      '<td>'+(d.pred?badge('Predeterminada','var(--aprobado-sol)'):hint('Alternativa'))+'</td><td style="text-align:right">'+Fmt.n(d.base||1)+'</td><td style="text-align:right">'+nA+' art. · '+nR+' rec.</td>'+
      '<td style="text-align:right">'+Explosion.pasoArt(d.art,d.id)+'</td><td><button class="btn-link" onclick="event.stopPropagation();loadLDM(\''+d.id+'\')">Abrir</button></td></tr>';
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:16px">Sin listas de materiales</td></tr>';
@@ -23,7 +23,7 @@ RENDER.gi17=renderLDM;
 
 function sigLDM(){let max=0;M().ldms.forEach(l=>{const m=/^LDM-(\d+)$/.exec(l.id);if(m)max=Math.max(max,+m[1])});return 'LDM-'+String(max+1).padStart(4,'0')}
 function nuevaLDM(art){
-  LDM_ID=""; LDM={id:sigLDM(),art:art||"",nom:"",desc:"",base:1,pred:false,items:[]};
+  LDM_ID=""; LDM={id:sigLDM(),art:art||"",nom:"",desc:"",obs:"",almProd:"",base:1,pred:false,items:[]};
   go('gi17f');
 }
 function loadLDM(id){
@@ -38,6 +38,8 @@ function renderLDMform(){
   document.getElementById('ldm-prod').disabled=!!LDM_ID;
   document.getElementById('ldm-nom').value=LDM.nom||'';
   document.getElementById('ldm-desc').value=LDM.desc||'';
+  document.getElementById('ldm-obs').value=LDM.obs||'';
+  document.getElementById('ldm-almprod').innerHTML=opcionesAlm(LDM.almProd||'',a=>!a.transito,'Sin proponer (Producción lo elige)');
   document.getElementById('ldm-cant').value=LDM.base||1;
   document.getElementById('ldm-pred').checked=!!LDM.pred;
   const otras=LDM.art?BD.ldmsDe(LDM.art).filter(l=>l.id!==LDM.id):[];
@@ -116,6 +118,9 @@ function guardarLDM(){
   LDM.art=document.getElementById('ldm-prod').value;
   LDM.nom=document.getElementById('ldm-nom').value.trim()||BD.nomArt(LDM.art);
   LDM.desc=document.getElementById('ldm-desc').value.trim();
+  LDM.obs=document.getElementById('ldm-obs').value.trim();
+  LDM.almProd=document.getElementById('ldm-almprod').value||'';
+  if(LDM.almProd&&(BD.alm(LDM.almProd)||{}).transito){toast("El almacén donde entra lo producido no puede ser uno en tránsito");return}
   LDM.base=parseFloat(document.getElementById('ldm-cant').value)||1;
   if(!LDM.art){toast("Seleccione el producto");return}
   if(!LDM.items.length){toast("Agregue al menos una línea");return}

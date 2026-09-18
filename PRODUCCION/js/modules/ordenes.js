@@ -68,12 +68,19 @@ const PR01N = {
       '<div class="card"><div class="formgrid c3">' +
       UI.campo('Artículo', '<div style="display:flex;gap:6px"><input id="n-artnom" readonly placeholder="Seleccione…" style="flex:1"><button class="btn btn-secondary btn-sm" onclick="PR01N.buscar()">🔍 Buscar</button></div>', { req: true, estilo: 'grid-column:span 2' }) +
       UI.campo('Cantidad', '<input id="n-cant" type="number" min="0" step="any" value="' + (p.cant || 1) + '" oninput="PR01N.prev()">', { req: true }) +
-      UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
-      UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom }))), '') + '</select>', { req: true }) +
-      UI.campo(R, '<input id="n-ref" value="' + UI.esc(p.ref || '') + '" placeholder="Nuevo">') +
+      UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.proponerAlm();PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
+      UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'Solo almacenes de ' + UI.esc(BD.empNom(BD.empresa)) + ' (empresa activa)' }) +
+      UI.campo(R, PR01N.selRef('n-ref', p.ref), { hint: '«Nueva» asigna un número al crear. Vincular a una existente agrupa la orden con esas órdenes para el listado por fase y el recosteo' }) +
+      UI.campo('Fecha requerida', '<input id="n-fecha" type="date">', { hint: 'Cuándo debe estar lo producido (las órdenes de una SF la heredan de la solicitud)' }) +
       UI.campo('Observación', '<input id="n-obs">') +
       '</div></div>' +
       '<div class="card" id="n-sugcard" style="display:none"><label class="check"><input type="checkbox" id="n-sug" checked onchange="PR01N.prev()"> <b>Crear también las órdenes de lo que se fabrica antes</b></label><div id="n-prev" style="margin-top:8px"></div></div>';
+  },
+  /* Q1: selector de referencia: nueva o una existente con órdenes abiertas (también lo usa PR-03) */
+  selRef(id, sel, todas) {
+    const R = Prod.nombreRef();
+    const lista = Prod.refsAbiertas(todas).map(x => ({ v: x.ref, t: 'Vincular a ' + R + ' ' + x.ref + ' · ' + (x.sf ? x.sf : 'creada en Producción') + ' · ' + x.n + ' orden(es), ' + x.abiertas + ' abierta(s) · ' + x.arts.slice(0, 2).join(', ') + (x.arts.length > 2 ? '…' : '') }));
+    return '<select id="' + id + '">' + UI.opts([{ v: '', t: 'Nueva (se asigna al crear)' }].concat(lista), sel || '') + '</select>';
   },
   despues() { PR01N.pintarArt(); },
   buscar() {
@@ -83,10 +90,12 @@ const PR01N = {
     const a = M.art(PR01N.art);
     document.getElementById('n-artnom').value = a ? a.cod + ' · ' + a.nom : '';
     const ldms = a ? M.ldmsDe(a.cod) : [];
-    document.getElementById('n-ldm').innerHTML = UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), ldms.length ? ldms[0].id : '');
-    if (a) document.getElementById('n-alm').value = Prod.almRecibo(a.cod);  /* vacío si no hay propuesta: el usuario lo elige */
+    document.getElementById('n-ldm').innerHTML = UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom + (l.almProd ? ' · entra en ' + l.almProd : '') }))), ldms.length ? ldms[0].id : '');
+    PR01N.proponerAlm();
     PR01N.prev();
   },
+  /* propone el almacén de la lista elegida (Q5) o el de la heurística; vacío si no hay propuesta: el usuario lo elige */
+  proponerAlm() { const a = M.art(PR01N.art); if (a) document.getElementById('n-alm').value = Prod.almRecibo(a.cod, UI.v('n-ldm')); },
   prev() {
     const box = document.getElementById('n-prev'), card = document.getElementById('n-sugcard'); if (!box) return;
     const ldm = UI.v('n-ldm'), cant = UI.f('n-cant'), art = PR01N.art;
@@ -94,7 +103,7 @@ const PR01N = {
     card.style.display = nec.length ? 'block' : 'none';
     if (!nec.length || !UI.chk('n-sug')) { box.innerHTML = ''; return; }
     const filas = nec.sort((a, b) => Explosion.pasoArt(a.art) - Explosion.pasoArt(b.art)).map(n => '<tr><td class="num">' + Explosion.pasoArt(n.art) + '</td><td>' + UI.esc(M.nomArt(n.art)) + '<br><span class="mini">' + n.art + '</span></td>' +
-      '<td class="num">' + UI.n(n.req, 0) + '</td><td class="num"><input type="number" min="0" step="any" id="h-' + n.art + '" value="' + n.sugerido + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px"></td><td>' + '<select id="h-alm-' + n.art + '" style="border:1px solid var(--borde);border-radius:5px;padding:5px">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod }))), n.alm) + '</select>' + '</td></tr>')
+      '<td class="num">' + UI.n(n.req, 0) + '</td><td class="num"><input type="number" min="0" step="any" id="h-' + n.art + '" value="' + n.sugerido + '" style="width:90px;text-align:right;border:1px solid var(--borde);border-radius:5px;padding:5px"></td><td>' + '<select id="h-alm-' + n.art + '" style="border:1px solid var(--borde);border-radius:5px;padding:5px">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa, n.alm, null, false)), n.alm) + '</select>' + '</td></tr>')
       .concat(['<tr><td class="num">' + Explosion.pasoArt(art, ldm) + '</td><td><b>' + UI.esc(M.nomArt(art)) + '</b></td><td class="num">' + UI.n(cant, 0) + '</td><td class="num"><b>' + UI.n(cant, 0) + '</b></td><td class="mini">' + UI.esc(UI.v('n-alm')) + '</td></tr>']);
     box.innerHTML = UI.tabla([['Fase', 'num'], 'Orden para', ['Se necesita', 'num'], ['A fabricar', 'num'], 'Entra en'], filas);
   },
@@ -102,7 +111,8 @@ const PR01N = {
     let sugeridas = null; const alms = {};
     if (UI.chk('n-sug') && UI.v('n-ldm')) { sugeridas = {}; document.querySelectorAll('#n-prev input[id^="h-"]').forEach(i => { sugeridas[i.id.slice(2)] = parseFloat(i.value) || 0; }); }
     document.querySelectorAll('#n-prev select[id^="h-alm-"]').forEach(s => { alms[s.id.slice(6)] = s.value; });
-    const r = App.accion(() => Prod.crearManual({ art: PR01N.art, ldm: UI.v('n-ldm'), cant: UI.f('n-cant'), alm: UI.v('n-alm'), ref: UI.v('n-ref'), obs: UI.v('n-obs'), sugeridas, alms }),
+    const iso = UI.v('n-fecha'), fechaFin = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '';
+    const r = App.accion(() => Prod.crearManual({ art: PR01N.art, ldm: UI.v('n-ldm'), cant: UI.f('n-cant'), alm: UI.v('n-alm'), ref: UI.v('n-ref'), obs: UI.v('n-obs'), fechaFin, sugeridas, alms }),
       x => x.length + ' orden(es) creada(s) · ' + Prod.nombreRef() + ' ' + x[0].ref);
     if (r) App.go('pr02', { id: r[0].id });
   }

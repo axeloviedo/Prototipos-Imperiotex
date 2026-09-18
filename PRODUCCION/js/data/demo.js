@@ -112,7 +112,7 @@ const Demo = {
 
     /* ---------- 2) SF azul: fabricada completa con lavado tercerizado ---------- */
     const sf1 = Demo._sf('02/07/2026 10:00', '02/07/2026 15:30', '03/07/2026 09:00',
-      { mes: 'Jul 2026', almDestino: 'SB-CENTRAL', fechaReq: '25/07/2026', obs: 'Campaña de julio: Zuleika azul', lineas: AZUL });
+      { almDestino: 'SB-CENTRAL', fechaReq: '25/07/2026', obs: 'Campaña de julio: Zuleika azul', lineas: AZUL });
     Demo._en('06/07/2026 09:30', 'produccion');
     const c1 = Prod.generarDesdeSF(sf1.id, null, Demo._almsProceso()); BD.guardar();
     const f1 = art => c1.find(o => o.art === art);
@@ -135,7 +135,7 @@ const Demo = {
 
     /* ---------- 3) SF negro: en curso ---------- */
     const sf2 = Demo._sf('08/07/2026 11:00', '09/07/2026 10:00', '09/07/2026 12:00',
-      { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '05/08/2026', obs: 'Reposición Zuleika negro', lineas: NEGRO });
+      { almDestino: 'SB-CENTRAL', fechaReq: '05/08/2026', obs: 'Reposición Zuleika negro', lineas: NEGRO });
     /* crudo sin color: Producción adelanta 10 crudos talla 28 (orden manual con sus piezas cortadas); la SF negro los usa y fabrica solo 20 */
     Demo._en('10/07/2026 10:00', 'produccion');
     const adelanto = Prod.crearManual({ art: 'PPT-0003', ldm: BD.ldmPred('PPT-0003').id, cant: 10, alm: 'SB-ZARATE-PP', sugeridas: { 'PPT-0001': 10 }, alms: Demo._almsProceso(), obs: 'Adelanto de crudo talla 28 para cualquier color' });
@@ -168,7 +168,7 @@ const Demo = {
 
     /* ---------- 4) SF de los cuatro terminados: aprobada, sin órdenes ---------- */
     Demo._sf('20/07/2026 10:00', '22/07/2026 09:00', '22/07/2026 11:30',
-      { mes: 'Ago 2026', almDestino: 'SB-CENTRAL', fechaReq: '20/08/2026', obs: 'Campaña de agosto: surtido Zuleika', lineas: TODOS });
+      { almDestino: 'SB-CENTRAL', fechaReq: '20/08/2026', obs: 'Campaña de agosto: surtido Zuleika', lineas: TODOS });
 
     BD.reloj = null;
     BD.usuario = usuarioAntes;

@@ -59,7 +59,7 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `atributos` | `{nom:'Color', vals:[...]}` | plantilla + valores |
 | `tiposCodigoBarra` | `'GTIN / EAN'` … | plantilla |
 | `articulos` | ver 3.2 | 101 MP + 17 SRV de plantilla; 6 avíos MP-0102..0107 y 16 ZULEIKA de complemento |
-| `ldms` | `{id:'LDM-0001', art, nom, desc, base, pred, items:[{tipo:'Artículo', cod, cant, alm, metodo:'Manual'\|'Notificación'} \| {tipo:'Recurso', cod, cant, metodo?} \| {tipo:'Texto', txt}]}` | complemento |
+| `ldms` | `{id:'LDM-0001', art, nom, desc, obs?, almProd? (almacén donde entra lo producido, opcional, Q5), base, pred, items:[{tipo:'Artículo', cod, cant, alm, metodo:'Manual'\|'Notificación'} \| {tipo:'Recurso', cod, cant, metodo?} \| {tipo:'Texto', txt}]}` | complemento |
 | `tiposRecurso` | `{cod:'TRC-0001', nom:'RECURSO HUMANO', clase:'humano'\|'servicio'?}` | complemento |
 | `recursos` | `{cod, nom, tipo, activo, u, costo (estándar), cuenta (mayor), prov?}` — un servicio de terceros usa **el mismo código del artículo SRV** | complemento |
 | `operarios` | `{cod:'OPE-001', nom, rec, activo}` | complemento |
@@ -108,7 +108,7 @@ Al crear órdenes, Producción junta en una sola orden de crudo (y de piezas cor
 
 ### 3.4 Documentos (`Docs`, siempre guardan)
 
-**Solicitud de Fabricación** `sfs`: `{id:'SF-000001', fecha, mes, solic, almDestino, fechaReq, est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs:[], ref, comprometido:[{alm, art, cant}], hist}`
+**Solicitud de Fabricación** `sfs`: `{id:'SF-000001', fecha, solic, almDestino, fechaReq (obligatoria, Q6), est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs:[], ref, comprometido:[{alm, art, req, cant}], hist}`
 Estados: Borrador → Pendiente Aprobar → Aprobada (V°B° Logística + Gerencia; compromete la materia prima bruta) → Convertida en Orden (Producción crea las órdenes) → Fabricada · Rechazada.
 `Docs.sf.crear/guardar/enviar/darVB/aprobar/rechazar/devolver/convertir(id, ofs, ref)/fabricada(id)`.
 

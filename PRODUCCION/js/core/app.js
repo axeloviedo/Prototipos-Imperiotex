@@ -49,9 +49,22 @@ const App = {
     }
   },
 
+  /* empresa activa (Q4): los almacenes que se ofrecen al crear órdenes y solicitudes son los de esta empresa; la orden guarda la de su almacén (N3) */
+  empresa(abrev) {
+    const e = BD.emp(abrev); if (!e) return;
+    BD.empresa = e.abrev;
+    const logo = document.querySelector('#sidebar .logo b'); if (logo) logo.textContent = e.nom + (e.marca && e.marca !== e.nom ? ' · ' + e.marca : '');
+    UI.toast('Empresa activa: ' + e.nom + ' · los almacenes se filtran por empresa');
+    App.refrescar();
+  },
+  pintarEmpresas() {
+    const s = document.getElementById('selEmpresa'); if (!s) return;
+    s.innerHTML = UI.opts(BD.d.maestros.empresas.map(e => ({ v: e.abrev, t: e.nom })), BD.empresa);
+  },
   iniciar() {
     BD.iniciar('USER05 · Producción');
     BDSelector.montar(document.getElementById('bd-selector'));
+    App.pintarEmpresas();
     /* otro módulo guardó en otra pestaña: se vuelve a pintar la pantalla actual (sin perder el modal abierto) */
     BD.alCambiar(() => { if (App.actual && !document.querySelector('#modales .overlay')) App.refrescar(); });
     App.nav();

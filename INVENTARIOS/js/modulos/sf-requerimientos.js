@@ -64,8 +64,11 @@ function renderPanelStock(){
 function renderComprometidoSP(){
   const s=SP_ACT(), card=document.getElementById('sp-comp-card'), c=(s&&s.comprometido)||[];
   card.style.display=c.length?'block':'none';
-  document.getElementById('sp-comp').innerHTML=c.map(x=>'<tr><td>'+x.art+' · '+Fmt.e(BD.nomArt(x.art))+'</td><td>'+x.alm+'</td><td style="text-align:right">'+Fmt.q(x.cant,BD.u(x.art))+'</td></tr>').join('')+
-    (s.est!=='Aprobada'?'<tr><td colspan="3" class="hint">'+(s.est==='Convertida en Orden'||s.est==='Fabricada'?'Liberado al crear las órdenes: cada orden compromete lo suyo en Producción.':'')+'</td></tr>':'');
+  document.getElementById('sp-comp').innerHTML=c.map(x=>{const req=x.req!=null?x.req:x.cant, falta=BD.r4(req-x.cant);
+    return '<tr><td>'+x.art+' · '+Fmt.e(BD.nomArt(x.art))+'</td><td>'+x.alm+'</td><td style="text-align:right">'+Fmt.q(req,BD.u(x.art))+'</td><td style="text-align:right;font-weight:600">'+Fmt.n(x.cant)+'</td>'+
+      '<td style="text-align:right">'+(falta>0.00005?'<span style="color:var(--cancelada);font-weight:600">'+Fmt.n(falta)+'</span>':hint('-'))+'</td></tr>'}).join('')+
+    (s.est!=='Aprobada'?'<tr><td colspan="5" class="hint">'+(s.est==='Convertida en Orden'||s.est==='Fabricada'?'Liberado al crear las órdenes: cada orden compromete lo suyo en Producción.':'')+'</td></tr>':
+      (c.some(x=>(x.req!=null?x.req:x.cant)-x.cant>0.00005)?'<tr><td colspan="5" class="hint">Solo se compromete lo que hay en el almacén (el Disponible nunca queda negativo). Lo que falta se pide con la Solicitud de Materiales y se compromete para esta solicitud cuando llega la compra o la transferencia.</td></tr>':''));
 }
 function verificarStock(){
   const mp=reqMP();

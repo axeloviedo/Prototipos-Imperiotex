@@ -19,19 +19,42 @@ const Prod = {
   MODULO: 'Producción',
   _hist(of, a, d) { of.hist.push({ f: UI.ahora(), a, d: d || '', u: BD.usuario }); },
   nombreRef() { return (BD.d.config || {}).nombreRef || 'N° Referencia'; },
-  /* almacén propuesto donde entra lo producido: el que usan las listas de materiales para tomarlo. Sin propuesta queda vacío
-     y el usuario debe elegirlo (decisión L1: el artículo no tiene almacén por defecto y nunca se asume SB-CENTRAL) */
-  almRecibo(art) { return Explosion.almDe(art) || ''; },
+  /* almacén propuesto donde entra lo producido (Q5): el que indica la lista de materiales (opcional, GI-17) y, si no, el que usan
+     otras listas para tomar el artículo. Sin propuesta queda vacío y el usuario debe elegirlo (L1/L7: nunca se asume SB-CENTRAL) */
+  almRecibo(art, ldmId) {
+    const L = ldmId ? M.ldm(ldmId) : M.ldmPred(art);
+    if (L && L.almProd && M.alm(L.almProd)) return L.almProd;
+    return Explosion.almDe(art) || '';
+  },
   /* almacén (no de tránsito) donde el artículo tiene más stock: origen del envío al proveedor del servicio */
   almStock(art) { const s = BD.d.stock.filter(x => x.art === art && x.act > 0 && !(M.alm(x.alm) || {}).transito).sort((a, b) => b.act - a.act)[0]; return s ? s.alm : ''; },
   /* el nombre de la referencia es solo la etiqueta del campo (un texto por empresa): se edita desde PR-04 */
   renombrarRef(nom) { nom = String(nom || '').trim(); if (!nom) throw new Error('Indique el nombre'); (BD.d.config = BD.d.config || {}).nombreRef = nom; return nom; },
   nuevaRef() { return BD.sig('ref', '', 4); },
+  /* Q1: referencias a las que se puede vincular una orden nueva: las que tienen al menos una orden abierta, con su origen y avance */
+  refsAbiertas(todas) {
+    return Explosion.refs().map(ref => {
+      const ofs = BD.d.ofs.filter(o => o.ref === ref && o.estado !== 'Cancelado'), sf = ofs.find(o => o.sf);
+      return { ref, sf: sf ? sf.sf : '', n: ofs.length, abiertas: ofs.filter(o => Prod.abierta(o)).length, arts: [...new Set(ofs.map(o => M.nomArt(o.art)))] };
+    }).filter(x => todas || x.abiertas > 0);
+  },
+  /* referencia elegida por el usuario: vacía = nueva; si indica una debe existir (no se crean referencias «a mano») */
+  _ref(ref) {
+    ref = String(ref || '').trim();
+    if (!ref) return Prod.nuevaRef();
+    if (!Explosion.refs().includes(ref)) throw new Error('No existe ' + Prod.nombreRef() + ' ' + ref + ': elija una referencia existente o deje «Nueva»');
+    return ref;
+  },
   operario(cod) { return BD.operario(cod); },
   abierta(of) { return of.estado === 'Planificado' || of.estado === 'Liberado'; },
   editable(of) { return of.origen !== 'Solicitud' && of.estado === 'Planificado'; },
   /* almacén donde está comprometida la línea (en una fase tercerizada a mano, el propio hasta que se envía) */
   almComp(m) { return m.almPropio || m.alm; },
+  /* lo que ESTA orden puede consumir de la línea (Q3): el Disponible del almacén (nadie más lo reservó) + lo que la propia orden ya comprometió ahí.
+     En una fase tercerizada a mano el compromiso está en el almacén propio, no en el de tránsito donde se consume. */
+  dispPara(m) { return UI.r4(Math.max(0, Stock.disp(m.alm, m.cod)) + (m.almPropio ? 0 : m.comp)); },
+  /* lo que a la línea le falta reservar y aún no se pidió a Logística: planificado − consumido − comprometido − pedido (en camino) */
+  faltaPedir(of, m) { return m.fab ? 0 : UI.r4(Math.max(0, m.plan - m.consumido - m.comp - Prod.pedido(of, m.cod, m.alm))); },
   pendiente(of) { return UI.r4(Math.max(0, of.cant - of.prod)); },
   tieneMovimientos(of) { return of.emisiones.length > 0 || of.recibos.length > 0; },
   esServicio(cod) { return BD.esServicio(cod); },
@@ -60,7 +83,7 @@ const Prod = {
     if (o.ldm && (!L || L.art !== o.art)) throw new Error('El artículo no tiene esa lista de materiales');
     if (!M.art(o.art)) throw new Error('Elija el artículo');
     const cant = UI.r4(o.cant);
-    const alm = o.alm || Prod.almRecibo(o.art);
+    const alm = o.alm || Prod.almRecibo(o.art, L ? L.id : '');
     if (!alm) throw new Error('Elija el almacén donde entra lo producido de ' + M.nomArt(o.art));
     if (!M.alm(alm)) throw new Error('Almacén no válido: ' + alm);
     const of = {
@@ -70,9 +93,15 @@ const Prod = {
       mats: L ? Explosion.materiales(L.id, cant) : [], recs: L ? Explosion.recursos(L.id, cant) : [], textos: L ? Explosion.textos(L.id) : [],
       emisiones: [], recibos: [], compras: [], envios: [], tercero: null, adj: [], hist: [], costo: { mat: 0, rec: 0, serv: 0 }, absorbido: 0
     };
+    Prod._validarEmpresa(of);
     BD.d.ofs.unshift(of);
     Prod._hist(of, 'Orden creada', of.tipofab + ' · ' + (of.sf ? 'desde ' + of.sf : 'en Producción') + ' · ' + Prod.nombreRef() + ' ' + of.ref);
     return of;
+  },
+  /* Q4: los materiales de la orden se toman de almacenes de la MISMA empresa que el almacén donde entra lo producido */
+  _validarEmpresa(of) {
+    const ajenos = of.mats.filter(m => m.alm && BD.empresaDe(m.alm) !== of.emp);
+    if (ajenos.length) throw new Error('La orden entra en ' + of.alm + ' (' + BD.empNom(of.emp) + ') pero toma material de otra empresa: ' + ajenos.map(m => M.nomArt(m.cod) + ' en ' + m.alm).join(', ') + '. Cambie el almacén de esas líneas o el de la orden');
   },
   _crearSugeridas(sugeridas, nec, base, alms) {
     return Object.keys(sugeridas || {}).filter(art => (Number(sugeridas[art]) || 0) > 0).map(art => {
@@ -85,7 +114,7 @@ const Prod = {
   crearManual(o) {
     if (!o.art) throw new Error('Elija el artículo');
     if (!(o.cant > 0)) throw new Error('Indique la cantidad a fabricar');
-    const ref = String(o.ref || '').trim() || Prod.nuevaRef();
+    const ref = Prod._ref(o.ref);
     const nec = o.ldm && o.sugeridas ? Explosion.necesidades([{ art: o.art, cant: o.cant, ldm: o.ldm }]) : [];
     const base = { ref, origen: 'Manual', fechaFin: o.fechaFin, obs: o.obs };
     return [Prod.crearOF(Object.assign({}, base, { art: o.art, ldm: o.ldm, cant: o.cant, alm: o.alm }))].concat(o.ldm ? Prod._crearSugeridas(o.sugeridas, nec, base, o.alms) : []);
@@ -94,7 +123,8 @@ const Prod = {
   /* ---------- Solicitud de Fabricación (aprobada en Inventarios GI-23): sus órdenes nacen Liberadas ---------- */
   sfsProduccion() { return BD.d.sfs.filter(s => s.est === 'Aprobada' || s.est === 'Convertida en Orden' || s.est === 'Fabricada'); },
   firmasSF(sf) { return (sf.hist || []).filter(h => /V°B°|Aprobación/.test(h.a)).map(h => h.a + ' ' + String(h.f).slice(0, 10)).join(' · '); },
-  generarDesdeSF(sfId, sugeridas, alms) {
+  /* ref (Q1): vacío crea una referencia nueva; con una existente las órdenes se suman a esa referencia (p. ej. otra SF de la misma campaña) */
+  generarDesdeSF(sfId, sugeridas, alms, ref) {
     const sf = BD.sf(sfId);
     if (!sf) throw new Error('Solicitud no encontrada');
     if (sf.est !== 'Aprobada') throw new Error('La solicitud ' + sf.id + ' está ' + sf.est + ': solo se crean órdenes de una solicitud Aprobada');
@@ -105,7 +135,7 @@ const Prod = {
     const alm = sf.almDestino && M.alm(sf.almDestino) ? sf.almDestino : '';
     const sinLista = sf.lineas.filter(l => !l.ldm || !M.ldm(l.ldm));
     if (sinLista.length) throw new Error('Sin lista de materiales: ' + sinLista.map(l => M.nomArt(l.art)).join(', '));
-    const ref = Prod.nuevaRef();
+    ref = Prod._ref(ref);
     const base = { ref, origen: 'Solicitud', sf: sf.id, fechaFin: sf.fechaReq || '' };
     const creadas = sf.lineas.map(l => Prod.crearOF(Object.assign({}, base, { art: l.art, ldm: l.ldm, cant: l.cant, alm: alm || Prod.almRecibo(l.art) }))).concat(Prod._crearSugeridas(sug, nec, base, alms));
     /* la solicitud libera lo que comprometió al aprobarse; cada orden compromete lo suyo al liberarse (sin duplicar ni perder compromiso) */
@@ -137,6 +167,7 @@ const Prod = {
     if (!of.mats.length && !of.recs.length) throw new Error('Agregue al menos un material o recurso antes de liberar');
     const sinAlm = of.mats.filter(m => !m.alm);
     if (sinAlm.length) throw new Error('Elija el almacén de: ' + sinAlm.map(m => M.nomArt(m.cod)).join(', '));
+    Prod._validarEmpresa(of);
     Prod._comprometer(of);
     of.estado = 'Liberado'; of.fechaLib = UI.ahora();
     Prod._hist(of, 'Orden liberada', detalle || '');
@@ -204,7 +235,7 @@ const Prod = {
     if (tipo === 'Texto') { of.textos[i] = valor; return; }
     const l = tipo === 'Recurso' ? of.recs[i] : of.mats[i];
     if (campo === 'cons') { const v = parseFloat(valor); if (!(v >= 0)) throw new Error('Cantidad no válida'); l.cons = UI.r4(v); }
-    if (campo === 'alm') { if (!M.alm(valor)) throw new Error('Almacén no válido'); l.alm = valor; }
+    if (campo === 'alm') { if (!M.alm(valor)) throw new Error('Almacén no válido'); if (BD.empresaDe(valor) !== of.emp) throw new Error(valor + ' es de otra empresa: la orden entra en ' + of.alm + ' (' + BD.empNom(of.emp) + ')'); l.alm = valor; }
     if (campo === 'metodo') l.metodo = valor === 'Notificación' ? 'Notificación' : 'Manual';
     Prod._recalc(of);
   },
@@ -235,10 +266,18 @@ const Prod = {
   solicitudesDe(of) { return BD.d.sols.filter(s => s.of === of.id); },
   nomItem(cod) { const R = M.rec(cod); return R ? R.nom : M.nomArt(cod); },
   uItem(cod) { const R = M.rec(cod); return R ? R.u : M.u(cod); },
-  /* cantidad ya pedida (línea pendiente o en compra) de un artículo hacia un almacén para la orden */
+  /* cantidad pedida a Logística y aún no llegada (línea Pendiente, En compra o En transferencia) de un artículo hacia un almacén para la orden:
+     es el «Pedido» de la orden; al llegar se compromete para ella (Docs.reserva) */
   pedido(of, art, alm) {
     return UI.r4(Prod.solicitudesDe(of).filter(s => s.estado !== 'Anulada' && s.estado !== 'Rechazada' && s.destino === alm)
-      .reduce((a, s) => a + s.lineas.filter(l => l.art === art && (l.estado === 'Pendiente' || l.estado === 'En compra')).reduce((z, l) => z + l.cant, 0), 0));
+      .reduce((a, s) => a + s.lineas.filter(l => l.art === art && (l.estado === 'Pendiente' || l.estado === 'En compra' || l.estado === 'En transferencia'))
+        .reduce((z, l) => z + UI.r4(l.cant - (l.recibido || 0)), 0), 0));
+  },
+  /* pide a Logística todo lo que a la orden le falta reservar (una solicitud por almacén) */
+  solicitarLoQueFalta(of) {
+    const items = of.mats.filter(m => !m.fab).map(m => ({ art: m.cod, cant: Prod.faltaPedir(of, m), destino: m.alm })).filter(x => x.cant > 0);
+    if (!items.length) throw new Error('La orden no tiene materiales por pedir: todo está comprometido o ya solicitado');
+    return Prod.solicitarFaltantes(of, items, 'Materia prima sin cobertura para la orden');
   },
   /* items: [{art, cant, destino}] → una solicitud por almacén destino, enviada a Logística; las líneas nacen sin propósito */
   solicitarFaltantes(of, items, motivo) {
@@ -458,10 +497,13 @@ const Prod = {
       return { i: x.i, cod: x.r.cod, u: x.r.u, cant: x.cant, valor, operarios: x.operarios || [] };
     });
   },
-  /* d: {fecha, obs, mats:{i: cant}, recs:{i: {cant, operarios:[{ope, horas}]}}}; lo que falta se pide con una Solicitud de materiales */
+  /* d: {fecha, obs, mats:{i: cant}, recs:{i: {cant, operarios:[{ope, horas}]}}, parcial}.
+     Q3: solo se emite lo que la orden puede consumir (Disponible + su propio comprometido): lo reservado por otros documentos no se toca.
+     Si no alcanza, la emisión se BLOQUEA; con parcial = true (botón «Emitir lo disponible y pedir el resto») se emite lo que hay
+     y la diferencia se pide a Logística con una Solicitud de materiales. */
   emitir(of, d) {
     if (of.estado !== 'Liberado') throw new Error('Libere la orden antes de emitir');
-    const mats = [], recs = [], faltan = [];
+    const mats = [], recs = [], faltan = [], cortos = [];
     Object.keys(d.mats || {}).forEach(k => {
       const v = d.mats[k], i = Number(k), m = of.mats[i];
       if (!m || v == null || v === '') return;
@@ -469,10 +511,11 @@ const Prod = {
       if (!(parseFloat(v) >= 0)) throw new Error('Cantidad no válida en ' + M.nomArt(m.cod));
       if (!cant) return;
       if (m.metodo === 'Notificación') throw new Error(M.nomArt(m.cod) + ' es de método Notificación: se consume al registrar el recibo');
-      const sale = UI.r4(Math.min(cant, Math.max(0, Stock.act(m.alm, m.cod)))), falta = UI.r4(cant - sale);
-      if (falta > 0) faltan.push({ art: m.cod, cant: falta, destino: m.alm });
+      const cap = Prod.dispPara(m), sale = UI.r4(Math.min(cant, cap)), falta = UI.r4(cant - sale);
+      if (falta > 0) { faltan.push({ art: m.cod, cant: falta, destino: m.alm }); cortos.push(Prod.textoCorto(m, cant)); }
       if (sale > 0) mats.push({ i, m, cant: sale });
     });
+    if (cortos.length && !d.parcial) throw new Error('No se puede emitir. ' + cortos.join('; ') + '. Emita menos o use «Emitir lo disponible y pedir el resto»');
     Object.keys(d.recs || {}).forEach(k => {
       const x = d.recs[k] || {}, i = Number(k), r = of.recs[i];
       if (!r) return;
@@ -500,11 +543,16 @@ const Prod = {
     if (em) em.sols = sols.map(s => s.id);
     return { em, sols };
   },
-  /* líneas Notificación que no alcanzan para recibir "cant" (agrupadas por almacén y artículo) */
+  /* explicación de por qué una línea no alcanza: lo que hay, lo que reservaron otros y lo que la orden puede usar */
+  textoCorto(m, cant) {
+    const act = Stock.act(m.alm, m.cod), otros = UI.r4(Math.max(0, Stock.comp(m.alm, m.cod) - (m.almPropio ? 0 : m.comp)));
+    return M.nomArt(m.cod) + ' en ' + m.alm + ': pide ' + UI.n(cant) + ' ' + m.u + ' y la orden puede usar ' + UI.n(Prod.dispPara(m)) + ' (hay ' + UI.n(act) + (otros > 0 ? ', ' + UI.n(otros) + ' comprometidos por otros documentos' : '') + ')';
+  },
+  /* líneas Notificación que no alcanzan para recibir "cant" (agrupadas por almacén y artículo), contra lo que la orden puede usar (Q3) */
   faltantesNotificacion(of, cant) {
-    const req = {};
-    of.mats.forEach(m => { if (m.metodo !== 'Notificación') return; const k = m.alm + '|' + m.cod; req[k] = UI.r4((req[k] || 0) + m.cons * cant); });
-    return Object.keys(req).map(k => { const p = k.split('|'), act = Stock.act(p[0], p[1]); return { alm: p[0], cod: p[1], req: req[k], act, falta: UI.r4(req[k] - Math.max(0, act)) }; })
+    const req = {}, propio = {};
+    of.mats.forEach(m => { if (m.metodo !== 'Notificación') return; const k = m.alm + '|' + m.cod; req[k] = UI.r4((req[k] || 0) + m.cons * cant); propio[k] = UI.r4((propio[k] || 0) + (m.almPropio ? 0 : m.comp)); });
+    return Object.keys(req).map(k => { const p = k.split('|'), act = Stock.act(p[0], p[1]), disp = UI.r4(Math.max(0, Stock.disp(p[0], p[1])) + propio[k]); return { alm: p[0], cod: p[1], req: req[k], act, disp, falta: UI.r4(req[k] - disp) }; })
       .filter(x => x.falta > 0.00005);
   },
   estimarRecibo(of, cant) {
@@ -522,7 +570,7 @@ const Prod = {
     const pend = Prod.pendiente(of);
     if (cant > pend + 0.0001) throw new Error('Quedan por recibir ' + UI.n(pend, 0) + ' ' + M.u(of.art) + ': no se pueden recibir ' + UI.n(cant, 0));
     const falt = Prod.faltantesNotificacion(of, cant);
-    if (falt.length) throw new Error('Falta stock para el consumo por notificación: ' + falt.map(f => M.nomArt(f.cod) + ' en ' + f.alm + ' (faltan ' + UI.n(f.falta) + ')').join('; ') + '. Solicite los materiales a Logística');
+    if (falt.length) throw new Error('Falta stock para el consumo por notificación: ' + falt.map(f => M.nomArt(f.cod) + ' en ' + f.alm + ' (la orden puede usar ' + UI.n(f.disp) + ', faltan ' + UI.n(f.falta) + ')').join('; ') + '. Solicite los materiales a Logística');
     const rc = { n: of.recibos.length + 1, f: d.fecha || UI.ahora(), cant, obs: d.obs || '', lineas: [], recursos: [], movs: [], costo: 0, cu: 0 };
     const wip = Prod.enProceso(of), factor = cant >= pend - 0.0001 ? 1 : cant / pend;
     rc.lineas = Prod._consumir(of, of.mats.map((m, i) => ({ i, m, cant: UI.r4(m.cons * cant) })).filter(x => x.m.metodo === 'Notificación' && x.cant > 0),

@@ -48,7 +48,7 @@ const PR05 = {
       lg: true, titulo: 'Nueva solicitud de materiales <span class="code">PR-05a</span>',
       cuerpo: '<div class="formgrid c3">' +
         UI.campo('Orden de fabricación', '<select id="ns-of">' + UI.opts(ofs.map(o => ({ v: o.id, t: o.id + ' · ' + M.nomArt(o.art) })), '', 'Sin orden') + '</select>', { hint: 'Opcional' }) +
-        UI.campo('Almacén destino', '<select id="ns-dest">' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), 'SB-ZARATE-MP') + '</select>', { req: true, hint: 'A dónde debe llegar' }) +
+        UI.campo('Almacén destino', '<select id="ns-dest">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'A dónde debe llegar · almacenes de ' + UI.esc(BD.empNom(BD.empresa)) }) +
         UI.campo('Motivo', '<input id="ns-mot" placeholder="Ej. Reposición de avíos en planta">') + '</div>' +
         '<div class="sec">Qué necesita <div style="flex:1"></div><button class="btn btn-secondary btn-sm" onclick="PR05.leer();PR05.nuevas.push({art:\'\',cant:\'\'});PR05.pintarNuevas()">+ Línea</button></div><div id="ns-lineas"></div>' +
         '<p class="hint">Solo se indica qué y a dónde, sin propósito: Logística decide en GI-13 si cada línea se transfiere o se compra.</p>',
