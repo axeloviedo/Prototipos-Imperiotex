@@ -19,9 +19,13 @@ const Prod = {
   MODULO: 'Producción',
   _hist(of, a, d) { of.hist.push({ f: UI.ahora(), a, d: d || '', u: BD.usuario }); },
   nombreRef() { return (BD.d.config || {}).nombreRef || 'N° Referencia'; },
-  /* almacén propuesto donde entra lo producido: el que usan las listas de materiales para tomarlo. Sin propuesta queda vacío
-     y el usuario debe elegirlo (decisión L1: el artículo no tiene almacén por defecto y nunca se asume SB-CENTRAL) */
-  almRecibo(art) { return Explosion.almDe(art) || ''; },
+  /* almacén propuesto donde entra lo producido (Q5): el que indica la lista de materiales (opcional, GI-17) y, si no, el que usan
+     otras listas para tomar el artículo. Sin propuesta queda vacío y el usuario debe elegirlo (L1/L7: nunca se asume SB-CENTRAL) */
+  almRecibo(art, ldmId) {
+    const L = ldmId ? M.ldm(ldmId) : M.ldmPred(art);
+    if (L && L.almProd && M.alm(L.almProd)) return L.almProd;
+    return Explosion.almDe(art) || '';
+  },
   /* almacén (no de tránsito) donde el artículo tiene más stock: origen del envío al proveedor del servicio */
   almStock(art) { const s = BD.d.stock.filter(x => x.art === art && x.act > 0 && !(M.alm(x.alm) || {}).transito).sort((a, b) => b.act - a.act)[0]; return s ? s.alm : ''; },
   /* el nombre de la referencia es solo la etiqueta del campo (un texto por empresa): se edita desde PR-04 */
@@ -79,7 +83,7 @@ const Prod = {
     if (o.ldm && (!L || L.art !== o.art)) throw new Error('El artículo no tiene esa lista de materiales');
     if (!M.art(o.art)) throw new Error('Elija el artículo');
     const cant = UI.r4(o.cant);
-    const alm = o.alm || Prod.almRecibo(o.art);
+    const alm = o.alm || Prod.almRecibo(o.art, L ? L.id : '');
     if (!alm) throw new Error('Elija el almacén donde entra lo producido de ' + M.nomArt(o.art));
     if (!M.alm(alm)) throw new Error('Almacén no válido: ' + alm);
     const of = {

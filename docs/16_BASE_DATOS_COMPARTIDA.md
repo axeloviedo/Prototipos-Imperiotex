@@ -59,7 +59,7 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `atributos` | `{nom:'Color', vals:[...]}` | plantilla + valores |
 | `tiposCodigoBarra` | `'GTIN / EAN'` … | plantilla |
 | `articulos` | ver 3.2 | 101 MP + 17 SRV de plantilla; 6 avíos MP-0102..0107 y 16 ZULEIKA de complemento |
-| `ldms` | `{id:'LDM-0001', art, nom, desc, base, pred, items:[{tipo:'Artículo', cod, cant, alm, metodo:'Manual'\|'Notificación'} \| {tipo:'Recurso', cod, cant, metodo?} \| {tipo:'Texto', txt}]}` | complemento |
+| `ldms` | `{id:'LDM-0001', art, nom, desc, obs?, almProd? (almacén donde entra lo producido, opcional, Q5), base, pred, items:[{tipo:'Artículo', cod, cant, alm, metodo:'Manual'\|'Notificación'} \| {tipo:'Recurso', cod, cant, metodo?} \| {tipo:'Texto', txt}]}` | complemento |
 | `tiposRecurso` | `{cod:'TRC-0001', nom:'RECURSO HUMANO', clase:'humano'\|'servicio'?}` | complemento |
 | `recursos` | `{cod, nom, tipo, activo, u, costo (estándar), cuenta (mayor), prov?}` — un servicio de terceros usa **el mismo código del artículo SRV** | complemento |
 | `operarios` | `{cod:'OPE-001', nom, rec, activo}` | complemento |

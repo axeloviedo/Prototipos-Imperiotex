@@ -27,7 +27,7 @@ const PR03D = {
     if (sf.est === 'Aprobada' && !sf.ofs.length) {
       const nec = Explosion.necesidades(sf.lineas.map(l => ({ art: l.art, cant: l.cant, ldm: l.ldm })));
       const filas = nec.map(n => ({ fase: Explosion.pasoArt(n.art), art: n.art, need: n.req, input: true, val: n.sugerido, alm: n.alm }))
-        .concat(sf.lineas.map(l => ({ fase: Explosion.pasoArt(l.art, l.ldm), art: l.art, need: l.cant, input: false, val: l.cant, alm: sf.almDestino || Prod.almRecibo(l.art) })))
+        .concat(sf.lineas.map(l => ({ fase: Explosion.pasoArt(l.art, l.ldm), art: l.art, need: l.cant, input: false, val: l.cant, alm: sf.almDestino || Prod.almRecibo(l.art, l.ldm) })))
         .sort((a, b) => a.fase - b.fase || a.art.localeCompare(b.art));
       bloque = '<div class="sec">Órdenes que se van a crear (nacen Liberadas)<div style="flex:1"></div>' +
         '<span class="mini">' + UI.esc(R) + '</span> ' + PR01N.selRef('sf-ref', '') + ' <button class="btn btn-primary" onclick="PR03D.generar()">Crear órdenes</button></div>' +

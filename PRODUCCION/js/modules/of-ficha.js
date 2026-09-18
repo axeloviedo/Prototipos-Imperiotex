@@ -37,7 +37,7 @@ const PR02 = {
       UI.dato('Empresa', UI.esc(BD.empNom(of.emp || BD.empresaDe(of.alm)))) +
       (of.faltante ? UI.dato('Faltante del proveedor', '<b class="err-t">' + UI.q(of.faltante.cant, M.u(of.art)) + '</b><br><span class="mini">' + UI.esc(M.provNom(of.faltante.prov) || '') + ' · ' + of.faltante.f.slice(0, 10) + ' · ' + of.faltante.estado + '</span>') : '') +
       (ed ? UI.campo('Lista de materiales (opcional)', PR02.sel('<select onchange="PR02.ldm(this.value)">' + UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), of.ldm) + '</select>'), { hint: 'Al elegir una lista se copian sus líneas' })
-        : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) : 'Sin lista')) +
+        : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) + (L.obs ? '<br><span class="mini">' + UI.esc(L.obs) + '</span>' : '') : 'Sin lista')) +
       UI.dato('Origen', of.sf ? 'Solicitud <button class="btn-link" onclick="App.go(\'pr03d\',{id:\'' + of.sf + '\'})">' + of.sf + '</button>' : 'Creada en Producción') +
       UI.dato('Fechas', 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
       UI.dato('Observación', UI.esc(of.obs)) +

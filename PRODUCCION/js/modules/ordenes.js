@@ -68,7 +68,7 @@ const PR01N = {
       '<div class="card"><div class="formgrid c3">' +
       UI.campo('Artículo', '<div style="display:flex;gap:6px"><input id="n-artnom" readonly placeholder="Seleccione…" style="flex:1"><button class="btn btn-secondary btn-sm" onclick="PR01N.buscar()">🔍 Buscar</button></div>', { req: true, estilo: 'grid-column:span 2' }) +
       UI.campo('Cantidad', '<input id="n-cant" type="number" min="0" step="any" value="' + (p.cant || 1) + '" oninput="PR01N.prev()">', { req: true }) +
-      UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
+      UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.proponerAlm();PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
       UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'Solo almacenes de ' + UI.esc(BD.empNom(BD.empresa)) + ' (empresa activa)' }) +
       UI.campo(R, PR01N.selRef('n-ref', p.ref), { hint: '«Nueva» asigna un número al crear. Vincular a una existente agrupa la orden con esas órdenes para el listado por fase y el recosteo' }) +
       UI.campo('Observación', '<input id="n-obs">') +
@@ -89,10 +89,12 @@ const PR01N = {
     const a = M.art(PR01N.art);
     document.getElementById('n-artnom').value = a ? a.cod + ' · ' + a.nom : '';
     const ldms = a ? M.ldmsDe(a.cod) : [];
-    document.getElementById('n-ldm').innerHTML = UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), ldms.length ? ldms[0].id : '');
-    if (a) document.getElementById('n-alm').value = Prod.almRecibo(a.cod);  /* vacío si no hay propuesta: el usuario lo elige */
+    document.getElementById('n-ldm').innerHTML = UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom + (l.almProd ? ' · entra en ' + l.almProd : '') }))), ldms.length ? ldms[0].id : '');
+    PR01N.proponerAlm();
     PR01N.prev();
   },
+  /* propone el almacén de la lista elegida (Q5) o el de la heurística; vacío si no hay propuesta: el usuario lo elige */
+  proponerAlm() { const a = M.art(PR01N.art); if (a) document.getElementById('n-alm').value = Prod.almRecibo(a.cod, UI.v('n-ldm')); },
   prev() {
     const box = document.getElementById('n-prev'), card = document.getElementById('n-sugcard'); if (!box) return;
     const ldm = UI.v('n-ldm'), cant = UI.f('n-cant'), art = PR01N.art;
