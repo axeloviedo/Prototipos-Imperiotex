@@ -29,6 +29,7 @@
 - ☐ Lote mínimo o múltiplo de fabricación en el artículo o la lista, si en planta se trabaja por tendidos.
 - ☐ Lote y vencimiento pedidos a mano en el recibo y la emisión de producción (hoy el lote es automático por ingreso y sale el más antiguo).
 - ☐ Producción: cantidades con decimales según la unidad de medida (hoy 4 decimales para todo, N1).
+- ☐ Sugerido de compras (CO-15) por **consumo promedio histórico** (3, 6 o 9 meses) con **holgura %**, como tenía la versión de ejemplo; hoy calcula por stock mínimo y órdenes (P6).
 
 ## Fuera del prototipo, para el desarrollo real
 

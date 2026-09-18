@@ -20,7 +20,7 @@ Se elige en la barra superior («Datos») y **↺ Reiniciar** deja los 4 módulo
 ## Postventa sobre la base (C-3, decisiones P1–P6)
 | Pantalla | Qué hace sobre la base |
 |---|---|
-| CO-11 Reclamos | Reclamo sobre lo recibido de una OC o sobre el **faltante de una orden tercerizada** (aviso en la bandeja con botón «Reclamar»). Resolución por línea: reposición (salida + reingreso), devolución (salida + nota 07) o nota de crédito. Cada línea muestra los documentos que generó. |
+| CO-11 Reclamos | Reclamo sobre lo recibido de una OC o sobre el **faltante de una orden tercerizada** (aviso en la bandeja con botón «Reclamar»). Resolución por línea: reposición (salida + reingreso), devolución (salida + nota 07), nota de crédito o no procedente (cierra sin documentos, con motivo). Lote opcional por línea. Aviso (no bloquea) si un avío reclamado es menos del 10 % de lo recibido. Cada línea muestra los documentos que generó. |
 | CO-12 Notas de crédito | Contra una factura con motivo SUNAT 07/05/09; desde un reclamo se prellena. Rebaja la factura o, si ya se pagó, queda como saldo a favor (resumen por proveedor en la bandeja). El 05 revaloriza a la baja lo que sigue en stock. |
 | CO-14 Costos de destino | Comprobante sobre OC recibidas con costos 05–09 en S/. o USD, reparto por valor o cantidad; registrar revaloriza (REV-) y anular lo revierte. |
 | CO-15 Sugerido | Cálculo al momento, agrupado por proveedor por defecto, con «Crear OC». |
