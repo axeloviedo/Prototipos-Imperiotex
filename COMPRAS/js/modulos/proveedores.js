@@ -1,21 +1,22 @@
-/* COMPRAS · CO-01/02/03 Proveedores y Grupos de Proveedor, CT-09 buscador de proveedor
-   Conectado a la base compartida (docs/16 §3.1): BD.d.maestros.proveedores, gruposProveedor y condicionesPago.
+/* COMPRAS · CO-01/02/03 Proveedores y Tipos de proveedor, CT-09 buscador de proveedor
+   Conectado a la base compartida (docs/16 §3.1): BD.d.maestros.proveedores, tiposProveedor y condicionesPago.
+   2026-09-18: GRUPO = Nacional / Internacional (BD.GRUPOS_SOCIO) · TIPO = Telas, Avíos, Servicios, Generales (código de tiposProveedor).
    Registro: {cod:'PROV-0001', tipoDoc, doc, nom, comercial, grupo, tipo, estado, email, dir, ubigeo, tel, cel, mon, cond, dias,
               retencion, detraccion, servicio?, alm?, diasEst?, origen, aConfirmar?} */
 function sinTildes(t){return String(t==null?"":t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}
 function coProvs(){return coD().maestros.proveedores}
-function coGruposProv(){return coD().maestros.gruposProveedor||(coD().maestros.gruposProveedor=[])}
+function coTiposProv(){return coD().maestros.tiposProveedor||(coD().maestros.tiposProveedor=[])}
 function coCondiciones(){return coD().maestros.condicionesPago||[]}
 function coProvTxt(cod){const p=BD.prov(cod);return p?p.nom:(cod||"")}
-/* el campo proveedor.grupo guarda el CÓDIGO del grupo (MP1, SRV, IMP, ADU, GEN) */
-function coGrupoProvNom(cod){const g=coGruposProv().find(x=>x.cod===cod);return g?g.nom:(cod||"")}
+/* el campo proveedor.tipo guarda el CÓDIGO del tipo (TEL, AVI, SRV, GEN); proveedor.grupo es Nacional o Internacional */
+function coTipoProvNom(cod){const g=coTiposProv().find(x=>x.cod===cod);return g?g.nom:(cod||"")}
 
 let PRV={cod:"",modo:"nuevo"}; // modo: nuevo | ver | editar
 function fillGrupoSelects(){
-  const gs=coGruposProv();
+  const gs=coTiposProv();
   const opts=g=>g.map(x=>'<option value="'+coEsc(x.cod)+'">'+coEsc(x.cod)+' · '+coEsc(x.nom)+'</option>').join('');
-  const s1=document.getElementById('prv-grupo'); if(s1)s1.innerHTML='<option value="">Seleccionar…</option>'+opts(gs);
-  const s2=document.getElementById('f-prv-g'); if(s2){const v=s2.value; s2.innerHTML='<option value="">Todos</option>'+opts(gs); s2.value=v;}
+  const s1=document.getElementById('prv-tipo'); if(s1)s1.innerHTML='<option value="">Seleccionar…</option>'+opts(gs);
+  const s2=document.getElementById('f-prv-t'); if(s2){const v=s2.value; s2.innerHTML='<option value="">Todos</option>'+opts(gs); s2.value=v;}
   const sc=document.getElementById('prv-cond'); if(sc)sc.innerHTML=coCondiciones().map(c=>'<option value="'+coEsc(c.nom)+'">'+coEsc(c.nom)+'</option>').join('');
   const ss=document.getElementById('prv-servicio');
   if(ss)ss.innerHTML='<option value="">Ninguno</option>'+coD().maestros.articulos.filter(a=>a.grupo==='SRV').map(a=>'<option value="'+a.cod+'">'+a.cod+' · '+coEsc(a.nom)+'</option>').join('');
@@ -32,7 +33,7 @@ function renderProv(){
     if(g && p.grupo!==g)return; if(t && p.tipo!==t)return; if(e && p.estado!==e)return;
     n++;
     const srv=p.servicio?(p.servicio+' · '+coEsc(BD.nomArt(p.servicio))):'<span class="hint">-</span>';
-    html+='<tr class="clickable" onclick="loadProv(\''+p.cod+'\',\'ver\')"><td>'+p.cod+'</td><td>'+coEsc(p.nom)+(p.aConfirmar?' <span class="warn" title="Datos a confirmar">⚠</span>':'')+'</td><td>'+coEsc(p.tipo)+'</td><td>'+(p.grupo?'<span title="'+coEsc(coGrupoProvNom(p.grupo))+'">'+coEsc(p.grupo)+'</span>':'-')+'</td><td>'+coEsc(p.tipoDoc)+' '+coEsc(p.doc)+'</td>'+
+    html+='<tr class="clickable" onclick="loadProv(\''+p.cod+'\',\'ver\')"><td>'+p.cod+'</td><td>'+coEsc(p.nom)+(p.aConfirmar?' <span class="warn" title="Datos a confirmar">⚠</span>':'')+'</td><td>'+coEsc(p.grupo)+'</td><td>'+(p.tipo?'<span title="'+coEsc(coTipoProvNom(p.tipo))+'">'+coEsc(p.tipo)+'</span>':'-')+'</td><td>'+coEsc(p.tipoDoc)+' '+coEsc(p.doc)+'</td>'+
      '<td>'+coEsc(p.cond||'-')+'</td><td>'+srv+'</td>'+
      '<td><span class="badge" style="background:'+(p.estado==="Activo"?"var(--confirmado)":"var(--borrador)")+'">'+coEsc(p.estado)+'</span></td>'+
      '<td><button class="btn-link" onclick="event.stopPropagation();loadProv(\''+p.cod+'\',\'ver\')">Ver</button> '+
@@ -42,8 +43,8 @@ function renderProv(){
   tb.innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:16px">Sin proveedores para los filtros aplicados</td></tr>';
   document.getElementById('prv-count').textContent=n+" proveedores";
 }
-const PRV_CAMPOS=['prv-tipo','prv-nombre','prv-comercial','prv-grupo','prv-tdoc','prv-ndoc','prv-email','prv-tel','prv-cel','prv-dir','prv-ubigeo','prv-mon','prv-cond','prv-retencion','prv-detraccion','prv-servicio','prv-alm','prv-diasest'];
-function prvSetRO(ro){PRV_CAMPOS.forEach(id=>{const el=document.getElementById(id); if(el)el.disabled=ro}); const b=document.getElementById('prv-b-grupos'); if(b)b.style.display=ro?"none":"inline-block"}
+const PRV_CAMPOS=['prv-grupo','prv-nombre','prv-comercial','prv-tipo','prv-tdoc','prv-ndoc','prv-email','prv-tel','prv-cel','prv-dir','prv-ubigeo','prv-mon','prv-cond','prv-retencion','prv-detraccion','prv-servicio','prv-alm','prv-diasest'];
+function prvSetRO(ro){PRV_CAMPOS.forEach(id=>{const el=document.getElementById(id); if(el)el.disabled=ro}); const b=document.getElementById('prv-b-tipos'); if(b)b.style.display=ro?"none":"inline-block"}
 function prvTab(t){
   ['datos','compras','reclamos'].forEach(x=>{
     document.getElementById('prv-pane-'+x).style.display=(x===t)?"block":"none";
@@ -71,7 +72,7 @@ function nuevoProv(){
   fillGrupoSelects();
   PRV={cod:"",modo:"nuevo"};
   document.getElementById('prv-titulo').textContent="NUEVO PROVEEDOR";
-  prvLlenar({cod:prvSigCodigo()+" (auto)",tipo:"",tipoDoc:"RUC",mon:"S/.",cond:"Contado"});
+  prvLlenar({cod:prvSigCodigo()+" (auto)",grupo:"",tipoDoc:"RUC",mon:"S/.",cond:"Contado"});
   prvSetRO(false); prvTabsVisible(false); prvTab('datos'); prvBotones(); setBadgeProv("Activo");
   go('co02');
 }
@@ -118,14 +119,14 @@ function prvBotones(){
 function editarProv(){loadProv(PRV.cod,'editar')}
 function guardarProv(){
   const val=id=>(document.getElementById(id).value||"").trim();
-  const tipo=val('prv-tipo'), nom=val('prv-nombre'), doc=val('prv-ndoc');
-  if(!tipo){toast("El Tipo de proveedor es obligatorio (Nacional / Internacional)");return}
+  const grupo=val('prv-grupo'), nom=val('prv-nombre'), doc=val('prv-ndoc');
+  if(!grupo){toast("El Grupo de proveedor es obligatorio (Nacional / Internacional)");return}
   if(!nom){toast("La razón social del proveedor es obligatoria");return}
   if(!doc){toast("El N° de documento es obligatorio");return}
   if(coProvs().some(p=>p.doc===doc && p.cod!==PRV.cod)){toast("Ya existe un proveedor con ese N° de documento (debe ser único)");return}
   const cond=val('prv-cond'), c=coCondiciones().find(x=>x.nom===cond);
   const diasEst=parseInt(val('prv-diasest'),10);
-  const datos={tipo:tipo,nom:nom,comercial:val('prv-comercial')||nom,grupo:val('prv-grupo'),tipoDoc:val('prv-tdoc'),doc:doc,
+  const datos={grupo:grupo,nom:nom,comercial:val('prv-comercial')||nom,tipo:val('prv-tipo'),tipoDoc:val('prv-tdoc'),doc:doc,
    email:val('prv-email'),tel:val('prv-tel'),cel:val('prv-cel'),dir:val('prv-dir'),ubigeo:val('prv-ubigeo'),
    mon:val('prv-mon')||'S/.',cond:cond||'Contado',dias:c?c.dias:0,retencion:val('prv-retencion')==='si',detraccion:val('prv-detraccion')==='si'};
   const srv=val('prv-servicio'), alm=val('prv-alm');
@@ -141,7 +142,7 @@ function guardarProv(){
   if(alm)p.alm=alm; else delete p.alm;
   if(isFinite(diasEst)&&diasEst>0)p.diasEst=diasEst; else delete p.diasEst;
   BD.guardar();
-  toast((PRV.modo==="nuevo"?"Proveedor creado: ":"Proveedor actualizado: ")+p.cod+(tipo==="Internacional"&&PRV.modo==="nuevo"?" · habilita compras en USD":""));
+  toast((PRV.modo==="nuevo"?"Proveedor creado: ":"Proveedor actualizado: ")+p.cod+(grupo==="Internacional"&&PRV.modo==="nuevo"?" · habilita compras en USD":""));
   fillGrupoSelects(); renderProv(); loadProv(p.cod,'ver');
 }
 function desactivarProv(){
@@ -174,14 +175,14 @@ function prvConfirmarEliminar(cod){
   closeModal('m-co01a'); renderProv(); toast("Proveedor eliminado: "+cod);
 }
 
-/* --- CO-03 grupos --- */
+/* --- CO-03 tipos de proveedor (Telas, Avíos, Servicios, Generales) --- */
 let grpEdit=-1;
 function renderGrupos(){
   const q=sinTildes(document.getElementById('grp-q').value||"");
   const tb=document.getElementById('grp-body'); let html="";
-  coGruposProv().forEach((g,i)=>{
+  coTiposProv().forEach((g,i)=>{
     if(q && !(sinTildes(g.nom).includes(q)||sinTildes(g.cod).includes(q)))return;
-    const count=coProvs().filter(p=>p.grupo===g.cod).length;
+    const count=coProvs().filter(p=>p.tipo===g.cod).length;
     if(grpEdit===i){
       html+='<tr><td>'+coEsc(g.cod)+'</td><td><input id="grp-edit-inp" value="'+coEsc(g.nom)+'" style="width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px"></td>'+
        '<td><input id="grp-edit-desc" value="'+coEsc(g.desc||'')+'" style="width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px"></td><td style="text-align:right">'+count+'</td>'+
@@ -191,42 +192,42 @@ function renderGrupos(){
        '<td><button class="btn-link" onclick="grpEdit='+i+';renderGrupos()">Editar</button> <button class="btn-link" onclick="eliminarGrupo('+i+')">Eliminar</button></td></tr>';
     }
   });
-  tb.innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin grupos</td></tr>';
+  tb.innerHTML=html||'<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin tipos</td></tr>';
 }
 function crearGrupo(){
   const inp=document.getElementById('grp-nuevo'), v=inp.value.trim(), desc=(document.getElementById('grp-desc').value||"").trim();
-  if(!v){toast("Escriba el nombre del grupo");return}
-  const gs=coGruposProv();
-  if(gs.some(g=>sinTildes(g.nom)===sinTildes(v))){toast("Ese grupo ya existe");return}
+  if(!v){toast("Escriba el nombre del tipo");return}
+  const gs=coTiposProv();
+  if(gs.some(g=>sinTildes(g.nom)===sinTildes(v))){toast("Ese tipo ya existe");return}
   let base=sinTildes(v).replace(/[^a-z]/g,'').slice(0,3).toUpperCase()||"GRP", cod=base, n=2;
   while(gs.some(g=>g.cod===cod))cod=base+(n++);
   const ng={cod:cod,nom:v}; if(desc)ng.desc=desc; gs.push(ng); BD.guardar();
   inp.value=""; document.getElementById('grp-desc').value="";
   renderGrupos(); fillGrupoSelects();
-  toast("Grupo creado: "+v+" ("+cod+")");
+  toast("Tipo creado: "+v+" ("+cod+")");
 }
 function guardarGrupo(i){
   const v=document.getElementById('grp-edit-inp').value.trim(), desc=document.getElementById('grp-edit-desc').value.trim();
   if(!v){toast("El nombre no puede quedar vacío");return}
-  const gs=coGruposProv(), g=gs[i];
-  if(gs.some((x,j)=>j!==i&&sinTildes(x.nom)===sinTildes(v))){toast("Ya existe otro grupo con ese nombre");return}
+  const gs=coTiposProv(), g=gs[i];
+  if(gs.some((x,j)=>j!==i&&sinTildes(x.nom)===sinTildes(v))){toast("Ya existe otro tipo con ese nombre");return}
   g.nom=v; if(desc)g.desc=desc; else delete g.desc;
   BD.guardar();
   grpEdit=-1; renderGrupos(); fillGrupoSelects(); renderProv();
-  toast("Grupo actualizado");
+  toast("Tipo actualizado");
 }
 function eliminarGrupo(i){
-  const gs=coGruposProv(), g=gs[i];
-  const count=coProvs().filter(p=>p.grupo===g.cod).length;
+  const gs=coTiposProv(), g=gs[i];
+  const count=coProvs().filter(p=>p.tipo===g.cod).length;
   if(count>0){toast("No se puede eliminar: tiene "+count+" proveedores asignados (reasigne antes)");return}
   gs.splice(i,1); BD.guardar();
-  toast("Grupo eliminado: "+g.nom);
+  toast("Tipo eliminado: "+g.nom);
   renderGrupos(); fillGrupoSelects();
 }
 
 /* --- CT-09 buscador de proveedor para la OC en edición --- */
 function openCT09(){
-  document.getElementById('ct09-g').innerHTML='<option value="">Todos</option>'+coGruposProv().map(g=>'<option value="'+coEsc(g.cod)+'">'+coEsc(g.cod)+' · '+coEsc(g.nom)+'</option>').join('');
+  document.getElementById('ct09-t').innerHTML='<option value="">Todos</option>'+coTiposProv().map(g=>'<option value="'+coEsc(g.cod)+'">'+coEsc(g.cod)+' · '+coEsc(g.nom)+'</option>').join('');
   document.getElementById('ct09-q').value="";
   renderCT09(); openModal('m-ct09');
 }
@@ -240,8 +241,8 @@ function renderCT09(){
     if(g && p.grupo!==g)return false; if(t && p.tipo!==t)return false;
     return true;
   }).sort((a,b)=>(srvs.includes(b.servicio)?1:0)-(srvs.includes(a.servicio)?1:0));
-  tb.innerHTML=lista.map(p=>'<tr'+(srvs.includes(p.servicio)?' style="background:#F0FDF4"':'')+'><td>'+p.cod+'</td><td>'+coEsc(p.nom)+'</td><td>'+coEsc(p.tipoDoc)+' '+coEsc(p.doc)+'</td><td>'+coEsc(p.grupo||'-')+'</td>'+
-    '<td>'+(p.servicio?p.servicio:'<span class="hint">-</span>')+'</td><td>'+coEsc(p.tipo)+'</td>'+
+  tb.innerHTML=lista.map(p=>'<tr'+(srvs.includes(p.servicio)?' style="background:#F0FDF4"':'')+'><td>'+p.cod+'</td><td>'+coEsc(p.nom)+'</td><td>'+coEsc(p.tipoDoc)+' '+coEsc(p.doc)+'</td><td>'+coEsc(p.tipo||'-')+'</td>'+
+    '<td>'+(p.servicio?p.servicio:'<span class="hint">-</span>')+'</td><td>'+coEsc(p.grupo)+'</td>'+
     '<td><button class="btn btn-primary btn-sm" onclick="elegirProvOC(\''+p.cod+'\')">Seleccionar</button></td></tr>').join('')
     ||'<tr><td colspan="7" style="text-align:center;color:var(--texto-sec);padding:14px">Sin proveedores activos para los filtros</td></tr>';
 }

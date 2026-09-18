@@ -54,7 +54,7 @@ const BD_COMERCIAL = (() => {
     agencias: ['SHALOM', 'OLVA COURIER', 'MARVISUR'],
     motivosAnulacion: ['Error de registro', 'Cliente desistió de la compra', 'Precio o cantidad equivocados', 'Otro'],
     afectacion: ['Gravado', 'Exonerado', 'Inafecto'],
-    /* clientes: el socio de negocio NO se unifica con el proveedor */
+    /* clientes: el socio de negocio NO se unifica con el proveedor. Grupo = Nacional / Internacional (como el proveedor, 2026-09-18) */
     tiposDoc: [{ cod: 'DNI', nom: 'DNI', largo: 8 }, { cod: 'RUC', nom: 'RUC', largo: 11 }, { cod: 'CE', nom: 'Carné de extranjería', largo: 0 }],
     tiposCliente: ['MINORISTA', 'MAYORISTA', 'EXPORTACIÓN', 'SERVICIOS'],
     ubigeos: [
@@ -103,7 +103,7 @@ const BD_COMERCIAL = (() => {
   ];
 
   const cli = (n, tipoDoc, doc, nom, tipo, tel, email, dir, ubigeo, cond, obs, alta, activo) =>
-    ({ cod: 'CLI-' + String(n).padStart(6, '0'), tipoDoc, doc, nom, tipo, tel, email, dir, ubigeo, cond, obs, activo: activo !== false, alta, aConfirmar: true });
+    ({ cod: 'CLI-' + String(n).padStart(6, '0'), tipoDoc, doc, nom, grupo: 'Nacional', tipo, tel, email, dir, ubigeo, cond, obs, activo: activo !== false, alta, aConfirmar: true });
   const clientes = [
     cli(1, 'DNI', '45781236', 'MARÍA FERNANDA QUISPE ROJAS', 'MINORISTA', '987 654 321', 'mfquispe@gmail.com', 'Jr. Huánuco 1580', '150115', 'CONTADO', '', '12/01/2026 10:00'),
     cli(2, 'RUC', '20601234567', 'COMERCIAL ANDINA SAC', 'MAYORISTA', '074 231 456', 'compras@comercialandina.pe', 'Av. Balta 820', '140101', 'CRED30', 'Despachar por agencia Shalom', '24/01/2026 10:00'),

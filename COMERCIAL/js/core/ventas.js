@@ -22,12 +22,13 @@ const Cli = {
     const doc = Cli.validarDoc(x.tipoDoc, x.doc);
     const nom = String(x.nom || '').trim().toUpperCase();
     if (nom.length < 3) throw new Error('Ingrese el nombre o la razón social');
+    if (BD.GRUPOS_SOCIO.indexOf(x.grupo || 'Nacional') < 0) throw new Error('Elija el grupo del cliente (Nacional / Internacional)');
     if (M.TIPOS_CLIENTE.indexOf(x.tipo) < 0) throw new Error('Elija el tipo de cliente');
     if (x.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x.email)) throw new Error('El correo no tiene un formato válido');
     if (x.cond && !M.cond(x.cond)) throw new Error('Condición de pago no válida');
     const otro = Store.d.clientes.find(c => c.tipoDoc === x.tipoDoc && c.doc === doc && c.cod !== cod);
     if (otro) throw new Error('Ya existe el cliente ' + otro.cod + ' con ' + x.tipoDoc + ' ' + doc);
-    return { tipoDoc: x.tipoDoc, doc, nom, tipo: x.tipo, tel: x.tel || '', email: x.email || '', dir: x.dir || '', ubigeo: x.ubigeo || '', cond: x.cond || 'CONTADO', obs: x.obs || '' };
+    return { tipoDoc: x.tipoDoc, doc, nom, grupo: x.grupo || 'Nacional', tipo: x.tipo, tel: x.tel || '', email: x.email || '', dir: x.dir || '', ubigeo: x.ubigeo || '', cond: x.cond || 'CONTADO', obs: x.obs || '' };
   },
   crear(x) {
     Store.exigir('crear_cliente', 'crear clientes');

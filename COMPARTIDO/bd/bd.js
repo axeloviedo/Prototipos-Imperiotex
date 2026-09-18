@@ -39,6 +39,7 @@ const BD = {
     let d = null;
     try { d = JSON.parse(localStorage.getItem(BD.KEY) || 'null'); } catch (e) { d = null; }
     if (!d || d.version !== BD.VERSION) d = BD.construir(BD.escenarioGuardado());
+    BD.migrar(d);
     BD.d = d;
     BD.guardar();
     if (typeof window !== 'undefined' && window.addEventListener && !BD._escuchando) {
@@ -49,6 +50,18 @@ const BD = {
       });
     }
     return BD.d;
+  },
+  /* socio de negocio (proveedor y cliente): GRUPO = Nacional / Internacional (2026-09-18) */
+  GRUPOS_SOCIO: ['Nacional', 'Internacional'],
+  /* bases guardadas antes del 2026-09-18: el proveedor tenía tipo = Nacional/Internacional y grupo = TEL/AVI/SRV/GEN (gruposProveedor).
+     Ahora es al revés: grupo = Nacional/Internacional y tipo = TEL/AVI/SRV/GEN (tiposProveedor). Se corrige sin perder datos. */
+  migrar(d) {
+    const m = d && d.maestros;
+    if (!m) return d;
+    if (m.gruposProveedor && !m.tiposProveedor) { m.tiposProveedor = m.gruposProveedor; delete m.gruposProveedor; }
+    const nac = { Nacional: 'Nacional', Internacional: 'Internacional', Extranjero: 'Internacional' };
+    (m.proveedores || []).forEach(p => { if (nac[p.tipo]) { const g = p.grupo; p.grupo = nac[p.tipo]; p.tipo = g || ''; } });
+    return d;
   },
   guardar() { try { localStorage.setItem(BD.KEY, JSON.stringify(BD.d)); } catch (e) { /* sin almacenamiento: sigue en memoria */ } },
   /* fn() se llama cuando otra pestaña (otro módulo) guarda cambios: refrescar la pantalla actual */
@@ -114,7 +127,7 @@ const BD = {
       recursos: C.recursos,
       operarios: C.operarios,
       proveedores: P.proveedores.concat(C.proveedores),
-      gruposProveedor: P.gruposProveedor,
+      tiposProveedor: P.tiposProveedor,
       condicionesPago: P.condicionesPago,
       /* estructura organizativa (docx): organización y grupos de compras, grupos y tipos de movimiento */
       organizacionesCompra: P.organizacionesCompra || [],

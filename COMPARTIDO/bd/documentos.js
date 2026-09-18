@@ -359,7 +359,7 @@ const Docs = (() => {
         exigir(it.recq + Number(l.cant) <= it.cant + 0.00005, 'No se recibe más de lo pedido: ' + BD.nomArt(l.art));
       });
       const factor = o.mon === 'USD' ? o.tc : 1;
-      const intl = (BD.prov(o.prov) || {}).tipo === 'Internacional';
+      const intl = (BD.prov(o.prov) || {}).grupo === 'Internacional';
       const r = Stock.ingreso({ det: intl ? 'Ingreso - Importación' : 'Ingreso - Compra', tipoMov: intl ? 'ING-IMPORT' : 'ING-COMPRA', alm, origen: BD.provNom(o.prov), ndoc: o.id, doc: o.id, modulo: 'Inventarios', obs: d.obs || '',
         lineas: lineas.map(l => ({ art: l.art, cant: l.cant, costo: BD.r4(o.items.find(i => i.art === l.art).pu * factor) })) });
       exigir(r.ok, r.error);

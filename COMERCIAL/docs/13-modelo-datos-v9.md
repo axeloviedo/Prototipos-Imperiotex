@@ -36,6 +36,7 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | tipo_documento | enum | DNI / RUC / CE | `type_document` | `id_document_type` |
 | numero_documento | text | Único por (empresa, tipo, número). DNI 8, RUC 11 | `n_document` | `document_number` |
 | nombre | text | Nombres o razón social | `full_name` | `name` |
+| grupo *(2026-09-18, S2)* | enum | **Nacional / Internacional**, como el proveedor. Obligatorio; por defecto Nacional | — | *(nuevo)* |
 | tipo_cliente | FK → catálogo | MINORISTA / MAYORISTA / EXPORTACIÓN / SERVICIOS. Define el nivel de precios | `client_segment_id` | `customer_type` |
 | telefono, email, direccion, ubigeo | text | ubigeo CHAR(6) | igual | igual |
 | observaciones | text | | — | `notes` |

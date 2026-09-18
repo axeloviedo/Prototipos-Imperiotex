@@ -143,7 +143,7 @@ const PR11F = {
       UI.campo('Unidad de consumo', '<select id="rf-u">' + UI.opts(M.UNIDADES.map(u => ({ v: u.cod, t: u.cod + ' · ' + u.nom })), r.u) + '</select>', { req: true, hint: 'Del maestro de Unidades de Medida (Inventarios)' }) +
       UI.campo('Costo Estándar (S/.)', '<input id="rf-costo" type="number" min="0" step="any" value="' + UI.esc(r.costo) + '">', { req: true, hint: 'Por unidad de consumo' }) +
       UI.campo('Cuenta Mayor', '<input id="rf-cta" type="number" min="0" step="1" inputmode="numeric" value="' + UI.esc(r.cuenta) + '" placeholder="Ej. 921101">', { req: true }) +
-      UI.campo('Proveedor habitual', '<select id="rf-prov">' + UI.opts(M.PROVEEDORES.filter(p => p.servicio || p.grupo === 'SRV' || p.cod === r.prov).map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), r.prov || '', '—') + '</select>', { hint: 'Solo SERVICIO DE TERCEROS: a quién se envía y a quién se le compra' }) +
+      UI.campo('Proveedor habitual', '<select id="rf-prov">' + UI.opts(M.PROVEEDORES.filter(p => p.servicio || p.tipo === 'SRV' || p.cod === r.prov).map(p => ({ v: p.cod, t: p.cod + ' · ' + p.nom })), r.prov || '', '—') + '</select>', { hint: 'Solo SERVICIO DE TERCEROS: a quién se envía y a quién se le compra' }) +
       '</div></div>' + (nuevo ? '' : PR11F.uso(r));
   },
   /* solo lectura: órdenes que llevan el recurso, con lo consumido y el costo que se les imputó */

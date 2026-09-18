@@ -32,6 +32,8 @@ const Store = {
       if (Array.isArray(c0[k]) && Array.isArray(cb[k]) && c0[k].every(x => x && x.cod)) c0[k].forEach(it => { if (!cb[k].some(e => e.cod === it.cod)) cb[k].push(BD.copia(it)); });
     });
     Object.keys(X.colecciones || {}).forEach(k => { if (d[k] === undefined) d[k] = BD.copia(X.colecciones[k]); });
+    /* clientes guardados antes del 2026-09-18: sin grupo → Nacional */
+    (d.clientes || []).forEach(c => { if (!c.grupo) c.grupo = 'Nacional'; });
     /* listasPrecio de otra versión (la de estilo SAP B1 guardaba cabeceras sin «filas» y los precios aparte): vuelven a las listas iniciales */
     if (!Array.isArray(d.listasPrecio) || d.listasPrecio.some(l => !l || !Array.isArray(l.filas))) {
       d.listasPrecio = BD.copia((X.colecciones || {}).listasPrecio || []);

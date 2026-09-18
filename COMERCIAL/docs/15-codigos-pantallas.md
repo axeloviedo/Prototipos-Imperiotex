@@ -49,8 +49,8 @@
 | CL-31 | Pantalla | Solicitudes de Materiales (vista compartida de Inventarios GI-13) | `cm12` → `../INVENTARIOS/index.html?vista=comercial#gi13` | `js/modules/solicitudes.js` |
 | CL-32 | Pantalla | Existencias y movimientos de la base compartida (Existencias de las tiendas de la empresa; Movimientos y Kardex de los almacenes de su sede, todos para el usuario logístico general) | `cm06` | `js/modules/consultas.js` |
 | CL-33 | Modal | Movimiento de stock (detalle) | `CM06.verMov` | `js/modules/consultas.js` |
-| CL-34 | Pantalla | Clientes (listado) | `cm07` | `js/modules/clientes.js` |
-| CL-35 | Ficha | Cliente (Datos, Ventas, Cotizaciones, Devoluciones, **Crédito** (notas de crédito) con sus movimientos) | `cm07f` | `js/modules/clientes.js` |
+| CL-34 | Pantalla | Clientes (listado con el estilo de CO-01: grupo, tipo, documento, condición, estados y acciones Ver / Editar / Desactivar) | `cm07` | `js/modules/clientes.js` |
+| CL-35 | Ficha | Cliente con el estilo de CO-02: modo Ver / Editar, tarjetas y pestañas (Datos del cliente, Historial de ventas, Cotizaciones, Devoluciones, **Crédito** por notas de crédito con sus movimientos) | `cm07f` | `js/modules/clientes.js` |
 | CL-36 | Modal | Desactivar / reactivar cliente | `CM07F.activo` | `js/modules/clientes.js` |
 | CL-37 | Modal | Nuevo cliente (alta rápida desde un documento) | `CLIQ.abrir` | `js/modules/clientes.js` |
 | CL-38 | Modal | Buscar cliente | `BUS.cliente` | `js/modules/buscador.js` |
