@@ -120,6 +120,16 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 - **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 devuelto por la lavandería con 26 de 30 prendas y cerrado: el faltante de 4 lo reclama Compras (CO-11) y se cierra con una nota de crédito 09; lavado T30 **cambiado a Lavandería Ecotex**: se enviaron 16 prendas, volvieron las 16 y 6 se reclasificaron como fallado (Compras reclama y Ecotex da un crédito que se aplica a su siguiente factura; guía 17 §4).
 - **SF-000003** (PT-0001..0004 × 20): **aprobada sin órdenes**, con su materia prima comprometida.
 
+## 11. Revisión Q (2026-09-17) · referencia, empresa, lista, fecha y stock sin negativos
+
+- **N° Referencia (Q1)**: al crear órdenes el campo es un selector **Nueva / Vincular a existente** (PR-01 Nueva OF, PR-03 y reproceso). `Prod.refsAbiertas()` lista las referencias con órdenes abiertas; `Prod._ref` rechaza un valor que no exista.
+- **Sin Disponible negativo (Q2)**: `Stock.comprometerHasta` reserva hasta lo disponible. La SF aprobada guarda `comprometido:[{alm, art, req, cant}]`. `Docs.reserva.llegada` compromete lo que llega por OC (GI-09) o transferencia (GI-11) para la orden liberada o la SF aprobada que lo pidió (enlace `of`/`sf` heredado de la SOL).
+- **Emisión y recibo (Q3)**: `Prod.dispPara(m)` = Disponible + comprometido propio. `Prod.emitir` bloquea si no alcanza; con `parcial: true` emite lo que hay y pide el resto. `Prod.faltantesNotificacion` valida igual. Pestaña Materiales: **Comprometido · Pedido · Falta pedir** (`Prod.pedido` incluye En transferencia; `Prod.faltaPedir`) y **Pedir a Logística lo que falta** (`Prod.solicitarLoQueFalta`).
+- **Almacenes por empresa (Q4)**: `M.almacenesDe(emp, sel)` / `M.opcionesAlm`; selector de empresa funcional (`App.empresa`); `Prod._validarEmpresa` al crear, al cambiar el almacén de una línea y al liberar.
+- **Lista de materiales (Q5)**: `ldm.almProd` y `ldm.obs` (GI-17). `Prod.almRecibo(art, ldmId)` propone `almProd` primero. La ficha y PR-10 muestran la observación.
+- **Fecha requerida (Q6)**: la SF ya no tiene `mes`; `fechaReq` es obligatoria al enviar. Nueva OF permite indicarla (`fechaFin`) y la ficha la muestra.
+- **Tercerización (Q7)**: sin cambios; se documenta en la observación de la lista.
+
 ## 10. Revisión N (2026-09-17)
 
 - **Envío consolidado (N5)**: en el modal de envío se pueden marcar otras órdenes liberadas del mismo proveedor de servicio. `Prod.enviarConsolidado` revisa el stock de todas juntas antes de mover nada, crea la transferencia de cada orden y **una sola guía de remisión por ruta** (la guía guarda `movs` y `ofs`).

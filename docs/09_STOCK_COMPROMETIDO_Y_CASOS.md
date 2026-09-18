@@ -124,3 +124,18 @@ Regla global del modelo: **Disponible = Actual − Comprometido** (el **Pedido**
 2. ✅ **RESUELTO — Compromiso entre documentos** (UC-09): decisión **T7**. La MP entra a Comprometido al **aprobarse la SP (dos firmas)** (`spComprometerMP`). Así, otra solicitud que usaba ese stock ve bajar su Disponible, **pudiendo quedar en negativo** — que es justo la señal de que dos pedidos competían por el mismo material.
 3. **Origen vs destino** (UC-06, UC-07): la coherencia de mover MP de varios orígenes a un único destino debe verificarse cuando se implemente el movimiento real (Producción).
 4. **Método de emisión** (Notificación/Manual): hoy es informativo en la SP; su efecto real (backflush por regla de tres vs consumo manual) ocurre en la emisión para producción (otro módulo).
+
+---
+
+## Parte D · Revisión Q (2026-09-17): el Disponible nunca queda negativo
+
+Sustituye el matiz de T7 («pudiendo quedar en negativo»). Ver decisiones **Q2** y **Q3** en `00_DECISIONES_CERRADAS.md`.
+
+- Nadie compromete más de lo que hay: `Stock.comprometerHasta(alm, art, cant)` reserva hasta el Disponible y devuelve lo que sí reservó.
+- **SF aprobada**: `comprometido:[{alm, art, req, cant}]` (`req` = requerido, `cant` = reservado). La diferencia se pide con la Solicitud de Materiales de GI-23 (`Docs.sf.faltaComprometer`).
+- **Orden liberada**: compromete lo suyo hasta lo disponible (como antes).
+- **Reserva al llegar** (`Docs.reserva.llegada`): la OC y la Solicitud de Transferencia heredan `of` / `sf` de la SOL; al recibir (GI-09) o confirmar la transferencia (GI-11), lo que llega se compromete para la orden liberada o la SF aprobada que lo pidió, solo por lo que aún le falta.
+- **Pedido** (T1) sigue informativo: «lo que viene en camino». La orden lo muestra por línea junto con Comprometido y Falta pedir.
+- **Emisión y recibo** validan contra «lo que la orden puede usar» = Disponible + comprometido propio (`Prod.dispPara`): lo reservado por otros documentos no se consume. Si no alcanza se bloquea; «Emitir lo disponible y pedir el resto» es la acción explícita.
+
+Casos que cambian de resultado: **UC-09** (dos pedidos sobre el mismo material): el segundo compromete solo lo que queda y el resto va a la SOL; su Disponible no baja de cero.

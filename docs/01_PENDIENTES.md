@@ -22,6 +22,17 @@
 - ☑ Saldo a favor del proveedor: se aplica a su siguiente factura desde CO-10 (P3).
 - ☑ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo. → decisiones **O1–O5** en `00_DECISIONES_CERRADAS.md` (2026-09-17).
 
+## Producción · revisión Q (2026-09-17, rama `feat/produccion-referencia-stock-sin-negativos`)
+
+- ☑ **Q1** N° Referencia: «Nueva» o «Vincular a existente» en Nueva OF, PR-03 y reproceso.
+- ☑ **Q2** Disponible nunca negativo: SF y OF comprometen hasta lo disponible; lo que llega por OC o transferencia se compromete para quien lo pidió (`Docs.reserva`).
+- ☑ **Q3** Emisión y recibo solo con lo que la orden puede usar; bloqueo, «Emitir lo disponible y pedir el resto», columnas Pedido y Falta pedir, «Pedir a Logística lo que falta».
+- ☑ **Q4** Almacenes filtrados por empresa en Producción; selector de empresa activo; la orden no toma material de otra empresa.
+- ☑ **Q5** LDM con almacén donde entra lo producido y observación (opcionales).
+- ☑ **Q6** Se retira «Mes proyectado»; fecha requerida obligatoria; la orden la hereda y la muestra.
+- ☐ **Q2 · pendiente de decidir**: qué pasa con lo que llega cuando la SOL fue de una SF que **ya se convirtió** en órdenes (hoy queda disponible y la orden lo toma al emitir si nadie lo reservó antes). Opción: que la SOL de la SF pase a las órdenes al convertir.
+- ☐ Comercial: la orden de venta compromete PT con `Stock.comprometer` sin tope; revisar si debe usar `comprometerHasta` (Q2) o mantener el negativo como señal de venta sin stock.
+
 ## Mejoras futuras (N12, acordadas pero no ahora)
 
 - ☐ **L4** Permisos por almacén por rol: hoy los roles se guardan y no filtran.
