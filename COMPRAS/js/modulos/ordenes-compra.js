@@ -24,7 +24,7 @@ const OC_EST={"Borrador":"var(--borrador)","Pendiente de Validar":"var(--pendien
 let OC=null, OCid="";   // OC: documento abierto (copia de trabajo si está en Borrador); OCid: '' = nueva sin guardar
 function esServicioOC(o){ return !!o && o.items.length>0 && o.items.every(it=>BD.esServicio(it.art)); }
 function ocTotales(o){ const t=Docs.oc.totales(o); return {sub:t.sub,igv:t.igv,tot:t.total}; }
-function ocIGV(art,prov){ const p=BD.prov(prov), a=BD.art(art); if(p&&p.tipo==="Internacional")return 0; return (a&&a.igv&&a.igv!=="Gravado")?0:18; }
+function ocIGV(art,prov){ const p=BD.prov(prov), a=BD.art(art); if(p&&p.grupo==="Internacional")return 0; return (a&&a.igv&&a.igv!=="Gravado")?0:18; }
 function ocPrecioRef(cod){ const a=BD.art(cod)||{}, r=BD.rec(cod)||{}; return Number(a.precioCompra||r.costo||a.costo||0); }
 function ocPendRec(o){ return o.items.filter(i=>i.cant-i.recq>0.00005); }
 function ocPendFac(o){ return o.items.filter(i=>i.cant-i.facq>0.00005); }
@@ -42,14 +42,14 @@ function renderOCS(){
     if(e==="*rec"){ if(!Docs.oc.recibible(o))return; }
     else if(e==="*fac"){ if(!ocFacturable(o))return; }
     else if(e && o.est!==e)return;
-    if(m && o.mon!==m)return; if(soloImp && p.tipo!=="Internacional")return;
+    if(m && o.mon!==m)return; if(soloImp && p.grupo!=="Internacional")return;
     n++;
     const t=Docs.oc.totales(o), a=Docs.oc.avance(o);
     const full=(o.est==="Completada");
     const origen=[o.sol?'<button class="btn-link" onclick="event.stopPropagation();verSolDeOC(\''+o.sol+'\')">'+o.sol+'</button>':'',
       o.of?'<button class="btn-link" onclick="event.stopPropagation();verOFdeOC(\''+o.of+'\')">'+o.of+'</button>':''].filter(Boolean).join(' · ')||'<span class="hint">OC directa</span>';
     const pct=(v,tip)=>'<td style="text-align:right;color:var(--confirmado);'+(v>=100?'font-weight:700':'')+'" title="'+tip+'">'+v+'%</td>';
-    html+='<tr class="clickable" onclick="abrirOC(\''+o.id+'\')"><td>'+o.id+(p.tipo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td>'+
+    html+='<tr class="clickable" onclick="abrirOC(\''+o.id+'\')"><td>'+o.id+(p.grupo==="Internacional"?' <span class="hint">IMPORTACIÓN</span>':'')+'</td>'+
      '<td>'+(o.prov?coEsc(p.nom||o.prov):'<span class="hint">sin proveedor</span>')+'</td><td>'+o.mon+'</td>'+
      '<td style="text-align:right;'+(full?'color:var(--confirmado);font-weight:700':'')+'">'+coMon(o.mon)+fmtM(t.total)+'</td>'+
      '<td><span class="badge" style="background:'+(OC_EST[o.est]||"var(--borrador)")+'">'+o.est+'</span></td><td>'+o.fecha+'</td>'+
@@ -95,10 +95,10 @@ function loadOC(id){ abrirOC(id); }
 
 function ocLlenarForm(){
   const p=BD.prov(OC.prov);
-  document.getElementById('oc-titulo').textContent=(OCid?"ORDEN DE COMPRA: "+OC.id:"NUEVA ORDEN DE COMPRA")+(p&&p.tipo==="Internacional"?" · IMPORTACIÓN":"");
+  document.getElementById('oc-titulo').textContent=(OCid?"ORDEN DE COMPRA: "+OC.id:"NUEVA ORDEN DE COMPRA")+(p&&p.grupo==="Internacional"?" · IMPORTACIÓN":"");
   document.getElementById('oc-id').value=OCid||"(se asigna al guardar)";
   document.getElementById('oc-sol').value=OC.sol||"OC directa";
-  document.getElementById('oc-prov').value=p?(p.nom+" ("+p.cod+" · "+p.tipo+")"):"";
+  document.getElementById('oc-prov').value=p?(p.nom+" ("+p.cod+" · "+p.grupo+")"):"";
   const conds=coCondiciones().map(c=>c.nom); if(OC.cond && !conds.includes(OC.cond))conds.unshift(OC.cond);
   document.getElementById('oc-cond').innerHTML=conds.map(c=>'<option>'+coEsc(c)+'</option>').join('');
   document.getElementById('oc-cond').value=OC.cond||"Contado";
@@ -211,7 +211,7 @@ function ocTotalesUI(){
   const dual=(mon==="USD")?(' <span class="hint">· S/. '+fmtM(tot*tc)+' (TC '+tc+')</span>'):'';
   document.getElementById('oc-items-foot').innerHTML='<tr><td colspan="6" style="text-align:right;font-weight:600">Totales ('+mon+')</td>'+
    '<td style="text-align:right;font-weight:600">'+fmtM(sub)+'</td><td style="text-align:right;font-weight:600">'+fmtM(igvT)+'</td><td style="text-align:right;font-weight:700">'+fmtM(tot)+dual+'</td>'+(conAvance?'<td></td><td></td>':'')+'<td></td></tr>';
-  const p=BD.prov(OC.prov), esImport=!!p && p.tipo==="Internacional";
+  const p=BD.prov(OC.prov), esImport=!!p && p.grupo==="Internacional";
   document.getElementById('oc-costos').style.display=esImport?"block":"none";
   if(esImport){
     const ca=(parseFloat(document.getElementById('oc-ca-adu').value)||0)+(parseFloat(document.getElementById('oc-ca-nac').value)||0)+(parseFloat(document.getElementById('oc-ca-fle').value)||0);
@@ -256,7 +256,7 @@ function elegirProvOC(cod){
   OC.prov=p.cod; OC.cond=p.cond||OC.cond;
   OC.items.forEach(it=>it.igv=ocIGV(it.art,p.cod));
   ocLlenarForm(); renderOC();
-  toast(p.tipo==="Internacional"?"Proveedor internacional: la OC se trata como importación (USD, IGV en la nacionalización)":"Proveedor seleccionado: "+p.nom);
+  toast(p.grupo==="Internacional"?"Proveedor internacional: la OC se trata como importación (USD, IGV en la nacionalización)":"Proveedor seleccionado: "+p.nom);
 }
 /* guarda la copia de trabajo en la base (crea la OC si es nueva). Devuelve true si se guardó */
 function guardarBorradorOC(silencio){

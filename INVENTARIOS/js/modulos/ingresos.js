@@ -84,7 +84,7 @@ function abrirVincularOC(){
 function vincularOC(id){
   const o=BD.oc(id); if(!o||!Docs.oc.recibible(o)){toast("La OC "+id+" no está para recibir");return}
   ING.oc=o.id;
-  const intl=(BD.prov(o.prov)||{}).tipo==='Extranjero'||o.mon==='USD'&&(BD.prov(o.prov)||{}).tipo!=='Nacional';
+  const intl=(BD.prov(o.prov)||{}).grupo==='Internacional'||o.mon==='USD'&&(BD.prov(o.prov)||{}).grupo!=='Nacional';
   document.getElementById('gi09-tipo').innerHTML=opcionesTipoMov('ING',intl?'ING-IMPORT':'ING-COMPRA');
   document.getElementById('gi09-ndoc').value=o.id;
   document.getElementById('gi09-origen').value=BD.provNom(o.prov);

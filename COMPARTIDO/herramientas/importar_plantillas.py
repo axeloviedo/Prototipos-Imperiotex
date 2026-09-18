@@ -151,13 +151,15 @@ for r in rs[1:]:
     g = lambda c: r[idx[c]] if c in idx else ''
     proveedores.append({
         'cod': g('Código (*)'), 'tipoDoc': g('Tipo doc. (*)'), 'doc': g('N° documento (*)'), 'nom': g('Razón social / Nombre (*)'),
-        'comercial': g('Nombre comercial'), 'grupo': g('Grupo'), 'tipo': g('Tipo (*)'), 'estado': g('Estado (*)') or 'Activo',
+        # 2026-09-18 (pedido del usuario): GRUPO = Nacional / Internacional (columna «Tipo (*)» del Excel) y TIPO = Telas, Avíos,
+        # Servicios, Generales (columna «Grupo» del Excel, hoja «GRUPO DE PROVEEDORES»). Revisa K4.
+        'comercial': g('Nombre comercial'), 'grupo': g('Tipo (*)'), 'tipo': g('Grupo'), 'estado': g('Estado (*)') or 'Activo',
         'email': g('Correo electrónico (*)'), 'dir': g('Dirección fiscal'), 'ubigeo': g('Ubigeo'), 'tel': g('Teléfono'), 'cel': g('Celular / WhatsApp'),
         'mon': g('Moneda default') or 'S/.', 'cond': g('Condición de pago (*)') or 'Contado', 'dias': int(num(g('Días crédito')) or 0),
         'retencion': g('Retención') == 'Sí', 'detraccion': g('Detracción') == 'Sí', 'origen': 'plantilla'
     })
 cfg_prov = bloques_config('PLANTILLA_Proveedores.xlsx')
-grupos_prov = [{'cod': r[0], 'nom': r[1], 'desc': r[2]} for r in cfg_prov['GRUPO DE PROVEEDORES'] if r[0] != 'Código']
+tipos_prov = [{'cod': r[0], 'nom': r[1], 'desc': r[2]} for r in cfg_prov['GRUPO DE PROVEEDORES'] if r[0] != 'Código']
 condiciones = [{'nom': r[0], 'dias': int(num(r[1]) or 0)} for r in cfg_prov['CONDICIÓN DE PAGO'] if r[0] != 'Descripción']
 
 # proveedor por defecto: de nombre a código
@@ -169,7 +171,7 @@ for a in mp + srv:
 
 # ---------------- estructura organizativa (docx) ----------------
 # Se lee la versión ACTUALIZADA del Word (COMPARTIDO/herramientas/actualizar_estructura_word.py), corregida con los Excel.
-# LOS EXCEL MANDAN: almacenes, sedes, empresas y grupos de proveedores salen del Excel; del Word solo se toma lo que el Excel no tiene
+# LOS EXCEL MANDAN: almacenes, sedes, empresas y tipos de proveedor salen del Excel; del Word solo se toma lo que el Excel no tiene
 # (compartida de la sede, organización y grupos de compras, grupos y tipos de movimiento).
 import docx
 from docx.table import Table
@@ -208,10 +210,10 @@ if os.path.exists(os.path.join(PL, ARCH_EST)):
                 tipos_mov.append({'cod': r[0], 'grupo': r[0].split('-')[0], 'nom': r[1], 'desc': r[2]})
     estructura['tiposMovimiento'] = tipos_mov
 
-# grupo del proveedor: el código del grupo del Excel (Telas → TEL, Avíos → AVI…), tal como está en la plantilla
-por_nombre_grupo = {g['nom'].upper(): g['cod'] for g in grupos_prov}
+# tipo del proveedor: el código de la hoja «GRUPO DE PROVEEDORES» del Excel (Telas → TEL, Avíos → AVI…)
+por_nombre_tipo = {t['nom'].upper(): t['cod'] for t in tipos_prov}
 for pr in proveedores:
-    pr['grupo'] = por_nombre_grupo.get(pr['grupo'].upper(), pr['grupo'])
+    pr['tipo'] = por_nombre_tipo.get(pr['tipo'].upper(), pr['tipo'])
 
 datos = {
     'fuente': 'docs/INFO/PLANTILLAS ENTREGADAS POR EL USUARIO',
@@ -219,7 +221,7 @@ datos = {
     'empresas': empresas, 'sedes': sedes, 'almacenes': almacenes,
     'unidades': unidades_pl, 'atributos': atributos, 'tiposCodigoBarra': tipos_barra,
     'categorias': cats, 'subcategorias': subcats,
-    'articulos': mp + srv, 'proveedores': proveedores, 'gruposProveedor': grupos_prov, 'condicionesPago': condiciones,
+    'articulos': mp + srv, 'proveedores': proveedores, 'tiposProveedor': tipos_prov, 'condicionesPago': condiciones,
     **estructura
 }
 os.makedirs(os.path.dirname(SALIDA), exist_ok=True)

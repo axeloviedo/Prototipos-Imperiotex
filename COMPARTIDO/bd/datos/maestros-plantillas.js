@@ -2570,8 +2570,8 @@ const BD_PLANTILLAS = {
    "doc": "20456123789",
    "nom": "TEXTIL SAN JACINTO SAC",
    "comercial": "TEXTIL SAN JACINTO",
-   "grupo": "TEL",
-   "tipo": "Nacional",
+   "grupo": "Nacional",
+   "tipo": "TEL",
    "estado": "Activo",
    "email": "ventas@sanjacinto.com.pe",
    "dir": "AV. AVIACION 3456",
@@ -2591,8 +2591,8 @@ const BD_PLANTILLAS = {
    "doc": "20321654987",
    "nom": "AVÍOS DEL SUR EIRL",
    "comercial": "AVÍOS DEL SUR",
-   "grupo": "AVI",
-   "tipo": "Nacional",
+   "grupo": "Nacional",
+   "tipo": "AVI",
    "estado": "Activo",
    "email": "ventas@aviosdelsur.pe",
    "dir": "JR. GAMARRA 890",
@@ -2612,8 +2612,8 @@ const BD_PLANTILLAS = {
    "doc": "20567891234",
    "nom": "LAVANDERIA INDUSTRIAL DEL SUR SAC",
    "comercial": "LAVANDERIA DEL SUR",
-   "grupo": "AVI",
-   "tipo": "Nacional",
+   "grupo": "Nacional",
+   "tipo": "AVI",
    "estado": "Activo",
    "email": "servicios@lavanderiadelsur.com",
    "dir": "AV. INDUSTRIAL 1200 - ZARATE",
@@ -2633,8 +2633,8 @@ const BD_PLANTILLAS = {
    "doc": "BR-33.013.545/0001",
    "nom": "YKK DO BRASIL LTDA",
    "comercial": "YKK",
-   "grupo": "TEL",
-   "tipo": "Internacional",
+   "grupo": "Internacional",
+   "tipo": "TEL",
    "estado": "Activo",
    "email": "export@ykk.com.br",
    "dir": "Av. Paulista 1000",
@@ -2649,7 +2649,7 @@ const BD_PLANTILLAS = {
    "origen": "plantilla"
   }
  ],
- "gruposProveedor": [
+ "tiposProveedor": [
   {
    "cod": "TEL",
    "nom": "Telas",

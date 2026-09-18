@@ -63,8 +63,8 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `tiposRecurso` | `{cod:'TRC-0001', nom:'RECURSO HUMANO', clase:'humano'\|'servicio'?}` | complemento |
 | `recursos` | `{cod, nom, tipo, activo, u, costo (estándar), cuenta (mayor), prov?}` — un servicio de terceros usa **el mismo código del artículo SRV** | complemento |
 | `operarios` | `{cod:'OPE-001', nom, rec, activo}` | complemento |
-| `proveedores` | `{cod:'PROV-0001', tipoDoc, doc, nom, comercial, grupo, tipo, estado, email, dir, ubigeo, tel, cel, mon, cond, dias, retencion, detraccion, servicio?, alm?, diasEst?, origen, aConfirmar?}` | 4 de plantilla + 17 de servicios (complemento) |
-| `gruposProveedor` | `{cod:'TEL'\|'AVI'\|'SRV'\|'GEN', nom, desc}` — el `grupo` del proveedor es este código | plantilla proveedores (Excel) |
+| `proveedores` | `{cod:'PROV-0001', tipoDoc, doc, nom, comercial, grupo:'Nacional'\|'Internacional', tipo:'TEL'\|'AVI'\|'SRV'\|'GEN', estado, email, dir, ubigeo, tel, cel, mon, cond, dias, retencion, detraccion, servicio?, alm?, diasEst?, origen, aConfirmar?}` | 4 de plantilla + 17 de servicios (complemento) |
+| `tiposProveedor` | `{cod:'TEL'\|'AVI'\|'SRV'\|'GEN', nom, desc}` — el `tipo` del proveedor es este código; el `grupo` es Nacional / Internacional (S1, 2026-09-18; antes `gruposProveedor`) | plantilla proveedores (Excel, hoja «GRUPO DE PROVEEDORES») |
 | `condicionesPago` | `{nom:'Crédito 30 días', dias}` | plantilla proveedores |
 | `organizacionesCompra` | `{cod:'SB'\|'CN', centro, nom}` | estructura organizativa |
 | `gruposCompra` | `{cod:'MP1'\|'SRV'\|'IMP'\|'EE1'\|'MSC'\|'SG1', nom}` — se asigna en el Grupo de Artículo (K10) | estructura organizativa |
