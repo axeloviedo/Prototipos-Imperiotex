@@ -55,7 +55,9 @@ const Cfg = {
     const c = Store.cfg();
     const igv = n(x.igv, 0, 30, 'El IGV'), tc = n(x.tc, 0.01, 99, 'El tipo de cambio'), dv = n(x.diasValidez, 1, 90, 'La validez de la cotización'), da = n(x.diasAnulacion, 0, 30, 'El plazo para anular');
     if (!M.ALMACENES.some(a => a.cod === x.almMalEstado)) throw new Error('Elija el almacén para devoluciones en mal estado');
+    if (x.dineroDev !== undefined && ['SALDO', 'CAJA'].indexOf(x.dineroDev) < 0) throw new Error('Elija qué pasa con el dinero de una devolución');
     Object.assign(c, { igv, tc: UI.r4(tc), diasValidez: Math.round(dv), diasAnulacion: Math.round(da), almMalEstado: x.almMalEstado });
+    if (x.dineroDev !== undefined) c.dineroDev = x.dineroDev;
     return c;
   },
   agregarCat(tipo, nombre) {

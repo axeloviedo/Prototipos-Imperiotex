@@ -40,6 +40,8 @@ const Demo = {
     if (o.validez) Cot.cambiarCabecera(c, 'validez', o.validez);
     return c;
   },
+  /* líneas de «Se lleva» de un cambio, con los precios de cualquier venta de la tienda y el cliente de la venta original */
+  _llevar(v, lineas) { const d = Dev.borradorLleva(v, []); Demo._lineas(d, lineas); return d.lineas; },
   _lineas(d, lineas) {
     lineas.forEach(x => {
       Doc.agregar(d, x[0]);
@@ -139,14 +141,19 @@ const Demo = {
     const p5 = Ventas.agregarPago(v5, { met: 'TRF', banco: 'BBVA', nop: 'BBVA-771204', voucher: 'transferencia_andina.pdf', monto: 1000 });
     T('31/07/2026 10:10', 'USER14'); Ventas.validarPago(v5, p5.id);
 
-    /* cambio de prenda: devolución finalizada (vuelve a SB-TIENDA01), dinero devuelto en caja y nueva venta */
+    /* ---------- cambios y devoluciones (2026-09-18, «solo cambios»): el dinero no sale de caja, queda como saldo a favor ----------
+       Caso 1 · cambio de talla sin diferencia: la vendedora registra y acepta en el mostrador; la venta nueva se paga toda con
+       saldo a favor y sale el stock en el acto (los pagos de la venta original no se tocan) */
     T('31/07/2026 10:30', 'USER10');
-    const d1 = Dev.crear(v4.id, { lineas: [{ n: 1, cant: 1, tipo: 'Cambio' }], sustTipo: 'Nota de crédito', sustNum: 'BC01-000034', obs: 'Talla equivocada: se cambia por la talla 28' });
-    T('31/07/2026 10:35', 'USER12'); Dev.finalizar(d1);
-    T('31/07/2026 10:40', 'USER11'); Caja.procesarReembolso(sTda, v4.id, d1.reembolso, { met: 'EFE' });
-    T('31/07/2026 10:45', 'USER10');
-    const v7 = Demo.venta({ sede: 'TDA-01', cli: 'CLI-000001', comp: 'BV', lineas: [['PT-0003', 1]], pagos: [{ met: 'EFE', monto: 'resto' }], obs: 'Cambio de ' + d1.id });
-    T('31/07/2026 10:50', 'USER11'); Ventas.validarPago(v7, v7.pagos[0].id);
+    Dev.aceptarNueva(v4.id, { lineas: [{ n: 1, cant: 1, tipo: 'Normal' }], sustTipo: 'Nota de crédito', sustNum: 'BC01-000034', obs: 'Talla equivocada: se cambia por la talla 28',
+      lleva: Demo._llevar(v4, [['PT-0003', 1]]) });
+    /* Caso 2 · cambio con diferencia en contra: la prenda nueva cuesta más; el cliente paga la diferencia con Yape (por validar en caja).
+       Hasta que caja la valida, el stock de la venta nueva queda comprometido */
+    T('31/07/2026 10:50', 'USER10');
+    Dev.aceptarNueva(v2.id, { lineas: [{ n: 1, cant: 1, tipo: 'Normal' }], sustTipo: 'Nota de crédito', sustNum: 'BC01-000035', obs: 'Prefiere el modelo azul',
+      lleva: Demo._llevar(v2, [['PT-0003', 1]]) }, { met: 'YAPE', nop: '930087', voucher: 'yape_930087.jpg' });
+    const v2c = Store.venta(Store.d.devs[0].ventaCambio);
+    T('31/07/2026 10:55', 'USER11'); Ventas.validarPago(v2c, v2c.pagos.find(p => p.estado === 'Por validar').id);
 
     /* venta de servicios al crédito (sin almacén ni stock; uno exonerado de IGV) */
     T('31/07/2026 11:20', 'USER10');
@@ -155,6 +162,20 @@ const Demo = {
     /* devolución pendiente de la factura de ayer, que ya tuvo salida (mal estado → SB-LIQUID al finalizar) */
     T('31/07/2026 11:30', 'USER10');
     Dev.crear(v3.id, { lineas: [{ n: 1, cant: 1, tipo: 'Mal estado' }], sustTipo: 'Nota de crédito', sustNum: 'FC01-000021', obs: 'Costura abierta en 1 unidad' });
+
+    /* Caso 3 · cambio con diferencia a favor: el mayorista devuelve 2 de la misma factura y se lleva 1 de otro modelo;
+       lo que sobra queda como saldo a favor del cliente (no sale dinero de caja) */
+    T('31/07/2026 11:40', 'USER10');
+    Dev.aceptarNueva(v3.id, { lineas: [{ n: 1, cant: 2, tipo: 'Normal' }], sustTipo: 'Nota de crédito', sustNum: 'FC01-000022', obs: 'Se lleva una del modelo negro; el resto queda a cuenta',
+      lleva: Demo._llevar(v3, [['PT-0004', 1]]) });
+    /* Caso 4 · devolución sin «Se lleva»: todo lo pagado queda como saldo a favor. Se registra Pendiente y la acepta la supervisora */
+    T('31/07/2026 11:50', 'USER10');
+    const d4 = Dev.crear(v1.id, { lineas: [{ n: 1, cant: 1, tipo: 'Normal' }], sustTipo: 'Nota de crédito', sustNum: 'BC01-000036', obs: 'No le quedó; vuelve otro día a elegir' });
+    T('31/07/2026 11:55', 'USER12'); Dev.finalizar(d4);
+    /* Caso 5 · el cliente vuelve y usa su saldo a favor en una compra mayor: saldo + efectivo (el efectivo se valida en caja) */
+    T('31/07/2026 13:20', 'USER10');
+    const vS = Demo.venta({ sede: 'TDA-01', cli: 'CLI-000004', comp: 'BV', lineas: [['PT-0001', 1], ['PT-0003', 1]], pagos: [{ met: 'SALDO', monto: Saldo.de('CLI-000004', 'PEN') }, { met: 'EFE', monto: 'resto' }] });
+    T('31/07/2026 13:25', 'USER11'); Ventas.validarPago(vS, vS.pagos.find(p => p.estado === 'Por validar').id);
 
     /* venta mixta con dos medios de pago: el Yape queda por validar, así que el stock sigue comprometido en SB-TIENDA01 */
     T('31/07/2026 12:00', 'USER10');
@@ -174,6 +195,7 @@ const Demo = {
     Store.fijarUsuario(previo || M.USUARIOS[0].cod, false);
     BD.guardar();
     const d = BD.d;
-    return { ajuste: falta, transferencias: (d.trfs || []).map(t => t.id + ' ' + t.estado), cotizaciones: d.cots.length, ventas: d.ventas.length, devoluciones: d.devs.length, cajas: d.sesiones.length, movimientosCaja: d.cmovs.length, cajaMayorista: sMay.id };
+    return { ajuste: falta, transferencias: (d.trfs || []).map(t => t.id + ' ' + t.estado), cotizaciones: d.cots.length, ventas: d.ventas.length, devoluciones: d.devs.map(x => x.id + ' ' + Dev.tipo(x) + ' ' + x.estado + ' ' + Dev.dineroTxt(x)),
+      saldos: d.clientes.map(c => ({ cli: c.cod, saldo: Saldo.de(c.cod, 'PEN') })).filter(x => x.saldo > 0), cajas: d.sesiones.length, movimientosCaja: d.cmovs.length, cajaMayorista: sMay.id };
   }
 };

@@ -21,6 +21,7 @@ const M = {
 Object.defineProperty(M, 'ALMACENES', { get: () => M.almacenesVenta(), enumerable: true });
 Object.defineProperty(M, 'CONVERSIONES', { get: () => BD.d.maestros.conversiones, enumerable: true });
 
+M.SALDO = 'SALDO'; /* medio de pago «Saldo a favor» */
 M.metodo = cod => M.METODOS.find(m => m.cod === cod);
 M.cond = cod => M.CONDICIONES.find(c => c.cod === cod);
 M.comp = cod => M.COMPROBANTES.find(c => c.cod === cod);
