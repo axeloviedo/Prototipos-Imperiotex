@@ -247,12 +247,8 @@ function renderOCdocs(){
   document.getElementById('oc-hist').innerHTML=(o.hist||[]).slice().reverse().map(h=>'<tr><td>'+h.f+'</td><td>'+coEsc(h.u)+'</td><td'+(h.e==='no'?' style="color:var(--cancelada)"':'')+'>'+coEsc(h.a)+'</td><td class="hint">'+coEsc(h.d)+'</td></tr>').join('')
     ||'<tr><td colspan="4" style="text-align:center;color:var(--texto-sec);padding:12px">Sin historial: la OC aún no se guarda</td></tr>';
 }
+/* la moneda (S/. o USD) es libre: no depende del proveedor */
 function ocMoneda(){
-  const m=document.getElementById('oc-mon').value, p=BD.prov(OC.prov);
-  if(m==="USD" && !(p && (p.tipo==="Internacional"||p.mon==="USD"))){
-    toast("USD requiere un proveedor Internacional (importación)");
-    document.getElementById('oc-mon').value="S/.";
-  }
   OC.mon=document.getElementById('oc-mon').value;
   renderOCitems();
 }
@@ -260,7 +256,7 @@ function elegirProvOC(cod){
   const p=BD.prov(cod); closeModal('m-ct09');
   if(!p||!OC||OC.est!=="Borrador"){toast("Abra una OC en Borrador para elegir el proveedor");return}
   ocLeerForm();
-  OC.prov=p.cod; OC.cond=p.cond||OC.cond; OC.mon=p.mon||"S/.";
+  OC.prov=p.cod; OC.cond=p.cond||OC.cond;
   OC.items.forEach(it=>it.igv=ocIGV(it.art,p.cod));
   ocLlenarForm(); renderOC();
   toast(p.tipo==="Internacional"?"Proveedor internacional: la OC se trata como importación (USD, IGV en la nacionalización)":"Proveedor seleccionado: "+p.nom);
