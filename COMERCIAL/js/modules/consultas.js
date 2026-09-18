@@ -45,10 +45,10 @@ const CM06 = {
   },
   /* aviso de lo que viene en camino a su sede: la recepción se confirma en CL-47 (misma Solicitud de Transferencia que GI-11) */
   enCamino() {
-    const n = typeof CM13 !== 'undefined' ? CM13.pendientes().length : 0;
+    const n = typeof CM14 !== 'undefined' ? CM14.pendientes().length : 0;
     if (!n) return '';
     return UI.aviso('<b>' + n + ' transferencia(s) en camino a su sede.</b> Confírmelas cuando llegue la mercadería: ' +
-      '<button class="btn-link" style="padding:0" onclick="App.go(\'cm13\')">Recepción de mercadería (CL-47)</button>', 'info');
+      '<button class="btn-link" style="padding:0" onclick="App.go(\'cm14\')">Recepción de mercadería (CL-47)</button>', 'info');
   },
   movimientos() {
     const f = CM06.f, mq = f.mq.toLowerCase();

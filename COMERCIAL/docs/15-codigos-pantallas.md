@@ -62,8 +62,8 @@
 | CL-44 | Modal | Datos de venta del artículo | `CM09.editar` | `js/modules/listas.js` |
 | CL-45 | Pantalla | Configuración comercial (parámetros, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
 | CL-46 | Modal | Reiniciar todo el prototipo (llama a `BD.reiniciar()` con el escenario actual y recarga; el selector «Datos» de la barra superior es `BDSelector` del núcleo, sin código CL) | `Store.reiniciar` | `js/core/store.js` |
-| CL-47 | Pantalla | Recepción de mercadería (Solicitudes de Transferencia que llegan a su sede: Por recibir / Recibidas) | `cm13` | `js/modules/recepciones.js` |
-| CL-48 | Modal | Recibir mercadería (cantidades que llegaron, total o incompleta; llama a `Docs.trf.recibir`, igual que GI-11) | `CM13.recibir` | `js/modules/recepciones.js` |
+| CL-47 | Pantalla | Recepción de mercadería (Solicitudes de Transferencia que llegan a su sede: Por recibir / Recibidas) | `cm14` | `js/modules/recepciones.js` |
+| CL-48 | Modal | Recibir mercadería (cantidades que llegaron, total o incompleta; llama a `Docs.trf.recibir`, igual que GI-11) | `CM14.recibir` | `js/modules/recepciones.js` |
 
 ## Equivalencia con los códigos anteriores
 

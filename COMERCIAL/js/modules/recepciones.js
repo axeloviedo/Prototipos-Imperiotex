@@ -3,7 +3,7 @@
    operación Docs.trf.recibir que usa GI-11; aquí solo cambia la presentación, más simple para la tienda. No hay otro documento ni otro estado.
    Quién confirma: el usuario cuya sede es la del almacén de destino (Store.enMiSede) o un usuario logístico general (acceso_logistico_general).
    Se listan solo las transferencias que llegan a los almacenes de la sede del usuario (todas si es logístico general); los Borradores no se muestran. */
-const CM13 = {
+const CM14 = {
   tab: 'pend',
   /* el documento conserva sus estados; en la tienda se leen así */
   ETIQUETA: { Aprobada: 'En camino', Parcial: 'Llegó incompleto', Recibida: 'Recibido', Cancelada: 'Anulado' },
@@ -11,21 +11,21 @@ const CM13 = {
   lista() {
     return (Store.d.trfs || []).filter(t => t.estado !== 'Borrador' && Store.enMiSede(t.destino));
   },
-  pendientes() { return CM13.lista().filter(t => t.estado === 'Aprobada' || t.estado === 'Parcial'); },
+  pendientes() { return CM14.lista().filter(t => t.estado === 'Aprobada' || t.estado === 'Parcial'); },
   unidades(t, campo) { return t.lineas.reduce((a, l) => a + (campo === 'pend' ? Docs.trf.pendiente(l) : campo === 'rec' ? (l.recibido || 0) : l.cant), 0); },
   render(p) {
-    const todas = CM13.lista(), pend = CM13.pendientes(), rec = todas.filter(t => t.estado === 'Recibida' || t.estado === 'Cancelada');
-    if (p && p.id) { const t = todas.find(x => x.id === p.id); if (t) CM13.tab = (t.estado === 'Aprobada' || t.estado === 'Parcial') ? 'pend' : 'rec'; }
+    const todas = CM14.lista(), pend = CM14.pendientes(), rec = todas.filter(t => t.estado === 'Recibida' || t.estado === 'Cancelada');
+    if (p && p.id) { const t = todas.find(x => x.id === p.id); if (t) CM14.tab = (t.estado === 'Aprobada' || t.estado === 'Parcial') ? 'pend' : 'rec'; }
     const alcance = Store.general() ? 'todos los almacenes (usuario logístico general)' : 'los almacenes de su sede: <b>' + Store.almsSede().map(a => UI.esc(a + ' · ' + M.almNom(a))).join(', ') + '</b>';
-    const lista = CM13.tab === 'pend' ? pend : rec;
+    const lista = CM14.tab === 'pend' ? pend : rec;
     const ajena = p && p.id && !todas.some(x => x.id === p.id) ? BD.trf(p.id) : null;
     const tabs = [['pend', 'Por recibir (' + pend.length + ')'], ['rec', 'Recibidas (' + rec.length + ')']];
     return '<div class="screen-head"><h1>Recepción de mercadería</h1><span class="code">CL-47</span></div>' +
       '<p class="hint" style="margin:0 0 10px">Lo que Logística envía a su tienda. Cuando la mercadería llegue, revise las cantidades y confirme: recién ahí se suma a su stock. Se muestran ' + alcance + '.</p>' +
       (ajena ? UI.aviso('La transferencia <b>' + UI.esc(ajena.id) + '</b> va a ' + UI.esc(ajena.destino + ' · ' + M.almNom(ajena.destino)) + ', que no es de su sede: la confirma alguien de esa sede o un usuario logístico general.') : '') +
-      '<div class="tabs">' + tabs.map(x => '<div class="tab' + (x[0] === CM13.tab ? ' active' : '') + '" onclick="CM13.tab=\'' + x[0] + '\';App.go(\'cm13\')">' + x[1] + '</div>').join('') + '</div>' +
-      (lista.length ? lista.map(t => CM13.tarjeta(t, p && p.id === t.id)).join('') :
-        UI.aviso(CM13.tab === 'pend' ? 'No hay mercadería en camino a su sede.' : 'Todavía no hay recepciones registradas en su sede.', 'info'));
+      '<div class="tabs">' + tabs.map(x => '<div class="tab' + (x[0] === CM14.tab ? ' active' : '') + '" onclick="CM14.tab=\'' + x[0] + '\';App.go(\'cm14\')">' + x[1] + '</div>').join('') + '</div>' +
+      (lista.length ? lista.map(t => CM14.tarjeta(t, p && p.id === t.id)).join('') :
+        UI.aviso(CM14.tab === 'pend' ? 'No hay mercadería en camino a su sede.' : 'Todavía no hay recepciones registradas en su sede.', 'info'));
   },
   tarjeta(t, resaltar) {
     const puede = Store.puede('recibir_transferencia') && Store.enMiSede(t.destino) && (t.estado === 'Aprobada' || t.estado === 'Parcial');
@@ -35,8 +35,8 @@ const CM13 = {
       '<div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">' +
         '<div style="flex:1;min-width:240px"><div style="font-size:15px;font-weight:600">Desde ' + UI.esc(M.almNom(t.origen)) + ' → ' + UI.esc(M.almNom(t.destino)) + '</div>' +
         '<div class="mini">' + t.id + ' · enviado el ' + UI.esc(String(t.fecha || '').split(' ')[0]) + ' · ' + origen + '</div></div>' +
-        '<div style="text-align:right">' + UI.badge(CM13.ETIQUETA[t.estado] || t.estado, CM13.COLOR[t.estado] || 'var(--borrador)') +
-          '<div class="mini" style="margin-top:3px">' + UI.q(CM13.unidades(t)) + ' unidades enviadas</div></div>' +
+        '<div style="text-align:right">' + UI.badge(CM14.ETIQUETA[t.estado] || t.estado, CM14.COLOR[t.estado] || 'var(--borrador)') +
+          '<div class="mini" style="margin-top:3px">' + UI.q(CM14.unidades(t)) + (CM14.unidades(t) === 1 ? ' unidad enviada' : ' unidades enviadas') + '</div></div>' +
       '</div>' +
       UI.tabla(['Producto', ['Enviado', 'num'], ['Recibido', 'num'], ['Falta', 'num']], t.lineas.map(l => {
         const f = Docs.trf.pendiente(l);
@@ -45,7 +45,7 @@ const CM13 = {
       }), { sub: true, estilo: 'margin-top:10px' }) +
       (recs.length ? '<p class="mini" style="margin-top:8px">' + recs.map(h => 'Recibido el ' + UI.esc(h.f) + ' por ' + UI.esc(h.u)).join(' · ') + (t.estado === 'Recibida' && t.lineas.some(l => Docs.trf.pendiente(l) > 0) ? ' · lo que faltaba se anuló' : '') + '</p>' : '') +
       (t.estado === 'Parcial' ? '<p class="mini" style="margin-top:4px">Lo que falta sigue en camino: se confirma cuando llegue, o Logística lo anula.</p>' : '') +
-      (puede ? '<div style="margin-top:10px;text-align:right"><button class="btn btn-primary" onclick="CM13.recibir(\'' + t.id + '\')">Recibir mercadería</button></div>' : '') +
+      (puede ? '<div style="margin-top:10px;text-align:right"><button class="btn btn-primary" onclick="CM14.recibir(\'' + t.id + '\')">Recibir mercadería</button></div>' : '') +
     '</div>';
   },
   /* CL-48: cantidades precargadas con lo que falta llegar; se puede bajar si llegó menos */
@@ -58,12 +58,12 @@ const CM13 = {
       cuerpo: '<p style="margin:0 0 10px">Cuente lo que llegó a <b>' + UI.esc(M.almNom(t.destino)) + '</b>. Si llegó todo, confirme tal cual; si llegó menos, corrija la cantidad.</p>' +
         UI.tabla(['Producto', ['Debe llegar', 'num'], ['Llegó', 'num', '130px']], ls.map(x =>
           '<tr><td>' + UI.esc(M.nomArt(x.l.art)) + '<br><span class="mini">' + x.l.art + '</span></td><td class="num">' + UI.q(x.f) + '</td>' +
-          '<td class="num"><input id="rc-' + x.i + '" type="number" min="0" max="' + x.f + '" step="1" value="' + x.f + '" data-max="' + x.f + '" oninput="CM13.aviso()" style="width:100%;text-align:right"></td></tr>'), { sub: true }) +
+          '<td class="num"><input id="rc-' + x.i + '" type="number" min="0" max="' + x.f + '" step="1" value="' + x.f + '" data-max="' + x.f + '" oninput="CM14.aviso()" style="width:100%;text-align:right"></td></tr>'), { sub: true }) +
         '<div id="rc-aviso" class="mini" style="margin-top:8px"></div>' +
         '<div class="formgrid" style="margin-top:8px">' + UI.campo('Observación (opcional)', '<input id="rc-obs" placeholder="Ej. llegó una caja abierta">', { full: true }) + '</div>',
-      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM13.confirmar(\'' + id + '\')">Confirmar recepción</button>'
+      pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="CM14.confirmar(\'' + id + '\')">Confirmar recepción</button>'
     });
-    CM13.aviso();
+    CM14.aviso();
   },
   aviso() {
     const el = document.getElementById('rc-aviso'); if (!el) return;
@@ -79,16 +79,16 @@ const CM13 = {
       Store.exigir('recibir_transferencia', 'confirmar recepciones');
       if (!Store.enMiSede(t.destino)) throw new Error('El almacén ' + t.destino + ' no es de su sede');
       return Docs.trf.recibir(id, lineas, obs);   /* la misma operación que GI-11 de Inventarios */
-    }, () => 'Se sumaron ' + UI.q(total) + ' unidades a ' + M.almNom(t.destino) + ' (' + id + ' ' + (CM13.ETIQUETA[BD.trf(id).estado] || '').toLowerCase() + ')');
+    }, () => 'Se ' + (total === 1 ? 'sumó 1 unidad' : 'sumaron ' + UI.q(total) + ' unidades') + ' a ' + M.almNom(t.destino) + ' (' + id + ' ' + (CM14.ETIQUETA[BD.trf(id).estado] || '').toLowerCase() + ')');
     if (!ok) return;
     UI.cerrar();
-    App.go('cm13', { id });
+    App.go('cm14', { id });
   }
 };
-App.pantalla('cm13', {
+App.pantalla('cm14', {
   titulo: 'Recepción de mercadería', permiso: 'ver_existencias',
   miga: p => p && p.id ? 'Recepción de mercadería / <b>' + UI.esc(p.id) + '</b>' : '<b>Recepción de mercadería</b>',
-  render: CM13.render,
+  render: CM14.render,
   /* App.go vuelve al inicio después de pintar: se desplaza a la tarjeta en el siguiente ciclo */
   despues: p => { if (p && p.id) setTimeout(() => { const e = document.getElementById('trf-' + p.id); if (e) e.scrollIntoView({ block: 'center' }); }, 0); }
 });

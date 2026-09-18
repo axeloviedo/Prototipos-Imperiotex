@@ -21,7 +21,7 @@ window.addEventListener('message', e => {
   const f = document.getElementById('gp-compartida');
   if (!f || e.source !== f.contentWindow || !e.data) return;
   /* clic en una Solicitud de Transferencia dentro de la vista compartida: se abre en Recepción de mercadería (CL-47) */
-  if (e.data.tipo === 'gp-abrir-st') { App.go('cm13', { id: e.data.id }); return; }
+  if (e.data.tipo === 'gp-abrir-st') { App.go('cm14', { id: e.data.id }); return; }
   if (e.data.tipo !== 'gp-miga') return;
   document.getElementById('breadcrumb').innerHTML = 'Comercial / ' + e.data.html;
 });
