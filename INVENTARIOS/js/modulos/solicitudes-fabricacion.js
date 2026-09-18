@@ -1,13 +1,9 @@
 /* INVENTARIOS · GI-21/22/23 Solicitudes de Fabricación sobre BD.d.sfs (Docs.sf, contrato §3.4):
-   {id, fecha, mes, solic, almDestino (código), fechaReq, est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs, ref, comprometido, hist}.
+   {id, fecha, solic, almDestino (código), fechaReq (obligatoria al enviar, Q6: sustituye al «mes proyectado»), est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs, ref, comprometido, hist}.
    La vista comercial (?vista=comercial) usa estas mismas pantallas. */
 const MESES=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Set","Oct","Nov","Dic"];
-function mesesProyectados(extra){
-  const p=BD.hoy().split('/'), m0=parseInt(p[1],10)-1, a0=parseInt(p[2],10), out=[];
-  for(let i=0;i<7;i++){const m=(m0+i)%12, a=a0+Math.floor((m0+i)/12);out.push(MESES[m]+' '+a)}
-  if(extra&&!out.includes(extra))out.unshift(extra);
-  return out;
-}
+/* mes de una fecha dd/mm/aaaa («Set 2026»): el filtro por mes de la bandeja sale de la fecha requerida */
+function mesDe(f){const p=String(f||'').split('/');return p.length===3?MESES[parseInt(p[1],10)-1]+' '+p[2]:''}
 function attrDe(cod,nom){return BD.attr(cod,nom)}
 /* artículos que se pueden pedir: terminados activos con lista de materiales */
 function artTerminados(){return M().articulos.filter(a=>a.grupo==='PT'&&a.estado==='Activo'&&BD.fabricable(a.cod))}
@@ -20,15 +16,15 @@ function fillFiltroCatSP(){
   const sel=document.getElementById('f-sp-b'); if(!sel)return;
   sel.innerHTML=opcionesLista([...new Set(artTerminados().map(a=>a.cat).filter(Boolean))],sel.value,'Todas');
   const m=document.getElementById('f-sp-m'), vm=m.value;
-  m.innerHTML=opcionesLista([...new Set(BD.d.sfs.map(s=>s.mes).filter(Boolean))],vm,'Todos');
+  m.innerHTML=opcionesLista([...new Set(BD.d.sfs.map(s=>mesDe(s.fechaReq)).filter(Boolean))],vm,'Todos');
 }
 function renderSP(){
   fillFiltroCatSP();
   const e=document.getElementById('f-sp-e').value, m=document.getElementById('f-sp-m').value, b=document.getElementById('f-sp-b').value;
   const q=Fmt.s(document.getElementById('f-sp-q').value);
-  const lista=BD.d.sfs.filter(d=>(!e||d.est===e)&&(!m||d.mes===m)&&(!b||spCategorias(d).includes(b))&&(!q||d.lineas.some(l=>Fmt.s(l.art+' '+BD.nomArt(l.art)).includes(q))));
+  const lista=BD.d.sfs.filter(d=>(!e||d.est===e)&&(!m||mesDe(d.fechaReq)===m)&&(!b||spCategorias(d).includes(b))&&(!q||d.lineas.some(l=>Fmt.s(l.art+' '+BD.nomArt(l.art)).includes(q))));
   const chip=(ok,t)=>'<span class="badge" style="background:'+(ok?'var(--confirmado)':'var(--borrador)')+';font-size:10.5px">'+(ok?'✓ ':'')+t+'</span>';
-  document.getElementById('sp-body').innerHTML=lista.map(d=>'<tr class="clickable" onclick="abrirSF(\''+d.id+'\')"><td>'+d.id+'</td><td>'+d.fecha+'</td><td>'+Fmt.e(d.mes||'')+'</td>'+
+  document.getElementById('sp-body').innerHTML=lista.map(d=>'<tr class="clickable" onclick="abrirSF(\''+d.id+'\')"><td>'+d.id+'</td><td>'+d.fecha+'</td><td>'+(d.fechaReq?Fmt.e(d.fechaReq):hint('-'))+'</td>'+
     '<td>'+d.lineas.map(l=>l.art+' × '+Fmt.n(l.cant)).join('<br>')+'</td><td style="text-align:right;font-weight:600">'+Fmt.n(spTotal(d))+'</td><td>'+(d.almDestino||hint('-'))+'</td>'+
     '<td>'+badge(d.est)+'</td><td>'+(d.est==='Borrador'?hint('-'):chip(d.vb,'V°B°')+' '+chip(d.ger,'Gerencia'))+'</td><td>'+Fmt.e(d.solic||'')+'</td>'+
     '<td onclick="event.stopPropagation()">'+((d.ofs||[]).length?d.ofs.length+' OF'+(d.ref?'<br><span class="hint">'+Fmt.e(d.ref)+'</span>':''):hint('-'))+'</td></tr>').join('')||
@@ -42,7 +38,6 @@ let NSP={lineas:[]}, ART_CTX="nuevo";
 function nuevaSP(){
   NSP={lineas:[]};
   document.getElementById('n-sp-fecha').value=BD.hoy();
-  document.getElementById('n-sp-mes').innerHTML='<option value="">Seleccionar…</option>'+opcionesLista(mesesProyectados(),'',false);
   document.getElementById('n-sp-almdest').innerHTML=opcionesAlm('SB-CENTRAL');
   document.getElementById('n-sp-freq').value='';
   document.getElementById('n-sp-obs').value='';
@@ -65,9 +60,9 @@ function nspFootUI(){
   document.getElementById('n-sp-total').value=Fmt.n(t)+" UND";
 }
 function guardarSP(enviar){
-  const d={mes:document.getElementById('n-sp-mes').value,almDestino:document.getElementById('n-sp-almdest').value,fechaReq:Fmt.bd(document.getElementById('n-sp-freq').value),
+  const d={almDestino:document.getElementById('n-sp-almdest').value,fechaReq:Fmt.bd(document.getElementById('n-sp-freq').value),
     obs:document.getElementById('n-sp-obs').value.trim(),solic:BD.usuario,lineas:NSP.lineas.map(l=>({art:l.art,cant:l.cant,ldm:l.ldm}))};
-  if(!d.mes){toast("Seleccione el mes proyectado");return}
+  if(!d.fechaReq){toast("Indique la fecha requerida");return}
   if(!d.almDestino){toast("Seleccione el almacén destino");return}
   if(!lineasValidas(NSP))return;
   const s=intentar(()=>{const x=Docs.sf.crear(d);return enviar?Docs.sf.enviar(x.id):x}); if(!s)return;
@@ -111,7 +106,7 @@ const SP_ACT=()=>BD.sf(SPF.id);
 function spEditable(){const s=SP_ACT();return !!s&&Docs.sf.editable(s)}
 function abrirSF(id){
   const s=BD.sf(id); if(!s){toast("No existe la solicitud "+id);return}
-  SPF={id:s.id,lineas:s.lineas.map(l=>({art:l.art,cant:l.cant,ldm:l.ldm})),sucio:false,mes:s.mes,almDestino:s.almDestino,fechaReq:s.fechaReq,obs:s.obs};
+  SPF={id:s.id,lineas:s.lineas.map(l=>({art:l.art,cant:l.cant,ldm:l.ldm})),sucio:false,almDestino:s.almDestino,fechaReq:s.fechaReq,obs:s.obs};
   go('gi23');
 }
 function loadSP(k){abrirSF(k)}   /* compatibilidad */
@@ -122,12 +117,11 @@ function renderSPform(){
   document.getElementById('sp-titulo').textContent="Solicitud de Fabricación · "+s.id+(e==="Pendiente Aprobar"?" · Revisión":"");
   document.getElementById('sp-id').value=s.id;
   document.getElementById('sp-resumen').value=spResumen(SPF);
-  document.getElementById('sp-mes').innerHTML=opcionesLista(mesesProyectados(SPF.mes),SPF.mes,false);
   document.getElementById('sp-almdest').innerHTML=opcionesAlm(SPF.almDestino);
   document.getElementById('sp-freq').value=Fmt.iso(SPF.fechaReq);
   document.getElementById('sp-solic').value=s.solic||'';
   document.getElementById('sp-obs').value=SPF.obs||'';
-  ['sp-mes','sp-almdest','sp-freq','sp-obs'].forEach(id=>{const x=document.getElementById(id);x.disabled=!ed;x.onchange=()=>{SPF.mes=document.getElementById('sp-mes').value;SPF.almDestino=document.getElementById('sp-almdest').value;SPF.fechaReq=Fmt.bd(document.getElementById('sp-freq').value);SPF.obs=document.getElementById('sp-obs').value;SPF.sucio=true;renderBotonesSP()}});
+  ['sp-almdest','sp-freq','sp-obs'].forEach(id=>{const x=document.getElementById(id);x.disabled=!ed;x.onchange=()=>{SPF.almDestino=document.getElementById('sp-almdest').value;SPF.fechaReq=Fmt.bd(document.getElementById('sp-freq').value);SPF.obs=document.getElementById('sp-obs').value;SPF.sucio=true;renderBotonesSP()}});
   document.getElementById('sp-total').value=Fmt.n(spTotal(SPF))+" UND";
   document.getElementById('sp-ofs').innerHTML=(s.ofs||[]).length?s.ofs.map(docLink).join(', ')+(s.ref?' · '+Fmt.e(s.ref):''):hint('Sin órdenes todavía');
   document.getElementById('sp-b-adddet').style.display=ed?'inline-block':'none';

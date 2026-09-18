@@ -65,7 +65,7 @@ BD.reloj = '04/08/2026 08:30';
 Docs.trf.recibir(st.id);
 BD.reloj = '04/08/2026 11:00';
 BD.usuario = 'Comercial 01';
-const sf = Docs.sf.crear({ solic: 'Comercial 01', mes: 'Set 2026', almDestino: 'SB-CENTRAL', fechaReq: '30/08/2026', obs: 'Campaña de setiembre: 100 por talla y color', lineas });
+const sf = Docs.sf.crear({ solic: 'Comercial 01', almDestino: 'SB-CENTRAL', fechaReq: '30/08/2026', obs: 'Campaña de setiembre: 100 por talla y color', lineas });
 Docs.sf.enviar(sf.id);
 BD.reloj = null; BD.guardar();
 `);

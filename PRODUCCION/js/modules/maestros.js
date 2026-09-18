@@ -26,7 +26,7 @@ const PR10 = {
         '<td class="num">' + UI.n(i.cant, 2) + ' ' + M.u(i.cod) + '</td><td class="mini">' + (i.alm || '—') + '</td><td class="mini">' + (i.metodo || '') + '</td></tr>';
     });
     return '<div class="card"><div class="sec">' + L.id + ' · ' + UI.esc(L.nom) + ' ' + (L.pred ? UI.badge('Predeterminada', 'var(--confirmado)') : '<span class="chip">Alternativa</span>') +
-      ' <span class="mini">' + UI.esc(L.desc) + ' · cantidad base ' + L.base + '</span></div>' +
+      ' <span class="mini">' + UI.esc(L.desc) + ' · cantidad base ' + L.base + (L.almProd ? ' · entra en ' + UI.esc(L.almProd) : '') + '</span>' + (L.obs ? '<br><span class="mini"><i>' + UI.esc(L.obs) + '</i></span>' : '') + '</div>' +
       UI.tabla(['Tipo', 'Código', 'Componente', ['Por unidad base', 'num'], 'Almacén', 'Método'], filas, { estilo: 'margin:0' }) + '</div>';
   }
 };

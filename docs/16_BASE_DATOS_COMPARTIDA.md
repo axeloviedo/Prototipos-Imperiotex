@@ -108,7 +108,7 @@ Al crear órdenes, Producción junta en una sola orden de crudo (y de piezas cor
 
 ### 3.4 Documentos (`Docs`, siempre guardan)
 
-**Solicitud de Fabricación** `sfs`: `{id:'SF-000001', fecha, mes, solic, almDestino, fechaReq, est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs:[], ref, comprometido:[{alm, art, cant}], hist}`
+**Solicitud de Fabricación** `sfs`: `{id:'SF-000001', fecha, solic, almDestino, fechaReq (obligatoria, Q6), est, vb, ger, obs, lineas:[{art, cant, ldm}], ofs:[], ref, comprometido:[{alm, art, req, cant}], hist}`
 Estados: Borrador → Pendiente Aprobar → Aprobada (V°B° Logística + Gerencia; compromete la materia prima bruta) → Convertida en Orden (Producción crea las órdenes) → Fabricada · Rechazada.
 `Docs.sf.crear/guardar/enviar/darVB/aprobar/rechazar/devolver/convertir(id, ofs, ref)/fabricada(id)`.
 

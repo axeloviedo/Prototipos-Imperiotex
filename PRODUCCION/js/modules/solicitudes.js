@@ -46,7 +46,7 @@ const PR03D = {
     return '<div class="screen-head"><h1>' + sf.id + '</h1>' + UI.badge(sf.est, EST_SF[sf.est] || 'var(--borrador)') +
       (sf.ref ? ' <span class="badge" style="background:var(--primario-claro)">' + UI.esc(R) + ' ' + UI.esc(sf.ref) + '</span>' : '') +
       '<div class="spacer"></div><button class="btn btn-secondary" onclick="App.go(\'pr03\')">Volver</button></div>' +
-      '<div class="card"><div class="formgrid c4">' + UI.dato('Fecha', sf.fecha) + UI.dato('Solicitante', UI.esc(sf.solic)) + UI.dato('Mes', UI.esc(sf.mes)) + UI.dato('Requerida', UI.esc(sf.fechaReq)) +
+      '<div class="card"><div class="formgrid c4">' + UI.dato('Fecha', sf.fecha) + UI.dato('Solicitante', UI.esc(sf.solic)) + UI.dato('Fecha requerida', UI.esc(sf.fechaReq)) +
       UI.dato('Almacén destino', UI.esc(sf.almDestino) + ' · ' + UI.esc(M.almNom(sf.almDestino))) + UI.dato('Aprobación', UI.esc(Prod.firmasSF(sf)), { estilo: 'grid-column:span 2' }) + UI.dato('Observación', UI.esc(sf.obs)) + '</div></div>' +
       '<div class="sec">Pedido</div>' + UI.tabla(['Artículo', 'Lista de materiales', ['Cantidad', 'num']], sf.lineas.map(l => '<tr><td>' + UI.esc(M.nomArt(l.art)) + ' <span class="mini">' + l.art + '</span></td><td class="mini">' + UI.esc(l.ldm) + '</td><td class="num"><b>' + UI.n(l.cant, 0) + '</b></td></tr>')) +
       bloque +

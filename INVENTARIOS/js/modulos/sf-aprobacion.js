@@ -1,7 +1,8 @@
 /* INVENTARIOS · GI-23 decisiones sobre la Solicitud de Fabricación (Docs.sf: guardar, enviar, darVB, aprobar, rechazar, devolver)
    y Solicitudes de Materiales generadas para el déficit (Docs.sol.crear con sf). */
-function datosSPF(){return {mes:SPF.mes,almDestino:SPF.almDestino,fechaReq:SPF.fechaReq,obs:SPF.obs,lineas:SPF.lineas.map(l=>({art:l.art,cant:l.cant,ldm:l.ldm}))}}
+function datosSPF(){return {almDestino:SPF.almDestino,fechaReq:SPF.fechaReq,obs:SPF.obs,lineas:SPF.lineas.map(l=>({art:l.art,cant:l.cant,ldm:l.ldm}))}}
 function validarSPF(){
+  if(!SPF.fechaReq){toast("Indique la fecha requerida");return false}
   if(!SPF.lineas.length){toast("Agregue al menos un artículo al detalle");return false}
   const i=SPF.lineas.findIndex(l=>!(l.cant>0)); if(i>=0){toast("Línea "+(i+1)+": la cantidad debe ser mayor que cero");return false}
   return true;

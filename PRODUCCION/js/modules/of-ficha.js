@@ -39,7 +39,7 @@ const PR02 = {
       (ed ? UI.campo('Lista de materiales (opcional)', PR02.sel('<select onchange="PR02.ldm(this.value)">' + UI.opts([{ v: '', t: 'Sin lista' }].concat(ldms.map(l => ({ v: l.id, t: l.id + ' · ' + l.nom }))), of.ldm) + '</select>'), { hint: 'Al elegir una lista se copian sus líneas' })
         : UI.dato('Lista de materiales', L ? L.id + ' · ' + UI.esc(L.nom) + (L.obs ? '<br><span class="mini">' + UI.esc(L.obs) + '</span>' : '') : 'Sin lista')) +
       UI.dato('Origen', of.sf ? 'Solicitud <button class="btn-link" onclick="App.go(\'pr03d\',{id:\'' + of.sf + '\'})">' + of.sf + '</button>' : 'Creada en Producción') +
-      UI.dato('Fechas', 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
+      UI.dato('Fechas', (of.fechaFin ? '<b>Requerida ' + UI.esc(of.fechaFin) + '</b><br>' : '') + 'Creada ' + of.fecha.slice(0, 10) + (of.fechaLib ? ' · liberada ' + of.fechaLib.slice(0, 10) : '') + (of.fechaCierre ? ' · cerrada ' + of.fechaCierre.slice(0, 10) : '')) +
       UI.dato('Observación', UI.esc(of.obs)) +
       (servs.length ? UI.dato('Servicio de terceros', UI.esc(M.provNom(Prod.provServicio(of))) + '<br><span class="mini">' + servs.map(c => UI.esc(Prod.nomItem(c))).join(', ') + ' · ' + UI.esc(Prod.almTercero(of)) + '</span>') : '') +
       '</div></div>' +

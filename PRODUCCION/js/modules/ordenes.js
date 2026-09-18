@@ -71,6 +71,7 @@ const PR01N = {
       UI.campo('Lista de materiales (opcional)', '<select id="n-ldm" onchange="PR01N.proponerAlm();PR01N.prev()"></select>', { estilo: 'grid-column:span 2', hint: 'Con lista: Estándar. Si luego la modifica o no elige lista: Especial' }) +
       UI.campo('Almacén donde entra', '<select id="n-alm">' + UI.opts([{ v: '', t: 'Seleccionar…' }].concat(M.opcionesAlm(BD.empresa)), '') + '</select>', { req: true, hint: 'Solo almacenes de ' + UI.esc(BD.empNom(BD.empresa)) + ' (empresa activa)' }) +
       UI.campo(R, PR01N.selRef('n-ref', p.ref), { hint: '«Nueva» asigna un número al crear. Vincular a una existente agrupa la orden con esas órdenes para el listado por fase y el recosteo' }) +
+      UI.campo('Fecha requerida', '<input id="n-fecha" type="date">', { hint: 'Cuándo debe estar lo producido (las órdenes de una SF la heredan de la solicitud)' }) +
       UI.campo('Observación', '<input id="n-obs">') +
       '</div></div>' +
       '<div class="card" id="n-sugcard" style="display:none"><label class="check"><input type="checkbox" id="n-sug" checked onchange="PR01N.prev()"> <b>Crear también las órdenes de lo que se fabrica antes</b></label><div id="n-prev" style="margin-top:8px"></div></div>';
@@ -110,7 +111,8 @@ const PR01N = {
     let sugeridas = null; const alms = {};
     if (UI.chk('n-sug') && UI.v('n-ldm')) { sugeridas = {}; document.querySelectorAll('#n-prev input[id^="h-"]').forEach(i => { sugeridas[i.id.slice(2)] = parseFloat(i.value) || 0; }); }
     document.querySelectorAll('#n-prev select[id^="h-alm-"]').forEach(s => { alms[s.id.slice(6)] = s.value; });
-    const r = App.accion(() => Prod.crearManual({ art: PR01N.art, ldm: UI.v('n-ldm'), cant: UI.f('n-cant'), alm: UI.v('n-alm'), ref: UI.v('n-ref'), obs: UI.v('n-obs'), sugeridas, alms }),
+    const iso = UI.v('n-fecha'), fechaFin = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4) : '';
+    const r = App.accion(() => Prod.crearManual({ art: PR01N.art, ldm: UI.v('n-ldm'), cant: UI.f('n-cant'), alm: UI.v('n-alm'), ref: UI.v('n-ref'), obs: UI.v('n-obs'), fechaFin, sugeridas, alms }),
       x => x.length + ' orden(es) creada(s) · ' + Prod.nombreRef() + ' ' + x[0].ref);
     if (r) App.go('pr02', { id: r[0].id });
   }

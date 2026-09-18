@@ -27,10 +27,10 @@ const Docs = (() => {
       });
       return out;
     },
-    /* d = {solic, mes, almDestino, fechaReq, obs, lineas:[{art, cant, ldm}]} */
+    /* d = {solic, almDestino, fechaReq (obligatoria al enviar, Q6), obs, lineas:[{art, cant, ldm}]} */
     crear(d) {
       const s = {
-        id: BD.sig('sf', 'SF-', 6), emp: BD.empresaDe(d.almDestino), fecha: BD.hoy(), mes: d.mes || '', solic: d.solic || BD.usuario, almDestino: d.almDestino || '', fechaReq: d.fechaReq || '',
+        id: BD.sig('sf', 'SF-', 6), emp: BD.empresaDe(d.almDestino), fecha: BD.hoy(), solic: d.solic || BD.usuario, almDestino: d.almDestino || '', fechaReq: d.fechaReq || '',
         est: 'Borrador', vb: false, ger: false, obs: d.obs || '', lineas: sf._lineas(d.lineas), ofs: [], ref: '', comprometido: [], hist: []
       };
       BD.d.sfs.unshift(s);
@@ -40,7 +40,7 @@ const Docs = (() => {
     guardar(id, d) {
       const s = BD.sf(id); exigir(s, 'No existe la solicitud ' + id);
       exigir(sf.editable(s), 'La solicitud ' + id + ' está ' + s.est + ': no se edita');
-      ['mes', 'solic', 'almDestino', 'fechaReq', 'obs'].forEach(k => { if (d[k] != null) s[k] = d[k]; });
+      ['solic', 'almDestino', 'fechaReq', 'obs'].forEach(k => { if (d[k] != null) s[k] = d[k]; });
       if (d.lineas) s.lineas = sf._lineas(d.lineas);
       BD.hist(s, 'Modificada');
       g(); return s;
@@ -50,6 +50,7 @@ const Docs = (() => {
       exigir(s.est === 'Borrador' || s.est === 'Rechazada', 'Solo se envía una solicitud en Borrador o Rechazada');
       exigir(s.lineas.length, 'Agregue al menos un artículo');
       exigir(s.almDestino && BD.alm(s.almDestino), 'Elija el almacén destino');
+      exigir(s.fechaReq, 'Indique la fecha requerida');
       Object.assign(s, { est: 'Pendiente Aprobar', vb: false, ger: false });
       BD.hist(s, 'Enviada a aprobación');
       g(); return s;

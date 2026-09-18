@@ -10,14 +10,14 @@ Vistas.pantallas(String.raw`
     <div class="card">
       <div class="filters">
         <div class="field"><label>Estado</label><select id="f-sp-e" onchange="renderSP()"><option value="">Todos</option><option>Borrador</option><option>Pendiente Aprobar</option><option>Aprobada</option><option>Rechazada</option><option>Convertida en Orden</option><option>Fabricada</option></select></div>
-        <div class="field"><label>Mes proyectado</label><select id="f-sp-m" onchange="renderSP()"><option value="">Todos</option></select></div>
+        <div class="field"><label>Mes requerido</label><select id="f-sp-m" onchange="renderSP()"><option value="">Todos</option></select></div>
         <div class="field"><label>Buscar artículo</label><input id="f-sp-q" placeholder="Código o nombre del artículo…" oninput="renderSP()"></div>
         <div class="field"><label>Categoría</label><select id="f-sp-b" onchange="renderSP()"><option value="">Todas</option></select></div>
       </div>
     </div>
     <div class="tbl-wrap">
       <table class="grid">
-        <thead><tr><th>N° Sol.</th><th>Fecha</th><th>Mes proy.</th><th>Artículos</th><th style="text-align:right">Cant. total</th><th>Almacén destino</th><th>Estado</th><th>Aprobaciones</th><th>Creado por</th><th>Órdenes</th></tr></thead>
+        <thead><tr><th>N° Sol.</th><th>Fecha</th><th>Fecha requerida</th><th>Artículos</th><th style="text-align:right">Cant. total</th><th>Almacén destino</th><th>Estado</th><th>Aprobaciones</th><th>Creado por</th><th>Órdenes</th></tr></thead>
         <tbody id="sp-body"></tbody>
       </table>
       <div class="pager"><span id="sp-count"></span></div>
@@ -39,9 +39,8 @@ Vistas.pantallas(String.raw`
       <div class="formgrid">
         <div class="field"><label>N° de solicitud</label><input id="n-sp-id" readonly value="(se asigna al guardar)"></div>
         <div class="field"><label>Fecha de creación</label><input id="n-sp-fecha" readonly></div>
-        <div class="field req"><label>Mes proyectado</label><select id="n-sp-mes"></select></div>
+        <div class="field req"><label>Fecha requerida <span class="hint">(cuándo debe estar el producto)</span></label><input type="date" id="n-sp-freq"></div>
         <div class="field req"><label>Almacén destino <span class="hint">(donde entra el producto terminado)</span></label><select id="n-sp-almdest"></select></div>
-        <div class="field"><label>Fecha requerida</label><input type="date" id="n-sp-freq"></div>
         <div class="field"><label>Solicitante</label><input id="n-sp-solic" readonly></div>
         <div class="field"><label>Cantidad total (suma del detalle)</label><input id="n-sp-total" readonly style="text-align:right;font-weight:600" value="0 UND"></div>
         <div class="field full"><label>Observaciones generales</label><input id="n-sp-obs" placeholder="Ej. proyección acordada con Comercial…"></div>
@@ -89,9 +88,8 @@ Vistas.pantallas(String.raw`
           <div class="formgrid" style="margin-top:12px">
             <div class="field"><label>N° de solicitud</label><input id="sp-id" readonly></div>
             <div class="field"><label>Artículos solicitados</label><input id="sp-resumen" readonly></div>
-            <div class="field"><label>Mes proyectado</label><select id="sp-mes"></select></div>
+            <div class="field req"><label>Fecha requerida</label><input type="date" id="sp-freq"></div>
             <div class="field"><label>Almacén destino <span class="hint">(producto terminado)</span></label><select id="sp-almdest"></select></div>
-            <div class="field"><label>Fecha requerida</label><input type="date" id="sp-freq"></div>
             <div class="field"><label>Solicitante</label><input id="sp-solic" readonly></div>
             <div class="field"><label>Cantidad total</label><input id="sp-total" readonly style="text-align:right;font-weight:600"></div>
             <div class="field"><label>Órdenes / N° Referencia</label><div id="sp-ofs" style="padding:6px 0"></div></div>
