@@ -84,7 +84,7 @@ const Doc = {
     if (!Store.activo(a)) throw new Error('El artículo ' + cod + ' no existe o está inactivo');
     if (!a.venta) throw new Error(a.nom + ' no está marcado como artículo de venta (GI-02)');
     const um = Precios.umVenta(a.cod);
-    const l = { art: a.cod, nom: a.nom, desc: '', um, factor: Precios.factor(a.cod, um), alm: a.inv ? Doc.sedeAlm(d) : '', cant: 1, precio: 0, origen: '', dcto: 0, obsequio: false };
+    const l = { art: a.cod, nom: a.nom, desc: '', um, factor: Precios.factor(a.cod, um), alm: a.inv ? Doc.sedeAlm(d) : '', cant: 1, precio: 0, origen: '', dcto: 0 };
     Doc.precio(d, l);
     Precios.linea(l);
     return l;
@@ -112,8 +112,7 @@ const Doc = {
         if (l.origen !== Doc.MANUAL) l.precioRef = { precio: antes.precio, origen: antes.origen, lista: antes.lista || '', oferta: antes.oferta ? antes.oferta.cod : '' };
         l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista;
       }
-    } else if (campo === 'obsequio') l.obsequio = !!val;
-    else if (campo === 'um') { l.um = val; l.factor = Precios.factor(l.art, val); Doc.precio(d, l); }
+    } else if (campo === 'um') { l.um = val; l.factor = Precios.factor(l.art, val); Doc.precio(d, l); }
     else if (campo === 'alm') l.alm = val;
     else if (campo === 'desc') l.desc = String(val || '');
     if ((campo === 'um' || campo === 'alm') && Doc.duplicada(d, l, i)) {
@@ -145,7 +144,7 @@ const Doc = {
     /* el precio escrito a mano se conserva, convertido con el tipo de cambio (LP11); el resto se vuelve a calcular en la moneda nueva */
     d.lineas.forEach(l => {
       if (l.origen === Doc.MANUAL) { l.precio = Precios.convertir(l.precio, prev, mon); if (l.precioRef) l.precioRef.precio = Precios.convertir(l.precioRef.precio, prev, mon); return; }
-      const r = Doc.precio(d, l); if (!r && !l.obsequio) sin.push(l.art);
+      const r = Doc.precio(d, l); if (!r) sin.push(l.art);
     });
     if (sin.length) {
       d.mon = prev;
@@ -162,19 +161,19 @@ const Doc = {
   revisarLinea(d, l, modo) {
     const a = Store.art(l.art) || {}, e = [], w = [];
     if (!(l.cant > 0)) e.push('la cantidad debe ser mayor que cero');
-    if (!l.obsequio && !(l.precio > 0)) e.push('no tiene precio en ' + d.mon);
+    if (!(l.precio > 0)) e.push('no tiene precio en ' + d.mon);
     if (a.inv && !l.alm) e.push('elija el almacén');
     /* LP4/LP8: la línea con oferta no revisa el rango del descuento manual (no lo admite); su precio ya viene con el piso del precio mínimo */
-    if (!l.obsequio && l.precio > 0 && !l.oferta) {
+    if (l.precio > 0 && !l.oferta) {
       const min = UI.r2(l.precio * (a.dctoMin || 0) / 100), max = UI.r2(l.precio * (a.dctoMax || 0) / 100);
       if (l.dcto < min - 0.001 || l.dcto > max + 0.001) e.push('el descuento por unidad debe estar entre ' + UI.n(min) + ' y ' + UI.n(max) + ' (' + (a.dctoMin || 0) + '% a ' + (a.dctoMax || 0) + '% del precio)');
     }
     /* LP12: el vendedor NUNCA vende debajo del precio mínimo (siempre, sin depender de «Verificar el precio mínimo»), tampoco con descuento manual;
-       sin mínimo, el neto debe ser mayor que cero. Solo el obsequio (con motivo) queda fuera */
-    if (!l.obsequio && l.precio > 0) {
+       sin mínimo, el neto debe ser mayor que cero */
+    if (l.precio > 0) {
       const neto = Precios.netoEnSoles(l, d.mon);
       if (a.precioMin > 0 && neto + 0.001 < a.precioMin) e.push('el precio neto (' + UI.s(neto) + ' por ' + a.u + ') está por debajo del precio mínimo de venta (' + UI.s(a.precioMin) + ')');
-      else if (!(neto > 0)) e.push('el precio neto debe ser mayor que cero (para regalarlo marque Obsequio)');
+      else if (!(neto > 0)) e.push('el precio neto debe ser mayor que cero');
     }
     /* L6: sin stock disponible no se vende (bloquea siempre); la cotización solo avisa porque no reserva stock */
     if (a.inv && l.alm && l.cant > 0) {
@@ -214,7 +213,6 @@ const Cot = {
     if (!d.lineas.length) e.push('Agregue al menos un artículo o servicio');
     if (!M.cond(d.cond)) e.push('Elija la condición de pago');
     if (!d.validez) e.push('Indique la fecha de validez'); else if (UI.aFecha(d.validez) < UI.aFecha(UI.hoy())) e.push('La validez no puede ser anterior a hoy');
-    if (d.lineas.some(l => l.obsequio) && !(d.obs || '').trim()) e.push('Indique en la observación el motivo del obsequio');
     const r = Doc.revisarLineas(d, 'cot');
     return { e: e.concat(r.e), w: r.w };
   },
@@ -345,7 +343,6 @@ const Ventas = {
     if (!d.fecha) e.push('Indique la fecha del documento'); else if (UI.aFecha(d.fecha) > UI.aFecha(UI.hoy())) e.push('La fecha del documento no puede ser posterior a hoy');
     const ref = d.ref || {}, llenos = [ref.tipo, ref.serie, ref.num].filter(x => String(x || '').trim()).length;
     if (llenos && llenos < 3) e.push('Documento referencial del cliente: complete tipo, serie y número, o deje los tres vacíos');
-    if (d.lineas.some(l => l.obsequio) && !(d.obs || '').trim()) e.push('Indique en la observación el motivo del obsequio');
     if (d.cot) { const ct = Store.cot(d.cot); if (!ct || ct.estado !== 'Vigente') e.push('La cotización ' + d.cot + ' ya no está Vigente'); }
     if (d.lineas.length && !Doc.soloServicios(d)) {
       const en = d.entrega || {}, lg = M.lugar(en.lugar);
@@ -399,7 +396,7 @@ const Ventas = {
     const nComp = v.lineas.filter(l => l.comp > 0).length;
     Store.hist(v, 'Registrada', comp.nom + ' ' + v.compNum + (d.cot ? ' · desde ' + d.cot : '') + (nComp ? ' · stock comprometido en ' + nComp + ' línea(s) hasta que el pago confirmado cubra el total' : '') + (r.w.length ? ' · avisos: ' + r.w.join(' · ') : ''));
     Store.d.ventas.unshift(v);
-    Ventas._salidaSiPagada(v); /* p. ej. un documento de total cero (solo obsequios) */
+    Ventas._salidaSiPagada(v);
     if (!v.salida && d.entregar && Ventas.aCredito(v) && Ventas.tieneStock(v)) Ventas.entregar(v);
     return { venta: v, avisos: r.w };
   },

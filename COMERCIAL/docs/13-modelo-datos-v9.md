@@ -106,9 +106,9 @@ Resolución (motor en fases, `12-prototipo-diseno.md` §12.1): precio base (sede
 
 ## 3. Documentos
 
-Cabecera común (cotización, orden y venta): `sede`, `vendedor`, `usuario`, **`fecha_creacion`** (la pone el sistema), `cliente` + `cliente_snap` (documento, nombre, tipo), `moneda`, `op_gravada`, `op_exonerada`, `igv`, `total`, `tasa_igv`, `observacion` (obligatoria si hay obsequios), `historial[]`.
+Cabecera común (cotización, orden y venta): `sede`, `vendedor`, `usuario`, **`fecha_creacion`** (la pone el sistema), `cliente` + `cliente_snap` (documento, nombre, tipo), `moneda`, `op_gravada`, `op_exonerada`, `igv`, `total`, `tasa_igv`, `observacion`, `historial[]`.
 
-Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* + `descripcion_personalizada` (solo servicios), `um`, `factor` (DOC = 12), `almacen` (solo inventariables), `cantidad`, `precio`, `origen_precio`, `descuento_unitario`, `obsequio`, `base`, `igv`, `total`.
+Línea común: `documento`, `n` (PK compuesta), `articulo` + `nombre` *(snap)* + `descripcion_personalizada` (solo servicios), `um`, `factor` (DOC = 12), `almacen` (solo inventariables), `cantidad`, `precio`, `origen_precio`, `descuento_unitario`, `base`, `igv`, `total`.
 
 ### Cotización · *SAP B1 `OQUT`, objeto 23*
 

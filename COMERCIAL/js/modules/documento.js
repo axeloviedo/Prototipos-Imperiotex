@@ -39,14 +39,13 @@ const DOCUI = {
         '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + (l.origen ? ' · ' + (l.precioRef ? UI.esc(l.origen) + ' <span class="mini">(referencial ' + UI.n(l.precioRef.precio) + ' · ' + UI.esc(l.precioRef.origen) + ')</span>' : l.oferta ? '<b class="ok-t">' + UI.esc(l.origen) + '</b>' + (l.precioLista ? ' (lista ' + UI.n(l.precioLista) + ')' : '') : UI.esc(l.origen)) : '') + '</span>' + desc + '</td>' +
         '<td>' + um + '</td><td>' + alm + '</td><td class="num">' + disp + '</td>' +
         '<td class="num">' + (ed ? inp(i, 'cant', l.cant, 70) : UI.q(l.cant)) + '</td>' +
-        '<td class="num">' + (ed ? inp(i, 'precio', l.precio, 90) : UI.n(l.obsequio ? 0 : l.precio)) + '</td>' +
-        '<td class="num">' + (ed && !l.oferta ? inp(i, 'dcto', l.dcto, 70) : ed ? '<span class="mini">no aplica</span>' : (l.dcto && !l.obsequio ? UI.n(l.dcto) : '')) + '</td>' +
-        '<td style="text-align:center">' + (ed ? '<input type="checkbox"' + (l.obsequio ? ' checked' : '') + ' onchange="' + ctx + '.cambiar(' + i + ',\'obsequio\',this.checked)">' : (l.obsequio ? 'Sí' : '')) + '</td>' +
+        '<td class="num">' + (ed ? inp(i, 'precio', l.precio, 90) : UI.n(l.precio)) + '</td>' +
+        '<td class="num">' + (ed && !l.oferta ? inp(i, 'dcto', l.dcto, 70) : ed ? '<span class="mini">no aplica</span>' : (l.dcto ? UI.n(l.dcto) : '')) + '</td>' +
         '<td class="num"><b>' + UI.n(l.total) + '</b>' + (Precios.tasa(l.art) === 0 ? '<br><span class="mini">' + UI.esc(a.igv || 'Sin IGV') + '</span>' : '') + '</td>' +
         '<td>' + (ed ? '<button class="btn-link" title="Quitar la línea" onclick="' + ctx + '.quitar(' + i + ')">✕</button>' : '') + '</td></tr>' +
-        (msgs.length ? '<tr class="linea-msg"><td></td><td colspan="10">' + msgs.join('<br>') + '</td></tr>' : '');
+        (msgs.length ? '<tr class="linea-msg"><td></td><td colspan="9">' + msgs.join('<br>') + '</td></tr>' : '');
     });
-    return UI.tabla([['#', 'num', '34px'], 'Artículo', ['UM', '', '84px'], ['Almacén', '', '120px'], [ro ? 'Stock' : 'Disponible', 'num'], ['Cantidad', 'num'], ['Precio ' + M.sim(d.mon), 'num'], ['Dcto. unit.', 'num'], 'Obsequio', ['Total', 'num'], ['', '', '30px']],
+    return UI.tabla([['#', 'num', '34px'], 'Artículo', ['UM', '', '84px'], ['Almacén', '', '120px'], [ro ? 'Stock' : 'Disponible', 'num'], ['Cantidad', 'num'], ['Precio ' + M.sim(d.mon), 'num'], ['Dcto. unit.', 'num'], ['Total', 'num'], ['', '', '30px']],
       filas, { vacio: 'Sin líneas: agregue artículos o servicios' });
   },
 
@@ -71,8 +70,8 @@ const DOCUI = {
       '<div><b>Condición de pago:</b> ' + ((M.cond(d.cond) || {}).nom || '') + (venta && Ventas.vencimiento(d) ? ' (vence ' + Ventas.vencimiento(d) + ')' : '') + '</div><div><b>Moneda:</b> ' + d.mon + '</div>' +
       '<div><b>Vendedor:</b> ' + UI.esc(DOCUI.vendedor(d.asesor)) + '</div>' + (venta && d.entrega ? '<div><b>Entrega:</b> ' + UI.esc(M.lugar(d.entrega.lugar).nom) + ' · ' + d.entrega.fecha + '</div>' : '') + '</div>' +
       '<h2>Detalle</h2><table><thead><tr><th>#</th><th>Código</th><th>Descripción</th><th>UM</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Dcto.</th><th class="num">Total</th></tr></thead><tbody>' +
-      d.lineas.map((l, i) => '<tr><td>' + (i + 1) + '</td><td>' + l.art + '</td><td>' + UI.esc(l.nom) + (l.desc ? '<br><span class="mini">' + UI.esc(l.desc) + '</span>' : '') + (l.obsequio ? ' <b>(obsequio)</b>' : '') + '</td><td>' + l.um + '</td>' +
-        '<td class="num">' + UI.q(l.cant) + '</td><td class="num">' + UI.n(l.obsequio ? 0 : l.precio) + '</td><td class="num">' + (l.dcto && !l.obsequio ? UI.n(l.dcto) : '') + '</td><td class="num">' + UI.n(l.total) + '</td></tr>').join('') +
+      d.lineas.map((l, i) => '<tr><td>' + (i + 1) + '</td><td>' + l.art + '</td><td>' + UI.esc(l.nom) + (l.desc ? '<br><span class="mini">' + UI.esc(l.desc) + '</span>' : '') + '</td><td>' + l.um + '</td>' +
+        '<td class="num">' + UI.q(l.cant) + '</td><td class="num">' + UI.n(l.precio) + '</td><td class="num">' + (l.dcto ? UI.n(l.dcto) : '') + '</td><td class="num">' + UI.n(l.total) + '</td></tr>').join('') +
       '</tbody></table><table style="width:300px;margin-left:auto"><tr><td>Op. gravada</td><td class="num">' + UI.m(d.gravada, d.mon) + '</td></tr>' +
       (d.exonerada ? '<tr><td>Op. exonerada</td><td class="num">' + UI.m(d.exonerada, d.mon) + '</td></tr>' : '') +
       '<tr><td>IGV</td><td class="num">' + UI.m(d.igv, d.mon) + '</td></tr><tr class="tot"><td>Total</td><td class="num">' + UI.m(d.total, d.mon) + '</td></tr></table>' +
