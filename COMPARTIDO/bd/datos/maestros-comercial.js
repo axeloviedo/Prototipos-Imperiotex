@@ -72,12 +72,13 @@ const BD_COMERCIAL = (() => {
     /* permisos finos por acción (ver_*, crear_*, editar_*, eliminar_*) */
     perfiles: {
       'Vendedor': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'ver_venta', 'crear_venta', 'ver_devolucion_venta', 'crear_devolucion_venta', 'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'ver_caja',
-        'ver_solicitud_fabricacion', 'crear_solicitud_materiales'],
-      'Cajero': ['ver_cotizacion', 'ver_venta', 'ver_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments', 'ver_cliente', 'ver_existencias'],
+        'ver_solicitud_fabricacion', 'crear_solicitud_materiales', 'recibir_transferencia'],
+      'Cajero': ['ver_cotizacion', 'ver_venta', 'ver_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments', 'ver_cliente', 'ver_existencias', 'recibir_transferencia'],
       'Supervisor comercial': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'eliminar_cotizacion', 'ver_venta', 'crear_venta', 'anular_venta', 'asignar_vendedor',
         'ver_devolucion_venta', 'crear_devolucion_venta', 'editar_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments',
         'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'editar_precios', 'configurar_comercial',
-        'ver_solicitud_fabricacion', 'crear_solicitud_materiales']
+        'ver_solicitud_fabricacion', 'crear_solicitud_materiales', 'recibir_transferencia']
+      /* acceso_logistico_general (usuario logístico: movimientos y recepción de todos los almacenes) no lo tiene ningún perfil de Comercial */
     },
     /* primer número de las series de Comercial en BD.d.seq cuando todavía no existen (los clientes y listas iniciales ya ocupan números) */
     seqInicial: { cli: 9, lp: 23 }

@@ -30,7 +30,15 @@ const Store = {
     const cfg0 = ((X.colecciones || {}).comercial || {}).cfg || {};
     d.comercial = d.comercial || {};
     d.comercial.cfg = Object.assign(BD.copia(cfg0), d.comercial.cfg || {});
+    /* permisos agregados después de guardada la base: se suman UNA vez a los perfiles que los traen en el código (no pisa lo que se quitó en CL-45) */
+    const perfiles0 = ((X.maestros || {}).comercial || {}).perfiles || {}, pb = ((d.maestros || {}).comercial || {}).perfiles;
+    d.comercial.permsAgregados = d.comercial.permsAgregados || [];
+    if (pb) Store.PERMISOS_NUEVOS.filter(p => d.comercial.permsAgregados.indexOf(p) < 0 && Object.keys(perfiles0).some(k => perfiles0[k].indexOf(p) >= 0)).forEach(p => {
+      Object.keys(perfiles0).forEach(k => { if (pb[k] && perfiles0[k].indexOf(p) >= 0 && pb[k].indexOf(p) < 0) pb[k].push(p); });
+      d.comercial.permsAgregados.push(p);
+    });
   },
+  PERMISOS_NUEVOS: ['recibir_transferencia'],
 
   /* reinicio GLOBAL (modal CL-46): BD.reiniciar borra todas las claves 'imperiotex.' y rearma la base del escenario elegido */
   reiniciar() {
@@ -62,6 +70,25 @@ const Store = {
   usuario() { return M.USUARIOS.find(u => u.cod === Store._usuario) || M.USUARIOS[0]; },
   sede(cod) { return M.SEDES.find(s => s.cod === (cod || Store.usuario().sede)); },
   puede(perm) { if (!perm) return true; const u = Store.usuario(); return (M.PERFILES[u.perfil] || []).indexOf(perm) >= 0; },
+  /* ===== Alcance por sede (decisión 2026-09-18) =====
+     - Usuario logístico general (permiso acceso_logistico_general): ve y recibe en todos los almacenes, como Inventarios.
+     - Resto: movimientos, Kardex y recepción solo de los almacenes de SU sede (la sede física de su tienda: almacén.sede = nombre de la sede);
+       el stock (existencias) sí lo consulta en todas las tiendas de la empresa. */
+  general() { return Store.puede('acceso_logistico_general'); },
+  /* nombre de la sede física de la tienda del usuario (tienda.sede = código de BD.d.maestros.sedes) */
+  sedeFisica() { const t = Store.sede(); const s = t && (BD.d.maestros.sedes || []).find(x => x.cod === t.sede); return s ? s.nom : ''; },
+  /* almacenes de la sede del usuario, en la empresa de Comercial (siempre incluye el almacén con el que vende su tienda) */
+  almsSede() {
+    const t = Store.sede(), sf = Store.sedeFisica();
+    return M.almacenesVenta().filter(a => (sf && a.sede === sf) || (t && a.cod === t.alm)).map(a => a.cod);
+  },
+  /* almacenes de las tiendas de la empresa: los de sedes de tienda (no compartidas) y el almacén de cada punto de venta */
+  almsTiendas() {
+    const sedesTienda = (BD.d.maestros.sedes || []).filter(s => s.compartida === false).map(s => s.nom), pv = M.SEDES.map(t => t.alm);
+    return M.almacenesVenta().filter(a => sedesTienda.indexOf(a.sede) >= 0 || pv.indexOf(a.cod) >= 0).map(a => a.cod);
+  },
+  /* ¿puede ver los movimientos / confirmar la recepción en este almacén? */
+  enMiSede(alm) { return Store.general() || Store.almsSede().indexOf(alm) >= 0; },
   exigir(perm, que) { if (!Store.puede(perm)) throw new Error('Su perfil (' + Store.usuario().perfil + ') no puede ' + que + ': falta el permiso ' + perm); },
 
   /* artículos: los de la base; se venden los que tienen venta: true */

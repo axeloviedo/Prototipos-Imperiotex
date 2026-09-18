@@ -29,7 +29,7 @@ function renderMov(){
     '<tr><td colspan="10" style="text-align:center;color:var(--texto-sec);padding:18px">'+(BD.d.movs.length?'Ningún movimiento coincide con los filtros':'Sin movimientos en la base: registre un ingreso o reciba una Orden de Compra')+'</td></tr>';
   document.getElementById('mov-count').textContent=lista.length+" de "+BD.d.movs.length+" movimientos";
 }
-RENDER.gi07=()=>{fillMovFiltros();renderMov();renderST()};
+RENDER.gi07=()=>{fillMovFiltros();renderMov()};
 
 /* ===== GI-08 · detalle ===== */
 let MOV_ACTUAL="";

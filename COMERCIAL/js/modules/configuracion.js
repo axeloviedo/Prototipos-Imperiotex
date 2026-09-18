@@ -6,8 +6,10 @@ const CM10 = {
     ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar y anular devoluciones'], ['editar_devolucion_venta', 'Finalizar devoluciones'],
     ['ver_caja', 'Ver caja e historial'], ['crear_caja', 'Abrir caja, ingresos, egresos y devolver dinero'], ['editar_caja', 'Cerrar caja y editar o anular movimientos'], ['valid_payments', 'Validar o rechazar pagos (validar el que completa el total saca el stock de la venta)'],
     ['ver_cliente', 'Ver clientes'], ['crear_cliente', 'Crear clientes'], ['editar_cliente', 'Editar y desactivar clientes'],
-    ['ver_existencias', 'Ver existencias y movimientos'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)'],
-    ['ver_solicitud_fabricacion', 'Solicitudes de Fabricación: ver, crear, editar y enviar (pantalla compartida GI-21/GI-22/GI-23 de Inventarios)'], ['crear_solicitud_materiales', 'Solicitudes de Materiales: crear y consultar (pantalla compartida GI-13 de Inventarios)']
+    ['ver_existencias', 'Ver existencias de las tiendas de la empresa, y movimientos y Kardex de los almacenes de su sede'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)'],
+    ['ver_solicitud_fabricacion', 'Solicitudes de Fabricación: ver, crear, editar y enviar (pantalla compartida GI-21/GI-22/GI-23 de Inventarios)'], ['crear_solicitud_materiales', 'Solicitudes de Materiales: crear y consultar (pantalla compartida GI-13 de Inventarios)'],
+    ['recibir_transferencia', 'Recepción de mercadería (CL-47): confirmar lo que llega por transferencia a los almacenes de su sede'],
+    ['acceso_logistico_general', 'Usuario logístico general: movimientos, Kardex y recepción de todos los almacenes (ningún perfil de Comercial lo tiene)']
   ],
   render() {
     const c = Store.cfg(), ed = Store.puede('configurar_comercial');

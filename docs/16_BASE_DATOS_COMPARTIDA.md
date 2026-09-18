@@ -154,7 +154,7 @@ Correlativos compartidos (`BD.sig`): `sf, sol, oc, fac, gre, ing, sal, trf, of, 
 ## 5. Alcance por módulo
 
 **Conectadas a la base** (deben leer y escribir `BD`):
-- Inventarios: GI-00, GI-01/02 artículos, GI-03/04 almacenes, GI-05 existencias, GI-06 kardex, GI-07/08 movimientos, GI-09 ingreso, GI-10 salida, GI-11 transferencia, GI-13 solicitudes de materiales, GI-14/15/16 GRE, GI-17 listas de materiales, GI-20 saldos, GI-21/22/23 solicitudes de fabricación, maestros de configuración (grupos, categorías, UM, conversiones, atributos, sedes).
+- Inventarios: GI-00, GI-01/02 artículos, GI-03/04 almacenes, GI-05 existencias, GI-06 kardex, GI-07/08 movimientos, GI-09 ingreso, GI-10 salida, GI-24 transferencias (listado) y GI-11 ficha, GI-13 solicitudes de materiales, GI-14/15/16 GRE, GI-17 listas de materiales, GI-20 saldos, GI-21/22/23 solicitudes de fabricación, maestros de configuración (grupos, categorías, UM, conversiones, atributos, sedes).
 - Compras: CO-00, CO-01/02 proveedores, CO-06/07 órdenes de compra (bienes y servicio, recepción/conformidad), CO-09/10 facturas.
 - Producción: todas (PR-01 … PR-12).
 - Comercial: todas; el stock y los artículos de venta salen de la base.

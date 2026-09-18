@@ -5,7 +5,7 @@ const App = {
   MENU: [
     { g: 'Ventas', items: [['cm01', '✎', 'Cotizaciones', 'ver_cotizacion'], ['cm02', '▤', 'Ventas', 'ver_venta'], ['cm03', '↩', 'Devoluciones', 'ver_devolucion_venta']] },
     { g: 'Caja', items: [['cm04', '▣', 'Caja de la tienda', 'ver_caja'], ['cm05', '☷', 'Historial de cajas', 'ver_caja']] },
-    { g: 'Abastecimiento', items: [['cm11', '✂', 'Solicitudes de Fabricación', 'ver_solicitud_fabricacion'], ['cm12', '⇆', 'Solicitudes de Materiales', 'crear_solicitud_materiales']] },
+    { g: 'Abastecimiento', items: [['cm11', '✂', 'Solicitudes de Fabricación', 'ver_solicitud_fabricacion'], ['cm12', '⇆', 'Solicitudes de Materiales', 'crear_solicitud_materiales'], ['cm14', '⤓', 'Recepción de mercadería', 'ver_existencias']] },
     { g: 'Consultas', items: [['cm06', '▦', 'Existencias y movimientos', 'ver_existencias']] },
     { g: 'Maestros', items: [['cm07', '☺', 'Clientes', 'ver_cliente'], ['cm08', '$', 'Listas de precios', 'ver_venta'], ['cm09', '≡', 'Artículos de venta', 'ver_venta'], ['cm10', '⚙', 'Configuración', 'ver_venta']] }
   ],

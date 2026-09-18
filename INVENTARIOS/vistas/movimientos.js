@@ -7,7 +7,6 @@ Vistas.pantallas(String.raw`
       <div class="spacer"></div>
       <button class="btn btn-primary" onclick="nuevoIngreso()">+ Ingreso</button>
       <button class="btn btn-secondary" onclick="nuevaSalida()">+ Salida</button>
-      <button class="btn btn-secondary" onclick="resetTRF()">+ Transferencia</button>
     </div>
     <div class="card">
       <div class="filters">
@@ -27,16 +26,7 @@ Vistas.pantallas(String.raw`
       </table>
       <div class="pager"><span id="mov-count"></span></div>
     </div>
-    <p class="hint">Todos los movimientos de la base compartida: los que registra Logística aquí y los automáticos de otros módulos (recepción de compra, emisión y recibo de producción, envío al servicio de terceros, ventas de Comercial). Un movimiento confirmado no se edita: se corrige con otro movimiento (regularización por sobrante en GI-09 o por faltante en GI-10).</p>
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:10px">
-        <b style="font-size:13px">Solicitudes de Transferencia (GI-11)</b>
-        <div class="spacer"></div>
-        <select id="f-st-e" onchange="renderST()" style="border:1px solid var(--borde);border-radius:6px;padding:5px 8px;font-size:12.5px"><option value="">Todas</option><option>Borrador</option><option>Aprobada</option><option>Parcial</option><option>Recibida</option><option>Cancelada</option></select>
-      </div>
-      <p class="hint" style="margin-top:4px">En dos pasos: al <b>aprobar</b> se compromete el stock en el origen y se suma como Pedido en el destino; al <b>confirmar la recepción</b> (total o parcial) se registra el movimiento de transferencia.</p>
-      <table class="grid subtable" style="margin-top:10px"><thead><tr><th>N°</th><th>Fecha</th><th>Tipo</th><th>Origen → Destino</th><th>Artículos</th><th>Vinculada a</th><th>Movimientos</th><th>Estado</th></tr></thead><tbody id="st-body"></tbody></table>
-    </div>
+    <p class="hint">Todos los movimientos de la base compartida: los que registra Logística aquí y los automáticos de otros módulos (recepción de compra, emisión y recibo de producción, envío al servicio de terceros, ventas de Comercial). Un movimiento confirmado no se edita: se corrige con otro movimiento (regularización por sobrante en GI-09 o por faltante en GI-10). Las <b>Solicitudes de Transferencia</b> son pedidos, no movimientos: están en <a href="#" onclick="go('gi24');return false">Transferencias (GI-24)</a>; aquí aparece su movimiento cuando se confirma la recepción.</p>
   </section>
 
   <!-- ==================================================== GI-08 · Detalle de Movimiento -->
