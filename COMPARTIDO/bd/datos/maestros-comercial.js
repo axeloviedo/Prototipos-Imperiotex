@@ -34,14 +34,18 @@ const BD_COMERCIAL = (() => {
       { cod: 'YAPE', nom: 'Yape / Plin', efectivo: false, bancos: [], monedas: ['PEN'] },
       { cod: 'TRF', nom: 'Transferencia bancaria', efectivo: false, bancos: ['BCP', 'BBVA', 'INTERBANK', 'SCOTIABANK'], monedas: ['PEN', 'USD'] },
       { cod: 'POS', nom: 'Tarjeta (POS)', efectivo: false, bancos: ['NIUBIZ', 'IZIPAY'], monedas: ['PEN', 'USD'] },
-      { cod: 'DEP', nom: 'Depósito en cuenta', efectivo: false, bancos: ['BCP', 'BBVA'], monedas: ['PEN', 'USD'] }
+      { cod: 'DEP', nom: 'Depósito en cuenta', efectivo: false, bancos: ['BCP', 'BBVA'], monedas: ['PEN', 'USD'] },
+      /* crédito del cliente por sus notas de crédito (devoluciones, 2026-09-18): se valida solo, no entra a caja y no pide voucher;
+         solo se ofrece si el cliente tiene crédito en la moneda de la venta */
+      { cod: 'NC', nom: 'Nota de crédito', efectivo: false, saldo: true, bancos: [], monedas: ['PEN', 'USD'] }
     ],
     /* comprobante de la venta: serie única por tienda y tipo (el envío a SUNAT queda fuera de este prototipo) */
     comprobantes: [{ cod: 'NV', nom: 'Nota de venta', ruc: false }, { cod: 'BV', nom: 'Boleta de venta', ruc: false }, { cod: 'FA', nom: 'Factura', ruc: true }],
     series: { 'TDA-01': { NV: 'NV01', BV: 'B001', FA: 'F001' }, 'TDA-02': { NV: 'NV02', BV: 'B002', FA: 'F002' }, 'MAY-01': { NV: 'NV03', BV: 'B003', FA: 'F003' } },
     docReferencial: ['Orden de compra del cliente', 'Guía de remisión del cliente', 'Factura del cliente'],
+    /* el número del sustento se escribe a mano: la nota de crédito se emite en el sistema de facturación (2026-09-18) */
     sustentoDev: ['Nota de crédito', 'Nota de devolución interna'],
-    tiposDev: ['Normal', 'Mal estado', 'Cambio'],
+    tiposDev: ['Normal', 'Mal estado', 'Cambio'], /* ya no se usa desde 2026-09-18: la devolución no distingue estado (DV1) */
     lugaresEntrega: [
       { cod: 'RECOJO', nom: 'Recojo en tienda', propio: true },
       { cod: 'DELIVERY', nom: 'Delivery en Lima', propio: false, ubigeo: true },
@@ -137,12 +141,12 @@ const BD_COMERCIAL = (() => {
       /* configuración comercial editable en CL-45 */
       comercial: {
         cfg: {
-          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 3, almMalEstado: 'SB-LIQUID',
+          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 7, almMalEstado: 'SB-LIQUID',
           catIngreso: ['Fondo de caja chica', 'Sobrante de caja', 'Otros ingresos'],
           catEgreso: ['Pasajes y movilidad', 'Útiles de oficina', 'Pago a personal eventual', 'Depósito al banco', 'Otros egresos']
         }
       },
-      cots: [], ventas: [], devs: [], sesiones: [], cmovs: []
+      cots: [], ventas: [], devs: [], sesiones: [], cmovs: [], saldos: []
     }
   };
 })();

@@ -3,7 +3,7 @@ const CM10 = {
   PERMISOS: [
     ['ver_cotizacion', 'Ver cotizaciones'], ['crear_cotizacion', 'Crear cotizaciones'], ['editar_cotizacion', 'Editar cotizaciones (línea por línea)'], ['eliminar_cotizacion', 'Anular cotizaciones'],
     ['ver_venta', 'Ver ventas, listas y artículos de venta'], ['crear_venta', 'Registrar ventas y pagos'], ['anular_venta', 'Anular ventas'], ['asignar_vendedor', 'Asignar el vendedor'],
-    ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar y anular devoluciones'], ['editar_devolucion_venta', 'Finalizar devoluciones'],
+    ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar devoluciones (nota de crédito por ítem)'], ['editar_devolucion_venta', 'Finalizar devoluciones (versión anterior; ya no se usa)'],
     ['ver_caja', 'Ver caja e historial'], ['crear_caja', 'Abrir caja, ingresos, egresos y devolver dinero'], ['editar_caja', 'Cerrar caja y editar o anular movimientos'], ['valid_payments', 'Validar o rechazar pagos (validar el que completa el total saca el stock de la venta)'],
     ['ver_cliente', 'Ver clientes'], ['crear_cliente', 'Crear clientes'], ['editar_cliente', 'Editar y desactivar clientes'],
     ['ver_existencias', 'Ver existencias de las tiendas de la empresa, y movimientos y Kardex de los almacenes de su sede'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)'],
@@ -36,7 +36,7 @@ const CM10 = {
         '<td class="mini">' + M.CAJAS.filter(k => k.sede === s.cod).map(k => k.cod + (Caja.abierta(s.cod, k.mon) ? ' (abierta)' : '')).join('<br>') + '</td>' +
         '<td>' + ['NV', 'BV', 'FA'].map(k => M.SERIES[s.cod][k]).join(' · ') + '</td></tr>'));
     html += '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:1;min-width:360px"><div class="sec">Medios de pago</div>' +
-      UI.tabla(['Medio', 'Cuenta en el arqueo', 'Bancos / procesadores', 'Monedas'], M.METODOS.map(m => '<tr><td>' + m.nom + '</td><td class="mini">' + (m.efectivo ? 'Efectivo: se cuenta' : 'Se valida con voucher o abono') + '</td><td class="mini">' + (m.bancos.join(', ') || '—') + '</td><td>' + m.monedas.join(', ') + '</td></tr>')) + '</div>' +
+      UI.tabla(['Medio', 'Cuenta en el arqueo', 'Bancos / procesadores', 'Monedas'], M.METODOS.map(m => '<tr><td>' + m.nom + '</td><td class="mini">' + (m.saldo ? 'No entra a caja: usa el crédito del cliente (sus notas de crédito) y se valida solo' : m.efectivo ? 'Efectivo: se cuenta' : 'Se valida con voucher o abono') + '</td><td class="mini">' + (m.bancos.join(', ') || '—') + '</td><td>' + m.monedas.join(', ') + '</td></tr>')) + '</div>' +
       '<div style="flex:1;min-width:300px"><div class="sec">Comprobantes · lugares de entrega</div>' +
       UI.tabla(['Comprobante', 'Exige'], M.COMPROBANTES.map(x => '<tr><td>' + x.nom + '</td><td class="mini">' + (x.ruc ? 'Cliente con RUC' : '—') + '</td></tr>')) +
       UI.tabla(['Lugar de entrega', 'Pide'], M.LUGARES_ENTREGA.map(x => '<tr><td>' + x.nom + '</td><td class="mini">' + (x.propio ? 'Nada más' : 'Ubigeo, dirección y quién recibe' + (x.agencia ? ', agencia' : '')) + '</td></tr>')) + '</div></div>';

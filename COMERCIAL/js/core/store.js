@@ -26,6 +26,11 @@ const Store = {
       if (Array.isArray(v) && Array.isArray(d.maestros[k])) v.forEach(it => { if (!d.maestros[k].some(e => e.cod === it.cod)) d.maestros[k].push(BD.copia(it)); });
       else if (d.maestros[k] === undefined) d.maestros[k] = BD.copia(v);
     });
+    /* catálogos de Comercial en una base guardada antes: se agregan los elementos nuevos por código (p. ej. el medio NC «Nota de crédito») */
+    const c0 = (X.maestros || {}).comercial || {}, cb = (d.maestros || {}).comercial;
+    if (cb) Object.keys(c0).forEach(k => {
+      if (Array.isArray(c0[k]) && Array.isArray(cb[k]) && c0[k].every(x => x && x.cod)) c0[k].forEach(it => { if (!cb[k].some(e => e.cod === it.cod)) cb[k].push(BD.copia(it)); });
+    });
     Object.keys(X.colecciones || {}).forEach(k => { if (d[k] === undefined) d[k] = BD.copia(X.colecciones[k]); });
     /* clientes guardados antes del 2026-09-18: sin grupo → Nacional */
     (d.clientes || []).forEach(c => { if (!c.grupo) c.grupo = 'Nacional'; });

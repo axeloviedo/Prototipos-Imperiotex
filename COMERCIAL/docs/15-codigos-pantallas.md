@@ -25,14 +25,14 @@
 | CL-07 | Formulario | Nueva venta (directa o desde cotización) | `cm02f` | `js/modules/ventas.js` |
 | CL-08 | Modal | Registrar con avisos de stock (contra el Disponible) | `CM02F.registrar` | `js/modules/ventas.js` |
 | CL-09 | Ficha | Venta (Detalle, Pagos, Devoluciones, Movimientos de stock, Historial) | `cm02v` | `js/modules/ventas.js` |
-| CL-10 | Modal | Registrar pago | `PAGOUI.abrir` | `js/modules/documento.js` |
+| CL-10 | Modal | Registrar pago (con «Nota de crédito» si el cliente tiene crédito; sin caja abierta, solo ese medio) | `PAGOUI.abrir` | `js/modules/documento.js` |
 | CL-11 | Modal | Rechazar pago (motivo) | `CM02V.rechazar` · `CM04.rechazar` | `js/modules/ventas.js`, `js/modules/caja.js` |
 | CL-12 | Modal | Anular venta (motivo) | `CM02V.anular` | `js/modules/ventas.js` |
-| CL-13 | Pantalla | Devoluciones (listado) | `cm03` | `js/modules/devoluciones.js` |
-| CL-14 | Modal | Nueva devolución · elegir la venta | `CM03.nueva` | `js/modules/devoluciones.js` |
-| CL-15 | Ficha | Devolución (registrar, editar, finalizar, anular) | `cm03f` | `js/modules/devoluciones.js` |
-| CL-16 | Modal | Finalizar devolución | `CM03F.finalizar` | `js/modules/devoluciones.js` |
-| CL-17 | Modal | Anular devolución (motivo) | `CM03F.anular` | `js/modules/devoluciones.js` |
+| CL-13 | Pantalla | Devoluciones (listado con la nota de crédito y el dinero) | `cm03` | `js/modules/devoluciones.js` |
+| CL-14 | Modal | Nueva devolución · elegir la boleta o factura | `CM03.nueva` | `js/modules/devoluciones.js` |
+| CL-15 | Ficha | Devolución = nota de crédito por ítem (prendas y cantidades, N° y motivo; registrar en un paso; nueva venta para el cliente; devolver en caja) | `cm03f` | `js/modules/devoluciones.js` |
+| CL-16 | Modal | Registrar devolución (confirmación) | `CM03F.registrar` | `js/modules/devoluciones.js` |
+| CL-17 | Modal | Anular devolución Pendiente de la versión anterior (motivo) | `CM03F.anular` | `js/modules/devoluciones.js` |
 | CL-18 | Pantalla | Caja de la tienda (Cobros, Por cobrar, Ingresos y egresos, Devoluciones de dinero) | `cm04` | `js/modules/caja.js` |
 | CL-19 | Modal | Abrir caja | `CM04.abrir` | `js/modules/caja.js` |
 | CL-20 | Modal | Cobrar · ventas con saldo | `CM04.cobrar` | `js/modules/caja.js` |
@@ -50,7 +50,7 @@
 | CL-32 | Pantalla | Existencias y movimientos de la base compartida (Existencias de las tiendas de la empresa; Movimientos y Kardex de los almacenes de su sede, todos para el usuario logístico general) | `cm06` | `js/modules/consultas.js` |
 | CL-33 | Modal | Movimiento de stock (detalle) | `CM06.verMov` | `js/modules/consultas.js` |
 | CL-34 | Pantalla | Clientes (listado con el estilo de CO-01: grupo, tipo, documento, condición, estados y acciones Ver / Editar / Desactivar) | `cm07` | `js/modules/clientes.js` |
-| CL-35 | Ficha | Cliente con el estilo de CO-02: modo Ver / Editar, tarjetas y pestañas (Datos del cliente, Historial de ventas, Cotizaciones, Devoluciones) | `cm07f` | `js/modules/clientes.js` |
+| CL-35 | Ficha | Cliente con el estilo de CO-02: modo Ver / Editar, tarjetas y pestañas (Datos del cliente, Historial de ventas, Cotizaciones, Devoluciones, **Crédito** por notas de crédito con sus movimientos) | `cm07f` | `js/modules/clientes.js` |
 | CL-36 | Modal | Desactivar / reactivar cliente | `CM07F.activo` | `js/modules/clientes.js` |
 | CL-37 | Modal | Nuevo cliente (alta rápida desde un documento) | `CLIQ.abrir` | `js/modules/clientes.js` |
 | CL-38 | Modal | Buscar cliente | `BUS.cliente` | `js/modules/buscador.js` |
@@ -67,6 +67,7 @@
 | CL-49 | Modal | Agregar artículos (varios a la vez) o un grupo completo a una lista u oferta | `CM08.agregar` | `js/modules/listas.js` |
 | CL-50 | Modal | Detalle de la lista u oferta: datos, artículos o grupos con precio fijo o %, agregar, retirar, cancelar e historial | `CM08.ver` | `js/modules/listas.js` |
 | CL-51 | Modal | Agregar un grupo de artículos completo con % de descuento | `CM08.agregarGrupo` | `js/modules/listas.js` |
+| CL-52 | Modal | Devolver en caja lo que el cliente no usó de una nota de crédito (monto, medio, banco, operación) | `CM03F.devolver` | `js/modules/devoluciones.js` |
 
 ## Equivalencia con los códigos anteriores
 
@@ -86,6 +87,8 @@
 | CM-12 Solicitudes de Materiales | CL-31 |
 | CM-13 Órdenes de venta | Sin código: `js/modules/ordenes.js` es de otra versión y `index.html` no lo carga |
 
+> 2026-09-18 · Devolución = nota de crédito por ítem (`12-prototipo-diseno.md` §14): CL-13 a CL-16 cambian de contenido (CL-16 pasa a «Registrar devolución»), CL-35 suma la pestaña Crédito y se agrega **CL-52** «Devolver en caja».
+
 ## Regla para pantallas nuevas
 
-Se toma el siguiente número libre (CL-52, CL-53, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.
+Se toma el siguiente número libre (CL-53, CL-54, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.

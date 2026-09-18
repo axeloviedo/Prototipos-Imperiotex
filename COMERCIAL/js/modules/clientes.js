@@ -103,13 +103,15 @@ const CM07F = {
       '<div class="spacer"></div>' + b.join('') + '</div>';
 
     if (modo === 'ver') {
+      const saf = Saldo.porMoneda(c.cod), safTxt = saf.map(x => UI.m(x.saldo, x.mon)).join(' · ');
       html += UI.kpis([
         { l: 'Comprado (neto)', v: CM02.sumaMon(vs.filter(v => v.estado === 'Registrada'), Ventas.neto) },
         { l: 'Saldo por cobrar', v: CM02.sumaMon(vs, Ventas.deuda), color: 'var(--pendiente)' },
+        { l: 'Crédito (notas de crédito)', v: safTxt || UI.s(0), s: 'sin usar · no vence', color: 'var(--prp)' },
         { l: 'Última compra', v: vs.filter(v => v.estado === 'Registrada').length ? vs.filter(v => v.estado === 'Registrada')[0].fecha.slice(0, 10) : '—', color: 'var(--borrador)' },
         { l: 'Cliente desde', v: (c.alta || '').slice(0, 10) || '—', color: 'var(--borrador)' }
       ]);
-      const tabs = [['datos', 'Datos del cliente'], ['ven', 'Historial de ventas (' + vs.length + ')'], ['cot', 'Cotizaciones (' + cs.length + ')'], ['dev', 'Devoluciones (' + ds.length + ')']];
+      const tabs = [['datos', 'Datos del cliente'], ['ven', 'Historial de ventas (' + vs.length + ')'], ['cot', 'Cotizaciones (' + cs.length + ')'], ['dev', 'Devoluciones (' + ds.length + ')'], ['saf', 'Crédito' + (safTxt ? ' (' + safTxt + ')' : '')]];
       html += '<div class="tabs">' + tabs.map(t => '<div class="tab' + (t[0] === CM07F.tab ? ' active' : '') + '" onclick="CM07F.tab=\'' + t[0] + '\';App.refrescar()">' + t[1] + '</div>').join('') + '</div>';
     }
     if (modo !== 'ver' || CM07F.tab === 'datos') {
@@ -119,8 +121,16 @@ const CM07F = {
       html += '<div class="card"><b style="font-size:13px">Ventas del cliente</b>' + UI.tabla(['Venta', 'Fecha de creación', 'Tienda', ['Total', 'num'], ['Saldo', 'num'], 'Pago', 'Estado'], vs.map(v => '<tr class="clickable" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})"><td><b>' + v.id + '</b><br><span class="mini">' + v.compNum + '</span></td><td class="mini">' + v.fecha + '</td><td class="mini">' + UI.esc(v.sedeNom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td><td class="num">' + UI.m(Ventas.deuda(v), v.mon) + '</td><td>' + UI.estado(Ventas.estadoPago(v)) + '</td><td>' + UI.estado(v.estado) + '</td></tr>'), { vacio: 'Sin ventas registradas', sub: true }) + '</div>';
     } else if (CM07F.tab === 'cot') {
       html += '<div class="card"><b style="font-size:13px">Cotizaciones del cliente</b>' + UI.tabla(['Cotización', 'Fecha de creación', 'Válida hasta', ['Total', 'num'], 'Estado'], cs.map(x => '<tr class="clickable" onclick="App.go(\'cm01f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.validez + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cotizaciones', sub: true }) + '</div>';
+    } else if (CM07F.tab === 'dev') {
+      html += '<div class="card"><b style="font-size:13px">Devoluciones del cliente</b>' + UI.tabla(['N°', 'Fecha de creación', 'Nota de crédito', 'Venta', ['Total', 'num'], 'Dinero', 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td class="mini">' + UI.esc(x.sustTipo + ' ' + x.sustNum) + '</td><td>' + x.venta + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td class="mini">' + UI.esc(Dev.dineroTxt(x)) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones', sub: true }) + '</div>';
     } else {
-      html += '<div class="card"><b style="font-size:13px">Devoluciones del cliente</b>' + UI.tabla(['Devolución', 'Fecha de creación', 'Venta', ['Total', 'num'], 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.venta + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones', sub: true }) + '</div>';
+      /* crédito por notas de crédito: de dónde vino (devolución, anulación) y en qué venta se usó o si se devolvió en caja; no se borra */
+      const ms = Saldo.movs(c.cod), ir = o => !o ? '' : o.doc === 'Devolución' ? '<button class="btn-link" style="padding:0" onclick="App.go(\'cm03f\',{id:\'' + o.id + '\'})">' + o.id + '</button>'
+        : (o.doc === 'Venta' || o.doc === 'Anulación') && Store.venta(o.id) ? '<button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + o.id + '\'})">' + o.id + '</button>' : UI.esc(o.id || '');
+      html += '<div class="card"><b style="font-size:13px">Crédito del cliente (notas de crédito)</b><div class="chips" style="margin:10px 0 8px">' + M.MONEDAS.map(m => '<span class="chip" style="font-size:13px;padding:5px 12px">Crédito ' + m.cod + ': <b>' + UI.m(Saldo.de(c.cod, m.cod), m.cod) + '</b></span>').join('') + '</div>' +
+        UI.tabla(['Movimiento', 'Fecha de creación', 'Tipo', 'Origen', 'Detalle', ['Monto', 'num'], 'Usuario'], ms.map(m => '<tr><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '</td><td>' + UI.badge(m.tipo, m.tipo === 'Abono' ? 'var(--confirmado)' : 'var(--parcial)') + '</td>' +
+          '<td>' + (m.origen ? UI.esc(m.origen.doc) + ' ' + ir(m.origen) : '') + '</td><td class="mini">' + UI.esc(m.obs) + '</td><td class="num">' + (m.tipo === 'Abono' ? '+ ' : '− ') + UI.m(m.monto, m.mon) + '</td><td class="mini">' + UI.esc(m.usuario) + '</td></tr>'), { vacio: 'Sin crédito', sub: true }) +
+        '<p class="hint" style="margin-top:8px">El crédito nace de las notas de crédito (devoluciones) y vuelve si se anula una venta pagada con él. Se usa como medio de pago «Nota de crédito» en cualquier venta de este cliente, en la misma moneda, o se le devuelve en caja desde la devolución. No vence.</p></div>';
     }
     return html;
   },

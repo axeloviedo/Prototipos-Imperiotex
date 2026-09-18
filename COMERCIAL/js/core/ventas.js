@@ -2,7 +2,7 @@
    Cadena simple (estilo SAP B1, sin Orden de Venta ni Entrega aparte):
      Cotización (no mueve stock) → Venta pendiente de pago (COMPROMETE stock)
        → pago confirmado (validado en caja) que cubre el total (Salida GI-10: baja el Actual y libera lo comprometido)
-       → Devolución (Ingreso GI-09, solo de lo que ya salió).
+       → Devolución = nota de crédito por ítem (Ingreso GI-09, solo de lo que ya salió; deja un crédito al cliente que paga su próxima venta o se devuelve en caja).
    DECISIÓN CERRADA 2026-09-16. Crédito: la misma regla; la condición de pago solo fija el vencimiento del saldo,
    el stock queda comprometido hasta que lo validado cubra el total.
    Toda regla que falla lanza Error con el motivo; App.accion lo muestra y no guarda. */
@@ -323,11 +323,14 @@ const Ventas = {
     Precios.doc(d);
     return d;
   },
+  /* el medio «Nota de crédito» usa el crédito del cliente: no entra a caja, no pide banco, operación ni voucher y se valida solo (DV2) */
+  esSaldo(p) { const m = M.metodo(p && p.met); return !!(m && m.saldo); },
   revisarPago(mon, p) {
     const e = [], m = M.metodo(p.met);
     if (!m) { e.push('elija el medio de pago'); return e; }
     if (m.monedas.indexOf(mon) < 0) e.push(m.nom + ' no acepta ' + mon);
     if (!(Number(p.monto) > 0)) e.push('el monto debe ser mayor que cero');
+    if (m.saldo) return e;
     if (m.bancos.length && m.bancos.indexOf(p.banco) < 0) e.push('elija el banco o procesador de ' + m.nom);
     if (!m.efectivo && !String(p.nop || '').trim()) e.push('ingrese el N° de operación');
     if (!m.efectivo && !String(p.voucher || '').trim()) e.push('adjunte el voucher');
@@ -364,7 +367,9 @@ const Ventas = {
       if (!pagos.length) e.push('Venta al contado: registre el pago');
       else if (Math.abs(pag - d.total) > 0.01) e.push('Venta al contado: los pagos (' + UI.m(pag, d.mon) + ') deben sumar el total (' + UI.m(d.total, d.mon) + ')');
     } else if (cond && pagos.length && pag >= d.total - 0.001) e.push('Venta al crédito: el pago a cuenta debe ser menor que el total (si paga todo, elija Contado)');
-    if (pagos.length && !Caja.abierta(d.sede, d.mon)) e.push('Para registrar pagos debe estar abierta la caja de ' + Store.sede(d.sede).nom + ' en ' + d.mon);
+    const conSaldo = UI.r2(pagos.filter(Ventas.esSaldo).reduce((t, p) => t + (Number(p.monto) || 0), 0));
+    if (conSaldo > 0 && c && conSaldo > Saldo.de(c.cod, d.mon) + 0.004) e.push('El crédito del cliente (notas de crédito) es ' + UI.m(Saldo.de(c.cod, d.mon), d.mon) + ': no alcanza para pagar ' + UI.m(conSaldo, d.mon));
+    if (pagos.some(p => !Ventas.esSaldo(p)) && !Caja.abierta(d.sede, d.mon)) e.push('Para registrar pagos debe estar abierta la caja de ' + Store.sede(d.sede).nom + ' en ' + d.mon);
     return { e, w: rl.w };
   },
   /* registra la venta: nace Pendiente de pago y COMPROMETE el stock de sus líneas inventariables (todavía no hay salida) */
@@ -379,7 +384,7 @@ const Ventas = {
     Object.keys(porAlm).forEach(alm => porAlm[alm].forEach(l => {
       if (Doc.necesidad(d, l.art, alm) > Stock.disp(alm, l.art) + 0.00005) throw new Error('Stock disponible insuficiente de ' + l.art + ' en ' + alm);
     }));
-    const ses = (d.pagos || []).length ? Caja.abierta(d.sede, d.mon) : null;
+    const ses = (d.pagos || []).some(p => !Ventas.esSaldo(p)) ? Caja.abierta(d.sede, d.mon) : null;
     const v = Doc.snapCliente(JSON.parse(JSON.stringify(d)));
     const serie = M.SERIES[d.sede][d.comp];
     Object.assign(v, {
@@ -392,7 +397,8 @@ const Ventas = {
     /* compromiso por línea inventariable, en UM de inventario */
     v.lineas.forEach(l => { l.comp = (Store.art(l.art) || {}).inv ? UI.r4(l.cant * l.factor) : 0; });
     Stock.comprometerLineas(v.lineas.filter(l => l.comp > 0).map(l => ({ alm: l.alm, art: l.art, cant: l.comp })), 1);
-    v.pagos = (d.pagos || []).map(p => ({ id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: p.met, banco: p.banco || '', nop: p.nop || '', voucher: p.voucher || '', monto: UI.r2(p.monto), estado: 'Por validar', caja: ses.id, usuario: u.nom }));
+    v.pagos = (d.pagos || []).map(p => Ventas.esSaldo(p) ? Ventas._pagoSaldo(v, p.monto)
+      : { id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: p.met, banco: p.banco || '', nop: p.nop || '', voucher: p.voucher || '', monto: UI.r2(p.monto), estado: 'Por validar', caja: ses.id, usuario: u.nom });
     if (d.cot) { const c = Store.cot(d.cot); c.estado = 'Convertida'; c.venta = v.id; Store.hist(c, 'Convertida en venta', v.id); }
     const nComp = v.lineas.filter(l => l.comp > 0).length;
     Store.hist(v, 'Registrada', comp.nom + ' ' + v.compNum + (d.cot ? ' · desde ' + d.cot : '') + (nComp ? ' · stock comprometido en ' + nComp + ' línea(s) hasta que el pago confirmado cubra el total' : '') + (r.w.length ? ' · avisos: ' + r.w.join(' · ') : ''));
@@ -468,7 +474,7 @@ const Ventas = {
   confirmado(v) { return UI.r2(v.pagos.filter(p => p.estado === 'Validado').reduce((t, p) => t + p.monto, 0)); },
   pagado(v) { return UI.r2(v.pagos.filter(p => p.estado !== 'Anulado').reduce((t, p) => t + p.monto, 0) - v.reembolsos.filter(x => x.estado === 'Procesado').reduce((t, x) => t + x.monto, 0)); },
   devoluciones(v) { return Store.d.devs.filter(x => x.venta === v.id && x.estado !== 'Anulada'); },
-  devuelto(v) { return UI.r2(Store.d.devs.filter(x => x.venta === v.id && x.estado === 'Finalizada').reduce((t, x) => t + x.total, 0)); },
+  devuelto(v) { return UI.r2(Store.d.devs.filter(x => x.venta === v.id && (x.estado === 'Registrada' || x.estado === 'Finalizada')).reduce((t, x) => t + x.total, 0)); },
   neto(v) { return v.estado === 'Anulada' ? 0 : UI.r2(v.total - Ventas.devuelto(v)); },
   porDevolver(v) { return UI.r2(v.reembolsos.filter(x => x.estado === 'Pendiente').reduce((t, x) => t + x.monto, 0)); },
   deuda(v) { return v.estado === 'Anulada' ? 0 : UI.r2(Math.max(0, Ventas.neto(v) - Ventas.pagado(v))); },
@@ -493,12 +499,27 @@ const Ventas = {
     const deuda = Ventas.deuda(v);
     if (deuda <= 0.004) throw new Error('La venta ' + v.id + ' no tiene saldo pendiente');
     if (Number(p.monto) > deuda + 0.01) throw new Error('El pago (' + UI.m(p.monto, v.mon) + ') supera el saldo pendiente (' + UI.m(deuda, v.mon) + ')');
+    if (Ventas.esSaldo(p)) {
+      if (Number(p.monto) > Saldo.de(v.cli, v.mon) + 0.004) throw new Error('El crédito del cliente (notas de crédito) es ' + UI.m(Saldo.de(v.cli, v.mon), v.mon));
+      /* se valida solo: si completa el total, la salida debe poder registrarse antes de usar el saldo */
+      if (!v.salida && Ventas.confirmado(v) + Number(p.monto) + 0.01 >= v.total) { const falta = Ventas.faltaParaSalir(v); if (falta) throw new Error('El pago completa el total y debe salir el stock, pero no alcanza: ' + falta); }
+      const ps = Ventas._pagoSaldo(v, p.monto);
+      v.pagos.push(ps);
+      Store.hist(v, 'Pago con nota de crédito', UI.m(ps.monto, v.mon) + ' · ' + ps.saldoMov + ' (no entra a caja)');
+      Ventas._salidaSiPagada(v, ps.id);
+      return ps;
+    }
     const ses = Caja.abierta(v.sede, v.mon);
     if (!ses) throw new Error('Abra la caja de ' + v.sedeNom + ' en ' + v.mon + ' para registrar el pago');
     const pago = { id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: p.met, banco: p.banco || '', nop: p.nop || '', voucher: p.voucher || '', monto: UI.r2(p.monto), estado: 'Por validar', caja: ses.id, usuario: Store.usuario().nom };
     v.pagos.push(pago);
     Store.hist(v, 'Pago registrado', M.metodo(p.met).nom + ' · ' + UI.m(pago.monto, v.mon) + ' · caja ' + ses.id);
     return pago;
+  },
+  /* pago con el crédito del cliente (sus notas de crédito): movimiento Uso, queda Validado al instante y no pertenece a ninguna caja */
+  _pagoSaldo(v, monto) {
+    const u = Store.usuario(), m = Saldo.usar(v.cli, v.mon, monto, { doc: 'Venta', id: v.id }, 'Pago de ' + v.id);
+    return { id: Store.sig('pag', 'PAG-', 6), fecha: UI.ahora(), met: M.SALDO, banco: '', nop: m.id, voucher: '', monto: UI.r2(monto), estado: 'Validado', caja: null, saldoMov: m.id, usuario: u.nom, validado: { f: UI.ahora(), u: 'Sistema (nota de crédito)' } };
   },
   _pagoEnCaja(v, id) {
     Store.exigir('valid_payments', 'validar pagos');
@@ -552,12 +573,49 @@ const Ventas = {
       });
     }
     v.pagos.filter(p => p.estado === 'Por validar').forEach(p => { p.estado = 'Anulado'; p.motivo = 'Venta anulada'; });
-    const cobrado = Ventas.pagado(v) - Ventas.porDevolver(v);
-    if (cobrado > 0.004) v.reembolsos.push({ id: Store.sig('ree', 'DD-', 6), origen: 'Anulación', monto: UI.r2(cobrado), estado: 'Pendiente', fecha: UI.ahora() });
+    const cobrado = UI.r2(Ventas.pagado(v) - Ventas.porDevolver(v));
+    /* lo pagado con nota de crédito vuelve al crédito del cliente; el resto queda por devolver en caja, como siempre */
+    const conSaldo = UI.r2(Math.min(cobrado, v.pagos.filter(p => p.estado !== 'Anulado' && Ventas.esSaldo(p)).reduce((t, p) => t + p.monto, 0)));
+    const enCaja = UI.r2(cobrado - conSaldo);
+    if (conSaldo > 0.004) Ventas._aSaldo(v, conSaldo, { doc: 'Anulación', id: v.id }, 'Anulación de ' + v.id);
+    if (enCaja > 0.004) v.reembolsos.push({ id: Store.sig('ree', 'DD-', 6), origen: 'Anulación', monto: enCaja, estado: 'Pendiente', fecha: UI.ahora() });
     v.estado = 'Anulada';
     v.anulacion = { f: UI.ahora(), u: Store.usuario().nom, motivo };
-    Store.hist(v, 'Anulada', motivo + (v.salida ? ' · stock devuelto al almacén' : Ventas.tieneStock(v) ? ' · stock comprometido liberado' : '') + (cobrado > 0.004 ? ' · por devolver ' + UI.m(cobrado, v.mon) : ''));
+    Store.hist(v, 'Anulada', motivo + (v.salida ? ' · stock devuelto al almacén' : Ventas.tieneStock(v) ? ' · stock comprometido liberado' : '') + (conSaldo > 0.004 ? ' · vuelven al crédito del cliente ' + UI.m(conSaldo, v.mon) : '') + (enCaja > 0.004 ? ' · por devolver ' + UI.m(enCaja, v.mon) : ''));
     return v;
+  },
+  /* dinero de la venta que pasa al crédito del cliente: Abono + devolución de dinero ya Procesada (sin caja),
+     así lo pagado de la venta baja igual que con una devolución en caja */
+  _aSaldo(v, monto, origen, obs) {
+    const m = Saldo.abonar(v.cli, v.mon, monto, origen, obs);
+    const re = { id: Store.sig('ree', 'DD-', 6), origen: origen.doc === 'Anulación' ? 'Anulación' : origen.id, monto: UI.r2(monto), estado: 'Procesado', destino: 'Crédito del cliente', saldoMov: m.id, fecha: UI.ahora() };
+    v.reembolsos.push(re);
+    return re;
+  }
+};
+
+/* ============================== CRÉDITO DEL CLIENTE POR NOTAS DE CRÉDITO (2026-09-18) ==============================
+   La devolución (nota de crédito) deja al cliente un crédito por lo que pagó, por cliente y moneda, sin vencimiento.
+   Se usa como medio de pago «Nota de crédito» (M.SALDO = 'NC') en su próxima venta o se le devuelve en caja.
+   BD.d.saldos = movimientos { id SAF-000001, emp, cli, mon, tipo Abono|Uso, monto, origen {doc, id}, obs, fecha, usuario }. Nunca se borran. */
+const Saldo = {
+  movs(cli, mon) { return (Store.d.saldos || []).filter(m => m.cli === cli && (!mon || m.mon === mon)); },
+  de(cli, mon) { return UI.r2(Saldo.movs(cli, mon).reduce((t, m) => t + (m.tipo === 'Abono' ? m.monto : -m.monto), 0)); },
+  /* [{mon, saldo}] con saldo mayor que cero */
+  porMoneda(cli) { return M.MONEDAS.map(m => ({ mon: m.cod, saldo: Saldo.de(cli, m.cod) })).filter(x => x.saldo > 0.004); },
+  _mov(tipo, cli, mon, monto, origen, obs) {
+    monto = UI.r2(Number(monto));
+    if (!(monto > 0)) throw new Error('El monto del crédito debe ser mayor que cero');
+    if (!Store.cli(cli)) throw new Error('Cliente no encontrado');
+    Store.d.saldos = Store.d.saldos || [];
+    const m = { id: Store.sig('saf', 'SAF-', 6), emp: M._c().empresa || 'SB', cli, mon, tipo, monto, origen: origen || null, obs: obs || '', fecha: UI.ahora(), usuario: Store.usuario().nom };
+    Store.d.saldos.unshift(m);
+    return m;
+  },
+  abonar(cli, mon, monto, origen, obs) { return Saldo._mov('Abono', cli, mon, monto, origen, obs); },
+  usar(cli, mon, monto, origen, obs) {
+    if (Number(monto) > Saldo.de(cli, mon) + 0.004) throw new Error('El crédito del cliente (notas de crédito) es ' + UI.m(Saldo.de(cli, mon), mon) + ': no alcanza para ' + UI.m(monto, mon));
+    return Saldo._mov('Uso', cli, mon, monto, origen, obs);
   }
 };
 
@@ -571,6 +629,19 @@ const Dev = {
       return { n: l.n, art: l.art, nom: l.nom, um: l.um, factor: l.factor, alm: l.alm, vendida: l.cant, devuelta: ya, max: UI.r4(l.cant - ya), precio: l.cant ? UI.r4(l.total / l.cant) : 0, costo: l.costo || 0 };
     });
   },
+  /* la nota de venta se corrige con una nota interna; boleta y factura con nota de crédito (su número se escribe: se emite en el sistema de facturación) */
+  sustentoDe(v) { return v && v.comp === 'NV' ? 'Nota de devolución interna' : 'Nota de crédito'; },
+  /* DV4: la nota de crédito se emite hasta 12 meses después de la venta */
+  plazo(v) { return UI.sumarDias(v.fecha, Dev.DIAS_PLAZO).slice(0, 10); },
+  DIAS_PLAZO: 365,
+  puedeDevolver(v) {
+    if (!v) return 'No existe la venta';
+    if (v.estado !== 'Registrada') return 'Solo se devuelve una venta Registrada (' + v.id + ' está ' + v.estado + ')';
+    if (!v.salida) return 'La venta ' + v.id + ' aún no tiene salida de stock (sigue comprometido hasta que el pago confirmado cubra el total): no hay nada que devolver; si ya no va, anúlela';
+    if (!Dev.candidatas(v).length) return 'La venta no tiene productos: los servicios no se devuelven';
+    if (UI.aFecha(UI.hoy()) > UI.aFecha(Dev.plazo(v))) return 'Pasaron 12 meses desde la venta (' + Dev.plazo(v) + '): ya no se emite nota de crédito';
+    return '';
+  },
   _armar(v, x, devId) {
     const cands = Dev.candidatas(v, devId), lineas = [];
     (x.lineas || []).forEach(y => {
@@ -579,104 +650,126 @@ const Dev = {
       const c = cands.find(k => k.n === Number(y.n));
       if (!c) throw new Error('La línea ' + y.n + ' no pertenece a la venta');
       if (cant > c.max + 0.00005) throw new Error('Línea ' + c.n + ' (' + c.art + '): se puede devolver hasta ' + UI.n(c.max, 0) + ' ' + c.um + ' (vendido ' + UI.n(c.vendida, 0) + ', ya devuelto ' + UI.n(c.devuelta, 0) + ')');
-      if (M.TIPOS_DEV.indexOf(y.tipo) < 0) throw new Error('Línea ' + c.n + ': elija el tipo de devolución');
-      const l = { n: c.n, art: c.art, nom: c.nom, um: c.um, factor: c.factor, alm: c.alm, cant, tipo: y.tipo, precio: c.precio, costo: c.costo };
+      const l = { n: c.n, art: c.art, nom: c.nom, um: c.um, factor: c.factor, alm: c.alm, cant, precio: c.precio, costo: c.costo };
       l.total = UI.r2(l.precio * cant);
       const t = Precios.tasa(l.art);
       l.subtotal = UI.r2(l.total / (1 + t));
       l.impuesto = UI.r2(l.total - l.subtotal);
       lineas.push(l);
     });
-    if (!lineas.length) throw new Error('Indique la cantidad a devolver de al menos una línea');
+    if (!lineas.length) throw new Error('Indique la cantidad a devolver de al menos una prenda');
     if (M.SUSTENTO_DEV.indexOf(x.sustTipo) < 0) throw new Error('Elija el documento de sustento');
-    if (!String(x.sustNum || '').trim()) throw new Error('Ingrese el número del documento de sustento');
-    const bruto = UI.r2(lineas.reduce((t, l) => t + l.total, 0)), dcto = Number(x.dcto) || 0;
-    if (dcto < 0 || dcto > bruto) throw new Error('El descuento debe estar entre 0 y ' + UI.n(bruto));
-    const f = bruto ? (bruto - dcto) / bruto : 0, total = UI.r2(bruto - dcto), igv = UI.r2(lineas.reduce((t, l) => t + l.impuesto, 0) * f);
-    return { lineas, bruto, dcto: UI.r2(dcto), total, igv, subtotal: UI.r2(total - igv), sustTipo: x.sustTipo, sustNum: String(x.sustNum).trim(), obs: x.obs || '', voucher: x.voucher || '' };
+    if (!String(x.sustNum || '').trim()) throw new Error('Ingrese el N° de la ' + String(x.sustTipo).toLowerCase() + ' (se emite en el sistema de facturación)');
+    if (!String(x.obs || '').trim()) throw new Error('Indique el motivo de la devolución');
+    const total = UI.r2(lineas.reduce((t, l) => t + l.total, 0)), igv = UI.r2(lineas.reduce((t, l) => t + l.impuesto, 0));
+    return { lineas, bruto: total, dcto: 0, total, igv, subtotal: UI.r2(total - igv), sustTipo: x.sustTipo, sustNum: String(x.sustNum).trim(), obs: String(x.obs).trim() };
   },
+  /* crédito que deja la nota: lo que el cliente ya pagó por lo devuelto (si la venta tenía saldo por cobrar, primero se descuenta de ese saldo) */
+  creditoDe(v, total) {
+    const neto = Ventas.neto(v), pagado = Ventas.pagado(v), pend = Ventas.porDevolver(v);
+    return UI.r2(Math.min(total, Math.max(0, pagado - pend - (neto - total))));
+  },
+  /* DV1 · registrar la devolución = nota de crédito por ítem, en un solo paso: entra el stock al almacén de la venta
+     y el cliente queda con un crédito por lo que pagó. La boleta o factura original no se anula ni se toca. */
   crear(ventaId, x) {
     Store.exigir('crear_devolucion_venta', 'registrar devoluciones');
-    const v = Store.venta(ventaId);
-    if (!v) throw new Error('No existe la venta ' + ventaId);
-    if (v.estado !== 'Registrada') throw new Error('Solo se devuelve una venta Registrada (' + v.id + ' está ' + v.estado + ')');
-    if (!v.salida) throw new Error('La venta ' + v.id + ' aún no tiene salida de stock (sigue comprometido hasta que el pago confirmado cubra el total): no hay nada que devolver; si ya no va, anúlela');
-    if (!Dev.candidatas(v).length) throw new Error('La venta no tiene productos: los servicios no se devuelven');
-    const d = Object.assign({ id: Store.sig('dev', 'DEV-' + Store.anio() + '-', 6), emp: v.emp || BD.empresaDe(Doc.sedeAlm(v)), fecha: UI.ahora(), venta: v.id, sede: v.sede, sedeNom: v.sedeNom, cliente: v.cliente, mon: v.mon, estado: 'Pendiente', usuario: Store.usuario().nom, movs: [], reembolso: null, hist: [] }, Dev._armar(v, x));
-    Store.hist(d, 'Registrada', UI.n(d.lineas.reduce((t, l) => t + l.cant, 0), 0) + ' unidad(es) · ' + UI.m(d.total, d.mon));
+    const v = Store.venta(ventaId), no = Dev.puedeDevolver(v);
+    if (no) throw new Error(no);
+    const x0 = Dev._armar(v, x), cred = Dev.creditoDe(v, x0.total); /* antes de sumar la devolución a la venta */
+    const d = Object.assign({ id: Store.sig('dev', 'DEV-' + Store.anio() + '-', 6), emp: v.emp || BD.empresaDe(Doc.sedeAlm(v)), fecha: UI.ahora(), venta: v.id, sede: v.sede, sedeNom: v.sedeNom, cliente: v.cliente, mon: v.mon, estado: 'Registrada', usuario: Store.usuario().nom, movs: [], reembolso: null, hist: [] }, x0);
     Store.d.devs.unshift(d);
-    Store.hist(v, 'Devolución registrada', d.id + ' (Pendiente)');
+    Dev._aplicar(d, v, cred);
+    Store.hist(v, 'Devolución', d.id + ' · ' + d.sustTipo + ' ' + d.sustNum + ' · ' + UI.m(d.total, d.mon) + ' · la venta no se modifica');
     return d;
   },
-  actualizar(d, x) {
-    Store.exigir('crear_devolucion_venta', 'editar devoluciones');
-    if (!d || d.estado !== 'Pendiente') throw new Error('Solo se edita una devolución Pendiente');
-    Object.assign(d, Dev._armar(Store.venta(d.venta), x, d.id));
-    Store.hist(d, 'Actualizada', UI.m(d.total, d.mon));
-    return d;
+  _aplicar(d, v, cred) {
+    Dev._ingresar(d, v);
+    const desc = UI.r2(d.total - cred);
+    d.credito = cred;
+    if (cred > 0.004) { const re = Ventas._aSaldo(v, cred, { doc: 'Devolución', id: d.id }, d.sustTipo + ' ' + d.sustNum); d.saldoMov = re.saldoMov; d.reembolsoSaldo = re.id; }
+    Store.hist(d, 'Registrada', 'Stock devuelto con ' + d.movs.join(', ') + (cred > 0.004 ? ' · crédito del cliente ' + UI.m(cred, d.mon) : '') + (desc > 0.004 ? ' · se descuenta del saldo por cobrar ' + UI.m(desc, d.mon) : ''));
   },
+  /* bases guardadas antes: una devolución Pendiente se registra con el mismo efecto */
   finalizar(d) {
-    Store.exigir('editar_devolucion_venta', 'finalizar devoluciones');
-    if (!d || d.estado !== 'Pendiente') throw new Error('Solo se finaliza una devolución Pendiente');
-    const v = Store.venta(d.venta);
-    if (v.estado !== 'Registrada') throw new Error('La venta ' + v.id + ' ya no está Registrada');
-    if (!v.salida) throw new Error('La venta ' + v.id + ' no tiene salida de stock: solo se devuelve lo que ya salió');
-    Dev._armar(v, { lineas: d.lineas.map(l => ({ n: l.n, cant: l.cant, tipo: l.tipo })), sustTipo: d.sustTipo, sustNum: d.sustNum, dcto: d.dcto }, d.id);
-    const netoAntes = Ventas.neto(v), pagado = Ventas.pagado(v), pendiente = Ventas.porDevolver(v);
-    /* todo vuelve con un Ingreso ING-DEVCLI al almacén de la venta; lo que llega en mal estado sigue con un traslado TRF-LIQUID al almacén de liquidación.
-       DECISIÓN: ese traslado es una Solicitud de Transferencia DIRECTA (Docs.trf.directa: crea, aprueba y recibe en el acto), la única excepción
-       a la transferencia en dos pasos (T2/T7): es automático al finalizar la devolución y no hay nadie que confirme la recepción en ese momento. */
-    const almMal = Store.cfg().almMalEstado, porAlm = {}, malPorAlm = {};
-    const linStock = l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) });
-    d.lineas.forEach(l => {
-      (porAlm[l.alm] = porAlm[l.alm] || []).push(l);
-      if (l.tipo === 'Mal estado' && almMal && almMal !== l.alm) (malPorAlm[l.alm] = malPorAlm[l.alm] || []).push(l);
-    });
-    /* antes de mover nada: lo que se traslada a liquidación debe quedar disponible en la tienda tras el ingreso */
-    Object.keys(malPorAlm).forEach(alm => {
-      const req = {};
-      malPorAlm[alm].forEach(l => { req[l.art] = UI.r4((req[l.art] || 0) + l.cant * l.factor); });
-      Object.keys(req).forEach(art => {
-        const entra = porAlm[alm].filter(l => l.art === art).reduce((t, l) => t + l.cant * l.factor, 0);
-        if (Stock.disp(alm, art) + entra + 0.00005 < req[art]) throw new Error('No se puede trasladar a liquidación ' + BD.nomArt(art) + ': en ' + alm + ' lo disponible está comprometido');
-      });
-    });
+    Store.exigir('crear_devolucion_venta', 'registrar devoluciones');
+    if (!d || d.estado !== 'Pendiente') throw new Error('Solo se registra una devolución Pendiente');
+    const v = Store.venta(d.venta), no = Dev.puedeDevolver(v);
+    if (no) throw new Error(no);
+    Object.assign(d, Dev._armar(v, { lineas: d.lineas.map(l => ({ n: l.n, cant: l.cant })), sustTipo: d.sustTipo, sustNum: d.sustNum, obs: d.obs || 'Devolución' }, d.id));
+    const cred = Dev.creditoDe(v, d.total);
+    d.estado = 'Registrada';
+    Dev._aplicar(d, v, cred);
+    return d;
+  },
+  /* todo vuelve con un Ingreso ING-DEVCLI al almacén de la venta, al costo con que salió (sin «mal estado»: si hiciera falta, Inventarios lo traslada) */
+  _ingresar(d, v) {
+    const porAlm = {};
+    d.lineas.forEach(l => { (porAlm[l.alm] = porAlm[l.alm] || []).push(l); });
     Object.keys(porAlm).forEach(alm => {
-      const r = Stock.ingreso({ tipoMov: 'ING-DEVCLI', det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + d.cliente.nom, ndoc: d.id, doc: 'Devolución', modulo: 'Comercial', obs: d.sustTipo + ' ' + d.sustNum + ' · venta ' + v.id, lineas: porAlm[alm].map(linStock) });
+      const r = Stock.ingreso({ tipoMov: 'ING-DEVCLI', det: 'Ingreso - Devoluciones de Clientes', alm, origen: 'Cliente · ' + d.cliente.nom, ndoc: d.id, doc: 'Devolución', modulo: 'Comercial', obs: d.sustTipo + ' ' + d.sustNum + ' · venta ' + v.id,
+        lineas: porAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor), costo: UI.r4((l.costo || 0) / (l.factor || 1)) })) });
       if (!r.ok) throw new Error(r.error);
       d.movs.push(r.mov.id);
     });
-    Object.keys(malPorAlm).forEach(alm => {
-      const r = Docs.trf.directa({ tipoMov: 'TRF-LIQUID', origen: alm, destino: almMal, obs: 'Devolución en mal estado ' + d.id + ' de la venta ' + v.id, lineas: malPorAlm[alm].map(l => ({ art: l.art, cant: UI.r4(l.cant * l.factor) })) });
-      d.trfs = (d.trfs || []).concat(r.trf.id);
-      d.movs.push(r.mov.id);
-    });
-    d.estado = 'Finalizada';
-    d.finalizada = { f: UI.ahora(), u: Store.usuario().nom };
-    /* dinero: primero baja la deuda; solo se devuelve lo que el cliente pagó de más */
-    const monto = UI.r2(Math.min(d.total, Math.max(0, pagado - pendiente - (netoAntes - d.total))));
-    if (monto > 0.004) {
-      const re = { id: Store.sig('ree', 'DD-', 6), origen: d.id, monto, estado: 'Pendiente', fecha: UI.ahora() };
-      v.reembolsos.push(re);
-      d.reembolso = re.id;
-    }
-    Store.hist(d, 'Finalizada', 'Stock devuelto con ' + d.movs.join(', ') + (monto > 0.004 ? ' · por devolver al cliente ' + UI.m(monto, d.mon) : ' · se descuenta del saldo de la venta'));
-    Store.hist(v, 'Devolución finalizada', d.id + ' · ' + UI.m(d.total, d.mon));
-    return d;
   },
-  /* D3: anulación lógica, solo mientras no movió stock */
+  /* D3: una devolución Pendiente (bases guardadas antes) se anula con motivo; una registrada ya movió stock y dinero */
   anular(d, motivo) {
     Store.exigir('crear_devolucion_venta', 'anular devoluciones');
-    if (!d || d.estado !== 'Pendiente') throw new Error('Solo se anula una devolución Pendiente: una Finalizada ya movió stock');
+    if (!d || d.estado !== 'Pendiente') throw new Error('Solo se anula una devolución Pendiente: una registrada ya movió stock');
     if (!String(motivo || '').trim()) throw new Error('Indique el motivo');
     d.estado = 'Anulada';
+    d.anulada = { f: UI.ahora(), u: Store.usuario().nom, motivo };
     Store.hist(d, 'Anulada', motivo);
     Store.hist(Store.venta(d.venta), 'Devolución anulada', d.id);
+  },
+  /* lo ya devuelto en caja de esta nota */
+  devueltoCaja(d) {
+    const v = Store.venta(d.venta);
+    return v ? UI.r2(v.reembolsos.filter(r => r.origen === d.id && r.destino !== 'Crédito del cliente').reduce((t, r) => t + r.monto, 0)) : 0;
+  },
+  /* cuánto de esta nota se puede devolver en caja: lo que no se devolvió aún y que el cliente todavía tiene como crédito */
+  porDevolverCaja(d) {
+    if (!d || d.estado !== 'Registrada' || !(d.credito > 0)) return 0;
+    return UI.r2(Math.max(0, Math.min(d.credito - Dev.devueltoCaja(d), Saldo.de(d.cliente.cod, d.mon))));
+  },
+  /* DV3 · devolver en caja (lo que sobra de un cambio a menor valor, o una devolución sin producto nuevo): el crédito baja (Uso)
+     y sale el dinero de la caja abierta de la tienda en el mismo paso (movimiento de caja tipo Devolución) */
+  devolverEnCaja(d, monto, x) {
+    Store.exigir('crear_caja', 'devolver dinero');
+    const v = Store.venta(d.venta), max = Dev.porDevolverCaja(d), m = UI.r2(Number(monto));
+    if (!(m > 0)) throw new Error('Indique cuánto se devuelve');
+    if (m > max + 0.004) throw new Error('Se puede devolver hasta ' + UI.m(max, d.mon) + ' (crédito de esta nota que el cliente aún no usó)');
+    const s = Caja.abierta(v.sede, v.mon);
+    if (!s) throw new Error('Abra la caja de ' + v.sedeNom + ' en ' + v.mon + ' para devolver el dinero');
+    return Dev._atomico(() => {
+      const dd = Store.dev(d.id), vv = Store.venta(v.id);
+      const mov = Saldo.usar(dd.cliente.cod, dd.mon, m, { doc: 'Devolución', id: dd.id }, 'Devuelto en caja');
+      const re = { id: Store.sig('ree', 'DD-', 6), origen: dd.id, monto: m, estado: 'Pendiente', fecha: UI.ahora(), saldoMov: mov.id };
+      vv.reembolsos.push(re);
+      const mc = Caja.procesarReembolso(Store.sesion(s.id), vv.id, re.id, x || { met: 'EFE' });
+      Store.hist(dd, 'Devuelto en caja', UI.m(m, dd.mon) + ' · ' + mc.id);
+      return mc;
+    });
+  },
+  _atomico(fn) {
+    const copia = JSON.stringify(BD.d);
+    try { return fn(); } catch (e) { BD.d = JSON.parse(copia); throw e; }
   },
   reembolso(d) {
     if (!d.reembolso) return null;
     const v = Store.venta(d.venta);
     return v ? v.reembolsos.find(x => x.id === d.reembolso) : null;
   },
-  tieneCambio(d) { return d.lineas.some(l => l.tipo === 'Cambio'); }
+  /* texto corto del dinero para listados */
+  dineroTxt(d) {
+    if (d.estado === 'Anulada') return '—';
+    if (d.estado === 'Pendiente') return 'Pendiente de registrar';
+    const re = Dev.reembolso(d); /* devoluciones de la versión anterior: dinero por devolver en caja */
+    if (re) return 'Caja ' + UI.m(re.monto, d.mon) + ' · ' + re.estado;
+    const cred = d.credito != null ? d.credito : d.total, caja = Dev.devueltoCaja(d), p = [];
+    if (cred > 0.004) p.push('Crédito ' + UI.m(cred, d.mon));
+    if (caja > 0.004) p.push('devuelto en caja ' + UI.m(caja, d.mon));
+    if (UI.r2(d.total - cred) > 0.004) p.push('descontado del saldo ' + UI.m(UI.r2(d.total - cred), d.mon));
+    return p.join(' · ') || '—';
+  }
 };

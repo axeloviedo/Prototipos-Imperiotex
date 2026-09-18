@@ -5,6 +5,7 @@
 > El modelo de datos está en `13-modelo-datos-v9.md`, los contratos funcionales en `14-contratos-funcionales.md` y los códigos de pantallas y modales (CL-xx) en `15-codigos-pantallas.md`.
 > **Base de datos compartida (2026-09-16):** Comercial trabaja sobre `BD.d` (clave `imperiotex.bd`), con el mismo stock, movimientos y artículos que Inventarios, Compras y Producción. Ver §11.
 > **Revisión 2026-09-16:** ver §10 «Decisiones cerradas de la revisión 2026-09-16». Se aplican sobre el código que está en el repo (Cotización → Venta → Devolución, con pagos por validar en caja y sin orden de venta cargada). Donde choquen con K1–K17, manda §10.
+> **Devoluciones (2026-09-18):** ver §14. La devolución es una **nota de crédito por ítem** (la boleta no se anula); deja un crédito al cliente que paga su venta nueva o se devuelve en caja. Revisa K9 y K10.
 > **Tercera versión (2026-09-15), simplificada a pedido del usuario:** «debe ser más simple, tal como lo hace SAP B1». Reemplaza la versión anterior, en la que la venta tenía estados de orden y de entrega, el comprobante iba aparte y los pagos se validaban.
 
 ---
@@ -31,7 +32,8 @@
 Cotización  ──Copiar a──▶  Orden de venta  ──Copiar a──▶  Venta (Boleta / Factura / Nota de venta)  ──▶  Cobro en caja
 no mueve stock             compromete stock               Pendiente de pago → Pagada                 cobro completo = sale el stock
                            (se atiende por partes)        │
-                                                          └──▶ Devolución (vuelve el stock, el dinero se devuelve en caja)
+                                                          └──▶ Devolución = nota de crédito por ítem (vuelve el stock; crédito del cliente
+                                                               que paga su venta nueva con «Nota de crédito» o se devuelve en caja, §14)
 En el mostrador: Venta directa, sin cotización ni orden.
 ```
 
@@ -51,8 +53,8 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 | K6 | **Solo contado** | Se quitó la condición de pago (crédito). La venta nace **Pendiente de pago** (el stock sigue comprometido) y pasa a **Pagada** cuando los cobros suman el total. |
 | K7 | **Cobro completo = sale el stock** | Cuando el pago queda completo, se genera una **Salida** de GI-10 por almacén («Venta al por menor» o «al por mayor», concepto **21**). Baja el Actual, libera lo comprometido y guarda el costo. No existe un botón «Entregar» ni pagos por validar. |
 | K8 | **Registrar cobro = cobrado** | Todo cobro entra a la **caja abierta de la tienda** en la moneda de la venta con estado **Cobrado**. Se puede cobrar al registrar la venta (uno o varios medios) o después desde la venta o la caja. Cada cobro es ≤ saldo. Mientras la venta sigue Pendiente de pago, un cobro se puede **anular** (`editar_caja`, caja abierta). |
-| K9 | **Anular la venta** | Solo `anular_venta` y sin devoluciones. **Pendiente de pago:** libera lo comprometido. **Pagada:** dentro del plazo (3 días, congelado en la venta) vuelve el stock con un Ingreso. Si venía de una orden, las cantidades **vuelven a quedar pendientes** en ella (se reabre si estaba cerrada). Lo cobrado queda **por devolver** en caja. |
-| K10 | **Devolución de una venta Pagada** | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
+| K9 | **Anular la venta** | Solo `anular_venta` y sin devoluciones. **Pendiente de pago:** libera lo comprometido. **Pagada:** dentro del plazo (**7 días** desde 2026-09-18, DV5; congelado en la venta) vuelve el stock con un Ingreso. Si venía de una orden, las cantidades **vuelven a quedar pendientes** en ella (se reabre si estaba cerrada). Lo cobrado queda **por devolver** en caja. |
+| K10 | **Devolución de una venta Pagada** *(revisada 2026-09-18 por DV1–DV6, §14: nota de crédito por ítem y crédito del cliente)* | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
 | K11 | **Un documento para productos y servicios** | La línea es un artículo: si no es inventariable (grupo SERVICIOS) no lleva almacén ni stock y admite descripción personalizada. |
 | K12 | **Sin stock no se vende** *(L6, 2026-09-16)* | Ya no hay control de stock por artículo. En la cotización solo avisa (no reserva stock). La orden y la venta directa **siempre** impiden pasar del Disponible. Al completar el cobro se revisa el Actual. |
 | K13 | ~~Listas de precios en cascada por artículo~~ **Reemplazada el 2026-09-18 por LP1–LP5 (§12)** | Ahora se crea la **lista** (moneda; sede y segmento de cliente opcionales; con fechas = **oferta**) y se le agregan artículos o grupos con precio fijo o % de descuento. Se mantienen: IGV incluido, orden sede y segmento → sede → segmento → general → precio sugerido (solo PEN), descuento manual en rango, precio mínimo y la **reversión** si falta precio en la moneda. |
@@ -71,7 +73,7 @@ Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, es
 |---|---|---|
 | CL-01 · CL-02 | Cotizaciones · ficha | Listado, nueva, edición línea por línea, clonar, anular, PDF y **Convertir en venta** |
 | CL-05 · CL-07 · CL-09 | Ventas · nueva venta · ficha | Listado con saldo y estado del stock, **Desde cotización** y **+ Nueva venta**. Formulario con comprobante y pagos. Ficha: Pago, Devolución (solo con salida), Anular y PDF, con las pestañas Detalle, Pagos, Devoluciones, Movimientos de stock e Historial |
-| CL-13 · CL-15 | Devoluciones · ficha | Listado, nueva desde una venta **con salida de stock**, ficha con ingreso de almacén y estado del dinero |
+| CL-13 · CL-15 | Devoluciones · ficha | Listado con la nota de crédito y el dinero; ficha: prendas y cantidades, N° de la nota y motivo; **Registrar** en un paso; **Nueva venta para el cliente** y **Devolver en caja** (CL-52) (§14) |
 | CL-18 | Caja de la tienda | Abrir, cobros (validar o rechazar), por cobrar, ingresos y egresos, devolver dinero, reporte del día, cerrar |
 | CL-28 | Historial de cajas | Detalle, PDF y Excel |
 | CL-30 | Solicitudes de Fabricación | **Misma pantalla GI-21 / GI-22 / GI-23 de Inventarios** (documentos SF-000001): crear, editar, enviar, V°B°, aprobar, rechazar |
@@ -103,7 +105,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | Cerrar / cancelar orden | Comprometido − (lo pendiente) | — |
 | Anular venta Pendiente de pago | Comprometido − (vuelve a la orden si venía de una) | Lo cobrado, por devolver |
 | Anular venta Pagada (en plazo) | **Ingreso** «Devoluciones de Clientes»: Actual + | Lo cobrado, por devolver |
-| Devolución | **Ingreso** GI-09 (mal estado → `SB-ALM-REM`) | Total, por devolver |
+| Registrar devolución (nota de crédito, §14) | **Ingreso** GI-09 al almacén de la venta | Crédito del cliente (paga su venta nueva con «Nota de crédito» o se devuelve en caja, CL-52) |
 | Devolver dinero | — | Movimiento tipo Devolución |
 
 | Paso entre documentos | Regla (`js/core/ventas.js`) |
@@ -111,7 +113,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | Cotización → Orden | `OV.desdeCotizacion` + `OV.crear`: la cotización queda Cerrada con el número de la orden |
 | Orden → Venta | `Ventas.desdeOrden` + `Ventas.registrar`: líneas con `ovLinea`; suma `atendida` y cierra la orden si no queda pendiente |
 | Venta → Cobro | `Ventas.cobrar` → `_siPagada` → `Stock.salida` con `liberaComp` |
-| Venta → Devolución | `Dev.crear` → `Stock.ingreso` + devolución de dinero Pendiente |
+| Venta → Devolución | `Dev.crear`: `Stock.ingreso` + `Saldo.abonar` (crédito del cliente); la venta nueva usa el medio NC; `Dev.devolverEnCaja` → `Caja.procesarReembolso` |
 | Dinero por devolver → Caja | `Caja.procesarReembolso` |
 
 ---
@@ -146,7 +148,7 @@ Cada listado exporta a **Excel** (CSV). Cotización, orden, venta y caja tienen 
 | C2, C5, C6 validación de pagos | No aplica: registrar el cobro ya es cobrado (K8) |
 | C4 devolución ≠ egreso | ✅ Movimiento tipo Devolución |
 | C7 moneda de la devolución | ✅ En la caja de la misma moneda |
-| R1 cambio | Devolución + venta nueva |
+| R1 cambio | ✅ Nota de crédito por ítem + venta nueva pagada con «Nota de crédito» (§14) |
 | R2 máximo con varias devoluciones | ✅ |
 | D3 / R4 anular devolución | No: la devolución tiene efecto al registrarse |
 | Q1 validez de cotización | ✅ Marca de vencida, no se copia |
@@ -173,7 +175,7 @@ Escenario (versión anterior a la base compartida; la historia vigente está en 
 - **Ayer, Tienda Gamarra 1.** Cuatro ventas directas cobradas en efectivo, POS y transferencia, un egreso y un cierre con S/ 2.00 de faltante.
 - **Hoy, Tienda Gamarra 1:**
   - Una venta pagada y anulada, con el dinero devuelto.
-  - Un cambio de talla (devolución más venta nueva).
+  - Devoluciones como nota de crédito y venta nueva (§14.1).
   - Una factura de servicios **Pendiente de pago**.
   - Una venta con Yape a cuenta que sigue **Pendiente de pago**, con el stock comprometido.
   - Una **orden de venta** en la que un mayorista separa 4 casacas.
@@ -279,7 +281,7 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
   - Se abren las cajas.
   - Venta anulada (libera lo comprometido).
   - Pago parcial validado de la mayorista (sigue comprometida).
-  - Cambio de prenda con devolución de dinero.
+  - Devoluciones con nota de crédito (§14.1): mismo valor, mayor valor con Yape, menor valor con S/ 88.00 devueltos en caja, devolución sin producto nuevo y uso del crédito.
   - Factura de servicios.
   - Devolución pendiente en mal estado.
   - Venta mixta con Yape por validar (comprometida).
@@ -387,3 +389,67 @@ Acordado con el usuario tras revisar una propuesta externa de «motor en fases»
 |---|---|---|
 | OB1 | **Se quita el obsequio** de la cotización y de la venta | Ya no existe la casilla «Obsequio» en la línea ni el campo `obsequio`. Toda línea lleva precio y pasa por las reglas de precio: precio en la moneda, rango del descuento manual y **precio mínimo siempre (LP12), sin excepciones**. La observación vuelve a ser opcional. El comprobante impreso y los CSV de detalle ya no tienen la columna Obsequio. |
 | OB2 | Por qué | El obsequio saltaba el precio mínimo sin permiso ni tope (bastaba escribir algo en la observación), una venta al contado de solo obsequios no se podía registrar, y ante SUNAT sería una **operación gratuita** con su propio tratamiento de IGV. Si el negocio vuelve a necesitar regalos, se diseñará aparte (permiso, motivo por línea, operación gratuita). |
+
+---
+
+## 14. Devolución = nota de crédito por ítem (2026-09-18)
+
+> Pedido del usuario: «una devolución es eso, una devolución; se hace una nueva venta del producto, así de simple». No hay proceso de «cambio», ni estado de la prenda, ni venta automática. Es el procedimiento estándar (Perú y la región): **nota de crédito por ítem** sobre el comprobante + **comprobante nuevo** por el producto que se lleva.
+> Respuestas del usuario: el N° de la nota de crédito **se escribe a mano** (se emite en el sistema de facturación); el crédito **no vence**. Reemplaza la primera versión de esta sección (cambio con «Se lleva», «mal estado», saldo a favor con parámetro), que se descartó. Revisa K9 (plazo) y K10.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| DV1 | **Devolución = nota de crédito por ítem** | Sobre **una** boleta o factura (una nota por comprobante) se eligen las prendas y cantidades que vuelven; **la boleta o factura no se anula** (el cliente se queda con lo demás). Se anota el **N°** de la nota de crédito (nota de devolución interna si fue nota de venta) y el **motivo**. **Un solo paso:** al registrarla entra el stock al almacén de la venta (ING-DEVCLI, al costo con que salió; sin «mal estado»: si hiciera falta, Inventarios lo traslada) y queda **Registrada**. No hay Pendiente ni «Finalizar». |
+| DV2 | **Crédito del cliente** | La nota deja al cliente un **crédito** por lo que pagó de lo devuelto (si la venta tenía saldo por cobrar, primero se descuenta de ese saldo). Es la suma de sus notas sin usar, por cliente y moneda, **no vence** y se ve en su ficha (CL-35, pestaña **Crédito**, con cada movimiento). Los cobros de la venta original no se tocan. |
+| DV3 | **El producto nuevo es una venta normal** | Desde la devolución, **«Nueva venta para el cliente»** abre CL-07 y el primer pago propone el medio **«Nota de crédito»** (usa el crédito; no entra a caja, sin voucher, se valida solo). **Mismo valor:** la nota paga todo, la caja no se mueve. **Mayor valor:** la nota paga una parte y el cliente paga la **diferencia** con otro medio (por validar en caja, como siempre). **Menor valor:** la nota paga todo y lo que sobra se **devuelve en caja** o queda como vale. |
+| DV4 | **Devolver en caja** (CL-52) | Botón en la devolución, para el cajero (`crear_caja`) con la caja abierta: devuelve hasta lo que el cliente aún tiene de esa nota; baja el crédito y sale el dinero en el mismo paso (movimiento de caja tipo Devolución). También sirve para una devolución sin producto nuevo. |
+| DV5 | **Plazos** | **Anular la venta (baja)** solo por error y dentro de **7 días** (antes 3; `diasAnulacion`). **Nota de crédito** hasta **12 meses** desde la venta. |
+| DV6 | **Nada se borra** | Una devolución registrada no se anula (ya movió stock y dinero); las **Pendientes** de la versión anterior se registran o se anulan con motivo, quién y cuándo. Los movimientos de crédito (Abono, Uso) no se borran. Anular una venta pagada con nota de crédito devuelve esa parte al crédito; el resto queda por devolver en caja. |
+
+### 14.1 Cómo se refleja en la demo («Con operación», 31/07/2026, Tienda #1)
+
+| Caso | Documentos | Stock | Dinero y caja |
+|---|---|---|---|
+| 1 · **Mismo valor** (María Fernanda cambia talla 30 por 28, S/ 124.90) | DEV-2026-000001 (BC01-000034) + boleta nueva VEN-2026-000007 | Entra 1 PT-0004; sale 1 PT-0003 | La nota paga toda la boleta nueva; caja 0 |
+| 2 · **Mayor valor** (Sofía: devuelve S/ 109.90, se lleva S/ 124.90) | DEV-2026-000002 + VEN-2026-000008 | Entra 1 PT-0002; sale 1 PT-0004 al validar la diferencia | Nota S/ 109.90 + **Yape S/ 15.00** validado en caja |
+| 3 · **Menor valor** (mayorista: devuelve 2 × S/ 89, se lleva 1 × S/ 90) | DEV-2026-000003 (FC01-000022) + factura nueva VEN-2026-000010 | Entran 2 PT-0002; sale 1 PT-0004 | La nota paga los S/ 90.00 y **se devuelven S/ 88.00 en efectivo** (CL-52) |
+| 4 · **Sin producto nuevo** (Andrea: 1 × S/ 119.90) | DEV-2026-000004 | Entra 1 PT-0001 | Queda un crédito de S/ 119.90 (vale) |
+| 5 · **Usa el crédito** (Andrea vuelve) | VEN-2026-000011 | Salen PT-0001 y PT-0002 al validar el efectivo | Nota S/ 119.90 + efectivo |
+
+Dónde se ve: CL-13 (columna Dinero: «Crédito S/ … · devuelto en caja S/ …»), CL-15 (prendas, nota, dinero y botones), CL-09 (pago «Nota de crédito» con «No entra a caja»), CL-35 › Crédito, CL-18 (la devolución de S/ 88.00 como movimiento de caja).
+
+### 14.2 Dónde está
+
+| Qué | Dónde |
+|---|---|
+| Reglas | `js/core/ventas.js`: `Dev` (`puedeDevolver`, `crear`, `creditoDe`, `devolverEnCaja`, `porDevolverCaja`, `dineroTxt`), `Saldo` (crédito del cliente: `de`, `movs`, `abonar`, `usar`), `Ventas.esSaldo`, `_pagoSaldo`, `_aSaldo`, y los ajustes a `revisar`, `registrar`, `agregarPago` y `anular` |
+| Datos | `COMPARTIDO/bd/datos/maestros-comercial.js`: medio **NC «Nota de crédito»** (`saldo: true`), `diasAnulacion: 7`, colección `saldos`. `Store.completarBase` agrega el medio a una base guardada |
+| Pantallas | `js/modules/devoluciones.js` (CL-13, CL-14, CL-15, CL-16, CL-17, **CL-52**) · `ventas.js` (CL-07, CL-09) · `documento.js` (CL-10) · `clientes.js` (CL-35) |
+| Pruebas | `node COMERCIAL/pruebas/probar-comercial.js` (`casos-devoluciones.js`: un solo paso, mismo / mayor / menor valor, sin producto nuevo, venta con saldo por cobrar, anulación con nota, plazos, base guardada antes) |
+
+### 14.3 Para el desarrollo
+
+- La nota de crédito es un documento por comprobante (regla uno a uno), con sus líneas; su número llega del sistema de facturación. No hay DELETE.
+- El crédito del cliente se calcula de sus movimientos (Σ abonos − Σ usos por empresa, cliente y moneda); un uso no lo deja negativo (bloqueo por cliente).
+- El pago con «Nota de crédito» no tiene caja (`caja_sesion_id` nulo), nace Validado y no cuenta en el arqueo.
+- «Devolver en caja» es una transacción: uso del crédito + movimiento de caja tipo Devolución.
+
+### 14.4 ⏳ Pendiente: consultar con el contador (21/09/2026)
+
+> El usuario decidió (2026-09-18) **dejar el prototipo como está** hasta la reunión con el contador del **21/09/2026**. No cambiar esta sección sin esa respuesta.
+
+**Qué ya cumple:** nota de crédito por ítem sobre un solo comprobante (la boleta o factura no se anula), comprobante nuevo por lo que se lleva, cobros originales intactos, crédito del cliente usado como pago (equivale a un anticipo), stock con su documento en cada movimiento.
+
+**Qué preguntar:**
+
+| # | Punto | Detalle |
+|---|---|---|
+| P1 | **¿Nota de crédito o cambio directo?** | **A.** Dejar la nota de crédito por ítem + venta nueva (este prototipo, formal completo). **B.** Cambio directo al **mismo precio** como el sistema real (`comercial`, `ProductExchangeBusinessImpl`): solo mueve stock (sale la nueva, entra la devuelta), no toca dinero ni comprobante y queda «Por revisar» para contabilidad; la nota de crédito solo para anular fuera de plazo. ¿Es aceptable que la boleta describa la prenda original, o hace falta nota por error en la descripción (motivo 03)? |
+| P2 | Motivo del catálogo 09 | Hoy es texto libre; la nota electrónica exige código: **07** devolución por ítem / **06** devolución total. |
+| P3 | Baja solo sin entregar | SUNAT permite la comunicación de baja (7 días) solo si el comprobante **no se entregó** al cliente; hoy el prototipo deja anular dentro de 7 días aunque ya se entregó. |
+| P4 | Plazo de 12 meses para la nota | No se encontró en la norma: ¿se deja como política de la empresa o se quita? |
+| P5 | «Devolver en caja» (CL-52) | Contradice «no devolvemos dinero» (en el sistema real `DEVOLUCION_HABILITADA` está apagado): ¿se quita y lo que sobra queda siempre como vale? |
+| P6 | Crédito del cliente | Cuenta contable del crédito (anticipos de clientes) y si debe vencer. |
+| P7 | Reglas de cambio del sistema real | Mismo precio, plazo 7 días, «prenda sin uso», oferta → oferta: ¿se llevan al prototipo? |
+
+Huecos vistos en el sistema real (para su equipo, fuera de este punto): permiso de confirmar cambios distinto entre front (`EXCHANGES:APPROVE`) y back (`EXCHANGES:CREATE`); si falla el ingreso de la prenda devuelta tras la salida de la nueva, el stock queda a medias; las boletas se dan de baja por comunicación de baja (RA) en vez de resumen diario: confirmar con el proveedor.

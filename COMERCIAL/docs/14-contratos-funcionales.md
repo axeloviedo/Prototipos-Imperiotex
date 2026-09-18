@@ -92,7 +92,16 @@
 |---|---|---|---|---|---|
 | Listar / ver | `GET /returns?…` · `GET /returns/{id}` | ver_devolucion_venta | — | — | 404 |
 | Líneas devolvibles | `GET /sales/{id}/returnable-lines` | ver_devolucion_venta | — | `{line, sold, returned, max, price}`; solo productos | 404 |
-| **Registrar** | `POST /returns` | crear_devolucion_venta | saleId, lines[{line, quantity, type: NORMAL/DAMAGED}], reason | Venta **Pagada**; cantidad ≤ máximo; motivo obligatorio. Efecto inmediato: Entrada de stock al costo de salida (dañado → almacén de remate) y devolución de dinero Pendiente por el total | 409 SALE-NOT-PAID, 422 QUANTITY-EXCEEDS |
+| **Registrar** *(2026-09-18)* | `POST /returns` | crear_devolucion_venta | saleId, lines[{line, quantity}], creditNote{type, number}, reason | Nota de crédito por ítem sobre una venta con salida de stock, hasta 12 meses; cantidad ≤ máximo. Efecto inmediato: Entrada de stock al almacén de la venta al costo de salida y **crédito del cliente** por lo pagado de lo devuelto. La venta no se anula ni cambia sus cobros | 409 SALE-NOT-DELIVERED / CREDIT-NOTE-PERIOD-EXPIRED, 422 QUANTITY-EXCEEDS |
+| **Devolver en caja** *(2026-09-18)* | `POST /returns/{id}/cash-refund` | crear_caja | amount, method, bank, operation | ≤ lo que queda de la nota y del crédito del cliente; caja abierta de la tienda. Transacción: Uso del crédito + movimiento de caja tipo Devolución | 409 CASH-CLOSED, 422 AMOUNT-EXCEEDS |
+
+### 6.1 Crédito del cliente · `CUSTOMER-CREDIT` *(2026-09-18)*
+
+| Operación | Ruta sugerida | Permiso | Reglas |
+|---|---|---|---|
+| Crédito y movimientos | `GET /customers/{id}/credit?currency=` | ver_cliente | Por moneda (Σ abonos − Σ usos) y movimientos con origen; no vence |
+| Pagar con nota de crédito | `POST /sales/{id}/payments` con `method=NC` (también al registrar la venta) | crear_venta | Monto ≤ crédito y ≤ deuda; sin caja; Validado al instante (puede disparar la salida de stock) |
+| Anular venta pagada con nota | `POST /sales/{id}/void` | anular_venta | Solo por error, dentro de 7 días. Lo pagado con nota vuelve como Abono; el resto, devolución de dinero en caja |
 
 ## 7. Caja · `CASH`
 
