@@ -90,18 +90,18 @@ const PAGOUI = {
     const ses = Caja.abierta(v.sede, v.mon), saf = Saldo.de(v.cli, v.mon);
     if (!ses && saf <= 0.004) { UI.toast('La caja de ' + v.sedeNom + ' en ' + v.mon + ' está cerrada: ábrala para cobrar'); return; }
     PAGOUI._v = v; PAGOUI._cb = cb;
-    /* «Saldo a favor» solo si el cliente tiene saldo; con la caja cerrada es el único medio posible */
+    /* «Nota de crédito» solo si el cliente tiene crédito; con la caja cerrada es el único medio posible */
     const mets = M.METODOS.filter(m => m.monedas.indexOf(v.mon) >= 0 && (m.saldo ? saf > 0.004 : !!ses));
     UI.modal({
       titulo: 'Registrar pago · ' + v.id, code: 'CL-10',
       cuerpo: '<div class="formgrid">' + UI.dato('Cliente', UI.esc(v.cliente.nom)) + UI.dato('Saldo pendiente', '<b>' + UI.m(Ventas.deuda(v), v.mon) + '</b>') +
-        UI.dato('Entra a la caja', ses ? ses.id + ' · ' + UI.esc(ses.nom) : 'Caja cerrada: solo saldo a favor') + UI.dato('Fecha de creación', UI.ahora()) +
+        UI.dato('Entra a la caja', ses ? ses.id + ' · ' + UI.esc(ses.nom) : 'Caja cerrada: solo nota de crédito') + UI.dato('Fecha de creación', UI.ahora()) +
         UI.campo('Medio de pago', '<select id="pg-met" onchange="PAGOUI.bancos()">' + UI.opts(mets.map(m => ({ v: m.cod, t: m.nom + (m.saldo ? ' (tiene ' + UI.m(saf, v.mon) + ')' : '') })), ses ? 'EFE' : M.SALDO) + '</select>', { req: true }) +
         UI.campo('Banco / procesador', '<select id="pg-banco"></select>') +
         UI.campo('N° de operación', '<input id="pg-nop">', { hint: 'Obligatorio si no es efectivo' }) +
         UI.campo('Voucher', '<input type="file" id="pg-vou" accept="image/*,.pdf">', { hint: 'Obligatorio si no es efectivo' }) +
         UI.campo('Monto (' + v.mon + ')', '<input id="pg-monto" type="number" min="0" step="any" value="' + Ventas.deuda(v) + '">', { req: true }) + '</div>' +
-        '<p class="hint" style="margin-top:10px">El pago queda <b>Por validar</b> hasta que caja lo valide (permiso valid_payments); la caja no se puede cerrar con pagos por validar. El <b>saldo a favor</b> no entra a caja y queda validado al instante. ' +
+        '<p class="hint" style="margin-top:10px">El pago queda <b>Por validar</b> hasta que caja lo valide (permiso valid_payments); la caja no se puede cerrar con pagos por validar. La <b>nota de crédito</b> (crédito del cliente) no entra a caja y queda validada al instante. ' +
         'El stock de la venta sigue <b>comprometido</b> y sale (Salida GI-10) cuando los pagos validados cubren el total.</p>',
       pie: '<button class="btn btn-secondary" onclick="UI.cerrar()">Cancelar</button><button class="btn btn-primary" onclick="PAGOUI.guardar()">Registrar pago</button>'
     });
@@ -116,7 +116,7 @@ const PAGOUI = {
   guardar() {
     const v = PAGOUI._v;
     const p = App.accion(() => Ventas.agregarPago(v, { met: UI.v('pg-met'), banco: UI.v('pg-banco'), nop: UI.v('pg-nop'), voucher: UI.archivo('pg-vou'), monto: UI.v('pg-monto') }),
-      x => 'Pago ' + x.id + (x.estado === 'Validado' ? ' con saldo a favor registrado' : ' registrado: queda por validar en caja'));
+      x => 'Pago ' + x.id + (x.estado === 'Validado' ? ' con nota de crédito registrado' : ' registrado: queda por validar en caja'));
     if (p) { UI.cerrar(); if (PAGOUI._cb) PAGOUI._cb(p); else App.refrescar(); }
   }
 };

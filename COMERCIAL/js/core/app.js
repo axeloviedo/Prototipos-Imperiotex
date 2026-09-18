@@ -3,7 +3,7 @@ const App = {
   P: {}, actual: null, params: null,
   /* cada ítem: [id, icono, título, permiso que lo muestra] · códigos visibles CL-xx en docs/15-codigos-pantallas.md */
   MENU: [
-    { g: 'Ventas', items: [['cm01', '✎', 'Cotizaciones', 'ver_cotizacion'], ['cm02', '▤', 'Ventas', 'ver_venta'], ['cm03', '↩', 'Cambios y devoluciones', 'ver_devolucion_venta']] },
+    { g: 'Ventas', items: [['cm01', '✎', 'Cotizaciones', 'ver_cotizacion'], ['cm02', '▤', 'Ventas', 'ver_venta'], ['cm03', '↩', 'Devoluciones', 'ver_devolucion_venta']] },
     { g: 'Caja', items: [['cm04', '▣', 'Caja de la tienda', 'ver_caja'], ['cm05', '☷', 'Historial de cajas', 'ver_caja']] },
     { g: 'Abastecimiento', items: [['cm11', '✂', 'Solicitudes de Fabricación', 'ver_solicitud_fabricacion'], ['cm12', '⇆', 'Solicitudes de Materiales', 'crear_solicitud_materiales'], ['cm14', '⤓', 'Recepción de mercadería', 'ver_existencias']] },
     { g: 'Consultas', items: [['cm06', '▦', 'Existencias y movimientos', 'ver_existencias']] },

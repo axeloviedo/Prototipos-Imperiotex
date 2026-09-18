@@ -141,7 +141,7 @@ const CM02F = {
 
     const saf = d.cli ? Saldo.de(d.cli, d.mon) : 0;
     const mets = M.METODOS.filter(m => m.monedas.indexOf(d.mon) >= 0 && (!m.saldo || saf > 0.004 || d.pagos.some(x => x.met === m.cod)));
-    html += '<div class="card"><div class="sec">Pagos' + (saf > 0.004 ? ' <span class="chip" style="margin-left:8px">Saldo a favor del cliente: ' + UI.m(saf, d.mon) + '</span>' : '') + '<div class="spacer"></div>' + (ses || saf > 0.004 ? '<button class="btn btn-secondary btn-sm" onclick="CM02F.nuevoPago()">+ Agregar pago</button>' : '') + '</div>' +
+    html += '<div class="card"><div class="sec">Pagos' + (saf > 0.004 ? ' <span class="chip" style="margin-left:8px">Crédito del cliente (notas de crédito): ' + UI.m(saf, d.mon) + '</span>' : '') + '<div class="spacer"></div>' + (ses || saf > 0.004 ? '<button class="btn btn-secondary btn-sm" onclick="CM02F.nuevoPago()">+ Agregar pago</button>' : '') + '</div>' +
       (d.pagos.length ? UI.tabla(['Medio', 'Banco / procesador', 'N° operación', 'Voucher', ['Monto ' + M.sim(d.mon), 'num'], ['', '', '30px']], d.pagos.map((x, i) => {
         const m0 = M.metodo(x.met) || { bancos: [], efectivo: true }, m = m0.saldo ? { bancos: [], efectivo: true } : m0;
         return '<tr><td><select class="celda" onchange="CM02F.pago(' + i + ',\'met\',this.value)">' + UI.opts(mets.map(k => ({ v: k.cod, t: k.nom })), x.met) + '</select></td>' +
@@ -187,7 +187,7 @@ const CM02F = {
   nuevoPago() {
     const d = CM02F.d, pag = d.pagos.reduce((t, x) => t + (Number(x.monto) || 0), 0);
     const saf = d.cli ? Saldo.de(d.cli, d.mon) : 0, usaSaf = saf > 0.004 && !d.pagos.some(x => x.met === M.SALDO), resto = Math.max(0, UI.r2(d.total - pag));
-    /* si el cliente tiene saldo a favor, el primer pago que se agrega lo usa (hasta el saldo); sin caja abierta solo se paga con saldo */
+    /* si el cliente tiene crédito por notas de crédito, el primer pago que se agrega lo usa (hasta el crédito); sin caja abierta solo se paga con él */
     d.pagos.push(usaSaf ? { met: M.SALDO, banco: '', nop: '', voucher: '', monto: UI.r2(Math.min(saf, resto)) } : { met: 'EFE', banco: '', nop: '', voucher: '', monto: resto });
     App.refrescar();
   },
@@ -235,12 +235,12 @@ const CM02V = {
     const movIds = v.movs.concat(...devs.map(x => x.movs)), movs = movIds.map(id => Store.d.movs.find(m => m.id === id)).filter(Boolean);
     const b = [];
     if (v.estado === 'Registrada' && deuda > 0.004 && (Store.puede('crear_venta') || Store.puede('crear_caja'))) b.push('<button class="btn btn-primary" onclick="PAGOUI.abrir(CM02V.v())">+ Pago</button>');
-    if (v.estado === 'Registrada' && v.salida && Dev.candidatas(v).some(c => c.max > 0) && Store.puede('crear_devolucion_venta')) b.push('<button class="btn btn-secondary" onclick="App.go(\'cm03f\',{venta:\'' + v.id + '\',nuevo:Date.now()})">↩ Registrar cambio / devolución</button>');
+    if (v.estado === 'Registrada' && v.salida && Dev.candidatas(v).some(c => c.max > 0) && Store.puede('crear_devolucion_venta')) b.push('<button class="btn btn-secondary" onclick="App.go(\'cm03f\',{venta:\'' + v.id + '\',nuevo:Date.now()})">↩ Devolución (nota de crédito)</button>');
     b.push('<button class="btn btn-secondary" onclick="DOCUI.imprimir(\'Venta\',CM02V.v())">⎙ PDF</button>');
     if (v.estado === 'Registrada' && !v.salida && Ventas.aCredito(v) && Ventas.tieneStock(v) && Store.puede('crear_venta')) b.push('<button class="btn btn-secondary" onclick="CM02V.entregar()">Entregar</button>');
     if (v.estado === 'Registrada' && Store.puede('anular_venta')) b.push('<button class="btn btn-danger" onclick="CM02V.anular()">Anular</button>');
     b.push('<button class="btn btn-secondary" onclick="App.go(\'cm02\')">Volver</button>');
-    const tabs = [['det', 'Detalle'], ['pag', 'Pagos (' + v.pagos.length + ')'], ['dev', 'Cambios y devoluciones (' + devs.length + ')'], ['mov', 'Movimientos de stock (' + movs.length + ')'], ['hist', 'Historial']];
+    const tabs = [['det', 'Detalle'], ['pag', 'Pagos (' + v.pagos.length + ')'], ['dev', 'Devoluciones (' + devs.length + ')'], ['mov', 'Movimientos de stock (' + movs.length + ')'], ['hist', 'Historial']];
 
     let html = '<div class="screen-head"><h1>' + v.id + '</h1>' + UI.estado(v.estado) + ' ' + UI.estado(Ventas.estadoPago(v)) + (Ventas.estadoStock(v) ? ' ' + UI.estado(Ventas.estadoStock(v)) : '') + ' <span class="mini">' + comp.nom + ' ' + v.compNum + '</span><span class="code">CL-09</span><div class="spacer"></div>' + b.join('') + '</div>';
     if (v.anulacion) html += UI.aviso('<b>Anulada</b> el ' + v.anulacion.f + ' por ' + UI.esc(v.anulacion.u) + ': ' + UI.esc(v.anulacion.motivo) + '. ' + (v.salida ? 'El stock volvió al almacén' : Ventas.tieneStock(v) ? 'Se liberó el stock comprometido (no había salido)' : 'Solo servicios') + (Ventas.porDevolver(v) > 0.004 ? ' y hay <b>' + UI.m(Ventas.porDevolver(v), v.mon) + '</b> por devolver al cliente en Caja.' : '.'), 'err');
@@ -259,7 +259,7 @@ const CM02V = {
       UI.dato('Comprobante', comp.nom + '<br><b>' + v.compNum + '</b>') + UI.dato('Fecha de creación', v.fecha) + UI.dato('Tienda', UI.esc(v.sedeNom)) +
       UI.dato('Condición · moneda', M.cond(v.cond).nom + ' · ' + v.mon) +
       UI.dato('Vendedor', UI.esc(DOCUI.vendedor(v.asesor)) + '<br><span class="mini">registró ' + UI.esc(v.usuario) + '</span>') +
-      UI.dato('Origen', v.cambioDe ? 'Cambio <button class="btn-link" style="padding:0" onclick="App.go(\'cm03f\',{id:\'' + v.cambioDe + '\'})">' + v.cambioDe + '</button>' : v.cot ? 'Cotización <button class="btn-link" style="padding:0" onclick="App.go(\'cm01f\',{id:\'' + v.cot + '\'})">' + v.cot + '</button>' : 'Venta directa') +
+      UI.dato('Origen', v.cot ? 'Cotización <button class="btn-link" style="padding:0" onclick="App.go(\'cm01f\',{id:\'' + v.cot + '\'})">' + v.cot + '</button>' : 'Venta directa') +
       UI.dato('Documento referencial', v.ref && v.ref.tipo ? UI.esc(v.ref.tipo + ' ' + v.ref.serie + '-' + v.ref.num) : '') +
       UI.dato('Se puede anular hasta', v.estado !== 'Registrada' ? '' : v.salida ? v.plazoAnular : 'sin plazo mientras no se confirme el pago completo') +
       (en ? UI.dato('Entrega', UI.esc(M.lugar(en.lugar).nom) + ' · ' + en.fecha + (en.agencia ? ' · ' + en.agencia : '') + (en.dir ? '<br><span class="mini">' + UI.esc(en.dir) + ' · ' + UI.esc(M.ubigeo(en.ubigeo)) + '</span>' : ''), { estilo: 'grid-column:span 2' }) +
@@ -286,17 +286,16 @@ const CM02V = {
         '<td>' + (puede ? '<button class="btn btn-primary btn-sm" onclick="CM02V.validar(\'' + x.id + '\')">Validar</button> <button class="btn-link" onclick="CM02V.rechazar(\'' + x.id + '\')">Rechazar</button>' : '') + '</td></tr>';
     });
     const ree = v.reembolsos.map(r => '<tr><td><b>' + r.id + '</b></td><td class="mini">' + r.fecha + '</td><td>' + (r.origen === 'Anulación' ? 'Anulación de la venta' : '<button class="btn-link" onclick="App.go(\'cm03f\',{id:\'' + r.origen + '\'})">' + r.origen + '</button>') + '</td>' +
-      '<td class="num">' + UI.m(r.monto, v.mon) + '</td><td>' + UI.estado(r.estado) + '</td><td class="mini">' + (r.destino === 'Saldo a favor' ? 'Al saldo a favor del cliente · ' + r.saldoMov : r.mov ? r.mov + ' · ' + r.caja : 'Se entrega en Caja') + '</td></tr>');
+      '<td class="num">' + UI.m(r.monto, v.mon) + '</td><td>' + UI.estado(r.estado) + '</td><td class="mini">' + (r.destino === 'Crédito del cliente' ? 'Crédito del cliente (nota de crédito) · ' + r.saldoMov : r.mov ? r.mov + ' · ' + r.caja : 'Se entrega en Caja') + '</td></tr>');
     return UI.tabla(['Pago', 'Fecha de creación', 'Medio', 'Operación / voucher', ['Monto', 'num'], 'Caja', 'Estado', ['', '', '160px']], filas, { vacio: 'Sin pagos' + (Ventas.deuda(v) > 0.004 ? ': cobre con + Pago o desde Caja' : '') }) +
       (ree.length ? '<div class="sec">Dinero devuelto al cliente</div>' + UI.tabla(['N°', 'Fecha de creación', 'Origen', ['Monto', 'num'], 'Estado', 'A dónde fue'], ree) : '') +
       '<p class="hint">Cada pago entra a la caja abierta de la tienda como <b>Por validar</b>; quien tiene el permiso valid_payments lo valida o lo rechaza (por ejemplo, si la transferencia no llegó). Solo lo validado cuenta en el arqueo y solo cuando lo validado cubre el total sale el stock de la venta.</p>';
   },
   t_dev(v, devs) {
-    return UI.tabla(['N°', 'Fecha de creación', 'Tipo', 'Sustento', ['Devuelve', 'num'], 'Venta del cambio', 'Dinero', 'Estado'], devs.map(x =>
-      '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + Dev.tipo(x) + '</td><td>' + UI.esc(x.sustTipo + ' ' + x.sustNum) + '</td>' +
-      '<td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + (x.ventaCambio ? '<button class="btn-link" style="padding:0" onclick="event.stopPropagation();App.go(\'cm02v\',{id:\'' + x.ventaCambio + '\'})">' + x.ventaCambio + '</button>' : '') + '</td>' +
-      '<td class="mini">' + UI.esc(Dev.dineroTxt(x)) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cambios ni devoluciones' }) +
-      '<p class="hint">Los pagos de esta venta no cambian con un cambio o una devolución: lo pagado por lo devuelto pasa al saldo a favor del cliente y, en un cambio, paga la venta nueva.</p>';
+    return UI.tabla(['N°', 'Fecha de creación', 'Nota de crédito', ['Total', 'num'], 'Dinero', 'Estado'], devs.map(x =>
+      '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + UI.esc(x.sustTipo + ' ' + x.sustNum) + '</td>' +
+      '<td class="num">' + UI.m(x.total, x.mon) + '</td><td class="mini">' + UI.esc(Dev.dineroTxt(x)) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones' }) +
+      '<p class="hint">La venta no se anula ni cambia sus pagos: la nota de crédito saca solo lo devuelto y deja al cliente un crédito que paga su próxima venta o se devuelve en caja.</p>';
   },
   t_mov(v, devs, movs) {
     return UI.tabla(['Movimiento', 'Fecha', 'Tipo', 'Detalle', 'Documento', 'Almacén', 'Concepto contable', ['Valor', 'num']], movs.map(m =>

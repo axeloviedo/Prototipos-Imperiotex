@@ -35,9 +35,9 @@ const BD_COMERCIAL = (() => {
       { cod: 'TRF', nom: 'Transferencia bancaria', efectivo: false, bancos: ['BCP', 'BBVA', 'INTERBANK', 'SCOTIABANK'], monedas: ['PEN', 'USD'] },
       { cod: 'POS', nom: 'Tarjeta (POS)', efectivo: false, bancos: ['NIUBIZ', 'IZIPAY'], monedas: ['PEN', 'USD'] },
       { cod: 'DEP', nom: 'Depósito en cuenta', efectivo: false, bancos: ['BCP', 'BBVA'], monedas: ['PEN', 'USD'] },
-      /* saldo a favor del cliente (cambios y devoluciones, 2026-09-18): se valida solo, no entra a caja y no pide voucher;
-         solo se ofrece si el cliente tiene saldo en la moneda de la venta */
-      { cod: 'SALDO', nom: 'Saldo a favor', efectivo: false, saldo: true, bancos: [], monedas: ['PEN', 'USD'] }
+      /* crédito del cliente por sus notas de crédito (devoluciones, 2026-09-18): se valida solo, no entra a caja y no pide voucher;
+         solo se ofrece si el cliente tiene crédito en la moneda de la venta */
+      { cod: 'NC', nom: 'Nota de crédito', efectivo: false, saldo: true, bancos: [], monedas: ['PEN', 'USD'] }
     ],
     /* comprobante de la venta: serie única por tienda y tipo (el envío a SUNAT queda fuera de este prototipo) */
     comprobantes: [{ cod: 'NV', nom: 'Nota de venta', ruc: false }, { cod: 'BV', nom: 'Boleta de venta', ruc: false }, { cod: 'FA', nom: 'Factura', ruc: true }],
@@ -45,8 +45,7 @@ const BD_COMERCIAL = (() => {
     docReferencial: ['Orden de compra del cliente', 'Guía de remisión del cliente', 'Factura del cliente'],
     /* el número del sustento se escribe a mano: la nota de crédito se emite en el sistema de facturación (2026-09-18) */
     sustentoDev: ['Nota de crédito', 'Nota de devolución interna'],
-    /* estado de la prenda que vuelve; un cambio ya no es un tipo de línea: es la devolución con la sección «Se lleva» (CD1) */
-    tiposDev: ['Normal', 'Mal estado'],
+    tiposDev: ['Normal', 'Mal estado', 'Cambio'], /* ya no se usa desde 2026-09-18: la devolución no distingue estado (DV1) */
     lugaresEntrega: [
       { cod: 'RECOJO', nom: 'Recojo en tienda', propio: true },
       { cod: 'DELIVERY', nom: 'Delivery en Lima', propio: false, ubigeo: true },
@@ -76,7 +75,7 @@ const BD_COMERCIAL = (() => {
     ],
     /* permisos finos por acción (ver_*, crear_*, editar_*, eliminar_*) */
     perfiles: {
-      'Vendedor': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'ver_venta', 'crear_venta', 'ver_devolucion_venta', 'crear_devolucion_venta', 'editar_devolucion_venta', 'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'ver_caja',
+      'Vendedor': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'ver_venta', 'crear_venta', 'ver_devolucion_venta', 'crear_devolucion_venta', 'ver_cliente', 'crear_cliente', 'editar_cliente', 'ver_existencias', 'ver_caja',
         'ver_solicitud_fabricacion', 'crear_solicitud_materiales', 'recibir_transferencia'],
       'Cajero': ['ver_cotizacion', 'ver_venta', 'ver_devolucion_venta', 'ver_caja', 'crear_caja', 'editar_caja', 'valid_payments', 'ver_cliente', 'ver_existencias', 'recibir_transferencia'],
       'Supervisor comercial': ['ver_cotizacion', 'crear_cotizacion', 'editar_cotizacion', 'eliminar_cotizacion', 'ver_venta', 'crear_venta', 'anular_venta', 'asignar_vendedor',
@@ -142,9 +141,7 @@ const BD_COMERCIAL = (() => {
       /* configuración comercial editable en CL-45 */
       comercial: {
         cfg: {
-          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 3, almMalEstado: 'SB-LIQUID',
-          /* dinero de una devolución o de lo que sobra en un cambio: 'SALDO' (saldo a favor del cliente, solo cambios) o 'CAJA' (se devuelve en caja) */
-          dineroDev: 'SALDO',
+          igv: 18, tc: 3.76, diasValidez: 7, diasAnulacion: 7, almMalEstado: 'SB-LIQUID',
           catIngreso: ['Fondo de caja chica', 'Sobrante de caja', 'Otros ingresos'],
           catEgreso: ['Pasajes y movilidad', 'Útiles de oficina', 'Pago a personal eventual', 'Depósito al banco', 'Otros egresos']
         }

@@ -26,12 +26,10 @@ const Store = {
       if (Array.isArray(v) && Array.isArray(d.maestros[k])) v.forEach(it => { if (!d.maestros[k].some(e => e.cod === it.cod)) d.maestros[k].push(BD.copia(it)); });
       else if (d.maestros[k] === undefined) d.maestros[k] = BD.copia(v);
     });
-    /* catálogos de Comercial en una base guardada antes: se agregan los elementos nuevos por código (p. ej. el medio SALDO)
-       y los catálogos que define el código se reemplazan (tiposDev: sin «Cambio» desde 2026-09-18) */
+    /* catálogos de Comercial en una base guardada antes: se agregan los elementos nuevos por código (p. ej. el medio NC «Nota de crédito») */
     const c0 = (X.maestros || {}).comercial || {}, cb = (d.maestros || {}).comercial;
     if (cb) Object.keys(c0).forEach(k => {
-      if (Store.CATALOGOS_CODIGO.indexOf(k) >= 0) cb[k] = BD.copia(c0[k]);
-      else if (Array.isArray(c0[k]) && Array.isArray(cb[k]) && c0[k].every(x => x && x.cod)) c0[k].forEach(it => { if (!cb[k].some(e => e.cod === it.cod)) cb[k].push(BD.copia(it)); });
+      if (Array.isArray(c0[k]) && Array.isArray(cb[k]) && c0[k].every(x => x && x.cod)) c0[k].forEach(it => { if (!cb[k].some(e => e.cod === it.cod)) cb[k].push(BD.copia(it)); });
     });
     Object.keys(X.colecciones || {}).forEach(k => { if (d[k] === undefined) d[k] = BD.copia(X.colecciones[k]); });
     /* listasPrecio de otra versión (la de estilo SAP B1 guardaba cabeceras sin «filas» y los precios aparte): vuelven a las listas iniciales */
@@ -52,8 +50,7 @@ const Store = {
       d.comercial.permsAgregados.push(p);
     });
   },
-  PERMISOS_NUEVOS: ['recibir_transferencia', 'editar_devolucion_venta'],
-  CATALOGOS_CODIGO: ['tiposDev'],
+  PERMISOS_NUEVOS: ['recibir_transferencia'],
 
   /* reinicio GLOBAL (modal CL-46): BD.reiniciar borra todas las claves 'imperiotex.' y rearma la base del escenario elegido */
   reiniciar() {
