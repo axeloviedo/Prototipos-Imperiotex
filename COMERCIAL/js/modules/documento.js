@@ -36,7 +36,7 @@ const DOCUI = {
       const desc = !a.inv ? (ed ? '<input class="celda" style="width:100%;margin-top:4px" placeholder="Descripción personalizada para el cliente" value="' + UI.esc(l.desc) + '" onchange="' + ctx + '.cambiar(' + i + ',\'desc\',this.value)">'
         : (l.desc ? '<br><span class="mini">“' + UI.esc(l.desc) + '”</span>' : '')) : '';
       return '<tr class="' + (msgs.length ? 'con-msg' : '') + '"><td class="num">' + (i + 1) + '</td>' +
-        '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + (l.origen ? ' · ' + (l.oferta ? '<b class="ok-t">' + UI.esc(l.origen) + '</b>' + (l.precioLista ? ' (lista ' + UI.n(l.precioLista) + ')' : '') : UI.esc(l.origen)) : '') + '</span>' + desc + '</td>' +
+        '<td>' + UI.esc(l.nom) + '<br><span class="mini">' + l.art + (l.origen ? ' · ' + (l.precioRef ? UI.esc(l.origen) + ' <span class="mini">(referencial ' + UI.n(l.precioRef.precio) + ' · ' + UI.esc(l.precioRef.origen) + ')</span>' : l.oferta ? '<b class="ok-t">' + UI.esc(l.origen) + '</b>' + (l.precioLista ? ' (lista ' + UI.n(l.precioLista) + ')' : '') : UI.esc(l.origen)) : '') + '</span>' + desc + '</td>' +
         '<td>' + um + '</td><td>' + alm + '</td><td class="num">' + disp + '</td>' +
         '<td class="num">' + (ed ? inp(i, 'cant', l.cant, 70) : UI.q(l.cant)) + '</td>' +
         '<td class="num">' + (ed ? inp(i, 'precio', l.precio, 90) : UI.n(l.obsequio ? 0 : l.precio)) + '</td>' +

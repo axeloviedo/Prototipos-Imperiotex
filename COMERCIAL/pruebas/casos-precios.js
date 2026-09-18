@@ -76,7 +76,7 @@ prueba('documento: toma la oferta, no suma descuento manual y el precio a mano l
     igual([l.precio, l.lista, l.oferta && l.oferta.cod, l.precioLista], [99.92, 'LP-08', 'LP-08', 124.90], 'línea con oferta');
     falla(() => Doc.cambiar(d, 0, 'dcto', 5), 'no se suma');
     Doc.cambiar(d, 0, 'precio', 110);
-    igual([l.origen, l.oferta, l.lista], ['Precio modificado a mano', undefined, undefined], 'a mano');
+    igual([l.origen, l.oferta, l.precioRef.precio, l.precioRef.oferta], ['Precio modificado a mano', undefined, 99.92, 'LP-08'], 'a mano, con la referencia');
     Doc.cambiarCliente(d, 'CLI-000003');
     igual(l.precio, 110, 'cambiar cliente no toca lo escrito a mano');
     const l2 = Doc.agregar(d, 'PT-0001');
@@ -195,5 +195,24 @@ prueba('la línea guarda la evidencia del cálculo', () => {
     const d = Cot.borrador('MAY-01'); Doc.cambiarCliente(d, 'CLI-000002');
     const l = Doc.agregar(d, 'PT-0002');
     igual([l.precio, l.calculo.base.precio, l.calculo.base.origen, l.calculo.ofertas.map(o => o.nom), l.calculo.ajusteMin, l.calculo.minimo], [79, 89, 'Mayorista', ['Navidad'], true, 79], 'evidencia');
+  } finally { BD.reloj = null; UI.reloj = null; }
+});
+
+prueba('el precio es referencial: el vendedor lo cambia y queda la referencia; la moneda no lo pisa', () => {
+  dia('15/08/2026');
+  try {
+    const d = Ventas.borrador('TDA-01'); Doc.cambiarCliente(d, 'CLI-000001');
+    const l = Doc.agregar(d, 'PT-0001');
+    igual(l.precio, 119.90, 'propone la lista');
+    Doc.cambiar(d, 0, 'precio', 135);
+    igual([l.precio, l.origen, l.precioRef.precio, l.precioRef.origen], [135, 'Precio modificado a mano', 119.90, 'Precios generales S/'], 'más caro que la lista');
+    Doc.cambiar(d, 0, 'precio', 100);
+    igual(l.precioRef.precio, 119.90, 'la referencia es la del motor, no la del cambio anterior');
+    igual(Doc.revisarLinea(d, l, 'venta').e.filter(x => x.indexOf('mínimo') >= 0).length, 0, '100 está sobre el mínimo 79');
+    Doc.cambiar(d, 0, 'precio', 70);
+    igual(Doc.revisarLinea(d, l, 'venta').e.some(x => x.indexOf('precio mínimo') >= 0), true, 'debajo del mínimo: lo controla «Verificar el precio mínimo» (hoy activo en toda la empresa)');
+    Doc.cambiar(d, 0, 'precio', 100);
+    Doc.cambiarMoneda(d, 'USD');
+    igual([l.origen, l.precio], ['Precio modificado a mano', UI.r2(100 / Store.cfg().tc)], 'el precio a mano se convierte, no se pisa');
   } finally { BD.reloj = null; UI.reloj = null; }
 });

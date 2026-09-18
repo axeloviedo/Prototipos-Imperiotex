@@ -71,7 +71,7 @@ const Doc = {
     const r = Precios.resolver(l.art, l.um, d.sede, Doc.tipoCli(d), d.mon);
     l.precio = r ? r.precio : 0;
     l.origen = r ? r.origen : 'Sin precio en ' + d.mon;
-    delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo;
+    delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo; delete l.precioRef;
     if (r && r.lista) l.lista = r.lista;
     /* LP5/LP8: evidencia de cómo se llegó al precio (base, ofertas encontradas, ganadora, ajuste al mínimo) */
     if (r) l.calculo = { base: r.base, ofertas: r.ofertas, gana: r.oferta ? r.oferta.cod : (r.lista || 'sugerido'), minimo: r.minimo, ajusteMin: r.ajusteMin, fecha: UI.hoy() };
@@ -106,8 +106,12 @@ const Doc = {
       if (val === '' || isNaN(n) || n < 0) throw new Error('Ingrese un número mayor o igual a cero');
       if (campo === 'dcto' && n > 0 && l.oferta) throw new Error('La línea tiene la oferta «' + l.oferta.nom + '»: no se suma un descuento manual (cambie el precio a mano si hace falta)');
       l[campo] = n;
-      /* LP4: el precio escrito a mano quita la oferta */
-      if (campo === 'precio') { l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista; delete l.lista; delete l.calculo; }
+      /* LP11: el precio del motor es REFERENCIAL: el vendedor lo cambia en la línea. Se conserva la referencia (precio, lista y cálculo) como evidencia;
+         la oferta deja de aplicarse (LP4) */
+      if (campo === 'precio') {
+        if (l.origen !== Doc.MANUAL) l.precioRef = { precio: antes.precio, origen: antes.origen, lista: antes.lista || '', oferta: antes.oferta ? antes.oferta.cod : '' };
+        l.origen = Doc.MANUAL; delete l.oferta; delete l.precioLista;
+      }
     } else if (campo === 'obsequio') l.obsequio = !!val;
     else if (campo === 'um') { l.um = val; l.factor = Precios.factor(l.art, val); Doc.precio(d, l); }
     else if (campo === 'alm') l.alm = val;
@@ -138,7 +142,11 @@ const Doc = {
     const prev = d.mon, copia = JSON.stringify(d.lineas);
     d.mon = mon;
     const sin = [];
-    d.lineas.forEach(l => { const r = Doc.precio(d, l); if (!r && !l.obsequio) sin.push(l.art); });
+    /* el precio escrito a mano se conserva, convertido con el tipo de cambio (LP11); el resto se vuelve a calcular en la moneda nueva */
+    d.lineas.forEach(l => {
+      if (l.origen === Doc.MANUAL) { l.precio = Precios.convertir(l.precio, prev, mon); if (l.precioRef) l.precioRef.precio = Precios.convertir(l.precioRef.precio, prev, mon); return; }
+      const r = Doc.precio(d, l); if (!r && !l.obsequio) sin.push(l.art);
+    });
     if (sin.length) {
       d.mon = prev;
       d.lineas = JSON.parse(copia);
