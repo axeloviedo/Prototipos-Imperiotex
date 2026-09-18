@@ -176,6 +176,7 @@ Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a l
 | id | PK `DD-NNNNNN` | V46 |
 | venta, origen | origen = devolución o «Anulación» | |
 | monto, estado | **Pendiente / Devuelto** | |
+| destino *(2026-09-18)* | **Caja** (se entrega en caja) o **Saldo a favor** (nace procesado, sin caja, con su movimiento de saldo) | |
 | caja_movimiento, caja_sesion | Al entregarlo | |
 
 ### Devolución · *SAP B1 devolución `ORDN`, objeto 16*
@@ -190,6 +191,32 @@ Lo que guarda y calcula `js/core/ventas.js`. Reemplaza, para este prototipo, a l
 | **línea:** linea_venta, articulo, um, factor, almacen, cantidad, tipo (Normal / Mal estado), precio, costo, total | cantidad ≤ vendido − devuelto | `devolucion_detail` |
 
 > No tiene estados: registrar = ingreso de stock y dinero por devolver.
+
+**Revisión 2026-09-18 (cambios, `12-prototipo-diseno.md` §13):**
+
+| Campo | Notas |
+|---|---|
+| estado | **Pendiente → Finalizada** (aceptada) **/ Anulada** (motivo, usuario, fecha; solo Pendiente) |
+| sustento_tipo, sustento_numero | Nota de crédito o Nota de devolución interna; el número **se escribe** (lo emite el sistema de facturación) |
+| **lleva** (líneas) | «Se lleva»: artículo, um, factor, almacén, cantidad, precio, descuento, total (mismas reglas que la línea de venta); vacío = devolución |
+| lleva_total | Total de lo que se lleva |
+| venta_cambio | Venta nueva que se registra al aceptar (`venta.cambio_de` apunta a la devolución) |
+| dinero | Reparto al aceptar: descuenta (del saldo pendiente de la venta), usa (paga el cambio con saldo), paga (diferencia del cliente, por validar en caja), sobra, modo (SALDO / CAJA) |
+| saldo_movimiento, devolucion_dinero | Abono del saldo a favor y, con el modo CAJA, lo que se devuelve en caja |
+| aceptada_por, aceptada_en | Quién y cuándo aceptó |
+
+### Saldo a favor del cliente *(nuevo, 2026-09-18)*
+
+| Campo | Notas |
+|---|---|
+| id | PK `SAF-NNNNNN` |
+| empresa, cliente, moneda | El saldo es por cliente y moneda; **no vence** |
+| tipo | **Abono** (devolución, lo que sobra en un cambio, anulación de una venta pagada con saldo) / **Uso** (pago de una venta) |
+| monto | > 0 |
+| origen_tipo, origen_id | Devolución, Venta o Anulación y su número |
+| observacion, usuario, fecha | Auditoría; no se edita ni se borra |
+
+Saldo *(calc)* = Σ Abono − Σ Uso por (empresa, cliente, moneda). El cobro con medio **SALDO** (`pago.medio = SALDO`, `pago.saldo_movimiento`) no tiene sesión de caja y nace Validado.
 
 ---
 
@@ -275,4 +302,7 @@ Comercial **no toca el Pedido** (OnOrder). Coincide con la hoja *Stock Compromet
 | Anular cobro solo con la venta Pendiente de pago y su caja abierta | Negocio |
 | Anular venta: sin devoluciones; Pagada solo hasta `anulable_hasta` | Negocio |
 | Devolución solo de ventas Pagadas; cantidad ≤ vendido − devuelto | Negocio |
+| Aceptar devolución o cambio: todo o nada (stock, saldo, venta nueva, pago de la diferencia) | Transacción |
+| Uso del saldo a favor ≤ saldo del cliente en esa moneda; nunca negativo | Negocio (bloqueo por cliente) |
+| Pago con saldo a favor: sin caja, Validado al registrarse; no cuenta en el arqueo | Negocio |
 | Ingreso/Egreso: monto > 0, descripción ≥ 5 | CHECK |

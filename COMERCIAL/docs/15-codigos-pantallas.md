@@ -25,13 +25,13 @@
 | CL-07 | Formulario | Nueva venta (directa o desde cotización) | `cm02f` | `js/modules/ventas.js` |
 | CL-08 | Modal | Registrar con avisos de stock (contra el Disponible) | `CM02F.registrar` | `js/modules/ventas.js` |
 | CL-09 | Ficha | Venta (Detalle, Pagos, Devoluciones, Movimientos de stock, Historial) | `cm02v` | `js/modules/ventas.js` |
-| CL-10 | Modal | Registrar pago | `PAGOUI.abrir` | `js/modules/documento.js` |
+| CL-10 | Modal | Registrar pago (con «Saldo a favor» si el cliente tiene saldo; sin caja abierta, solo ese medio) | `PAGOUI.abrir` | `js/modules/documento.js` |
 | CL-11 | Modal | Rechazar pago (motivo) | `CM02V.rechazar` · `CM04.rechazar` | `js/modules/ventas.js`, `js/modules/caja.js` |
 | CL-12 | Modal | Anular venta (motivo) | `CM02V.anular` | `js/modules/ventas.js` |
-| CL-13 | Pantalla | Devoluciones (listado) | `cm03` | `js/modules/devoluciones.js` |
-| CL-14 | Modal | Nueva devolución · elegir la venta | `CM03.nueva` | `js/modules/devoluciones.js` |
-| CL-15 | Ficha | Devolución (registrar, editar, finalizar, anular) | `cm03f` | `js/modules/devoluciones.js` |
-| CL-16 | Modal | Finalizar devolución | `CM03F.finalizar` | `js/modules/devoluciones.js` |
+| CL-13 | Pantalla | Cambios y devoluciones (listado con tipo y dinero) | `cm03` | `js/modules/devoluciones.js` |
+| CL-14 | Modal | Cambio o devolución · elegir la venta | `CM03.nueva` | `js/modules/devoluciones.js` |
+| CL-15 | Ficha | Cambio o devolución en dos columnas «Devuelve» / «Se lleva», con la diferencia en vivo (guardar pendiente, editar, aceptar, anular) | `cm03f` | `js/modules/devoluciones.js` |
+| CL-16 | Modal | Aceptar cambio o devolución (resumen y medio de pago de la diferencia) | `CM03F.aceptar` | `js/modules/devoluciones.js` |
 | CL-17 | Modal | Anular devolución (motivo) | `CM03F.anular` | `js/modules/devoluciones.js` |
 | CL-18 | Pantalla | Caja de la tienda (Cobros, Por cobrar, Ingresos y egresos, Devoluciones de dinero) | `cm04` | `js/modules/caja.js` |
 | CL-19 | Modal | Abrir caja | `CM04.abrir` | `js/modules/caja.js` |
@@ -50,7 +50,7 @@
 | CL-32 | Pantalla | Existencias y movimientos de la base compartida (Existencias de las tiendas de la empresa; Movimientos y Kardex de los almacenes de su sede, todos para el usuario logístico general) | `cm06` | `js/modules/consultas.js` |
 | CL-33 | Modal | Movimiento de stock (detalle) | `CM06.verMov` | `js/modules/consultas.js` |
 | CL-34 | Pantalla | Clientes (listado) | `cm07` | `js/modules/clientes.js` |
-| CL-35 | Ficha | Cliente (Datos, Ventas, Cotizaciones, Devoluciones) | `cm07f` | `js/modules/clientes.js` |
+| CL-35 | Ficha | Cliente (Datos, Ventas, Cotizaciones, Cambios y devoluciones, **Saldo a favor** con sus movimientos) | `cm07f` | `js/modules/clientes.js` |
 | CL-36 | Modal | Desactivar / reactivar cliente | `CM07F.activo` | `js/modules/clientes.js` |
 | CL-37 | Modal | Nuevo cliente (alta rápida desde un documento) | `CLIQ.abrir` | `js/modules/clientes.js` |
 | CL-38 | Modal | Buscar cliente | `BUS.cliente` | `js/modules/buscador.js` |
@@ -60,7 +60,7 @@
 | CL-42 | Modal | Quitar precio | `CM08.quitar` | `js/modules/listas.js` |
 | CL-43 | Pantalla | Artículos de venta | `cm09` | `js/modules/listas.js` |
 | CL-44 | Modal | Datos de venta del artículo | `CM09.editar` | `js/modules/listas.js` |
-| CL-45 | Pantalla | Configuración comercial (parámetros, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
+| CL-45 | Pantalla | Configuración comercial (parámetros —incluido «Dinero de una devolución»—, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
 | CL-46 | Modal | Reiniciar todo el prototipo (llama a `BD.reiniciar()` con el escenario actual y recarga; el selector «Datos» de la barra superior es `BDSelector` del núcleo, sin código CL) | `Store.reiniciar` | `js/core/store.js` |
 | CL-47 | Pantalla | Recepción de mercadería (Solicitudes de Transferencia que llegan a su sede: Por recibir / Recibidas) | `cm14` | `js/modules/recepciones.js` |
 | CL-48 | Modal | Recibir mercadería (cantidades que llegaron, total o incompleta; llama a `Docs.trf.recibir`, igual que GI-11) | `CM14.recibir` | `js/modules/recepciones.js` |
@@ -82,6 +82,8 @@
 | CM-11 Solicitudes de Pedido | CL-30 Solicitudes de Fabricación |
 | CM-12 Solicitudes de Materiales | CL-31 |
 | CM-13 Órdenes de venta | Sin código: `js/modules/ordenes.js` es de otra versión y `index.html` no lo carga |
+
+> 2026-09-18 · Cambios y devoluciones con saldo a favor (`12-prototipo-diseno.md` §13): **no se crean códigos nuevos**. CL-13 a CL-16 cambian de contenido (CL-16 pasa de «Finalizar» a «Aceptar») y CL-35 suma la pestaña Saldo a favor. Los códigos CL-49 a CL-51 los usa la rama de listas de precios; si se necesita uno nuevo aquí, se toma desde CL-52.
 
 ## Regla para pantallas nuevas
 
