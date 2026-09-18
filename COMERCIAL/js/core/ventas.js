@@ -707,6 +707,8 @@ const Dev = {
       Dev._ingresar(dd, vv);
       dd.estado = 'Finalizada';
       dd.finalizada = { f: UI.ahora(), u: Store.usuario().nom };
+      /* cómo se repartió el dinero, para mostrarlo sin recalcular: descuenta del saldo pendiente · paga el cambio · paga el cliente · sobra (a saldo o a caja) */
+      dd.dinero = { descuenta: r.descuenta, usa: r.usa, paga: r.paga, sobra: r.sobra, modo: r.modo };
       /* dinero: el crédito se usa en la venta nueva y lo que sobra va al saldo a favor (o por devolver en caja) */
       const aSaldo = UI.r2(r.usa + (r.modo === 'SALDO' ? r.sobra : 0)), aCaja = r.modo === 'CAJA' ? r.sobra : 0;
       if (aSaldo > 0.004) { const re = Ventas._aSaldo(vv, aSaldo, { doc: 'Devolución', id: dd.id }, dd.sustTipo + ' ' + dd.sustNum + ' · ' + dd.id); dd.saldoMov = re.saldoMov; dd.reembolsoSaldo = re.id; }
@@ -792,8 +794,13 @@ const Dev = {
   dineroTxt(d) {
     if (d.estado === 'Anulada') return '—';
     if (d.estado === 'Pendiente') return 'Al aceptar';
-    const v = Store.venta(d.venta), rs = v && d.reembolsoSaldo ? v.reembolsos.find(x => x.id === d.reembolsoSaldo) : null, re = Dev.reembolso(d), p = [];
-    if (rs) p.push('Saldo a favor ' + UI.m(rs.monto, d.mon));
+    const re = Dev.reembolso(d), x = d.dinero, p = [];
+    if (x) {
+      if (x.usa > 0.004) p.push('Paga el cambio ' + UI.m(x.usa, d.mon));
+      if (x.paga > 0.004) p.push('Diferencia en caja ' + UI.m(x.paga, d.mon));
+      if (x.sobra > 0.004 && x.modo === 'SALDO') p.push('A favor ' + UI.m(x.sobra, d.mon));
+      if (x.descuenta > 0.004) p.push('Descontado del saldo ' + UI.m(x.descuenta, d.mon));
+    }
     if (re) p.push('Caja ' + UI.m(re.monto, d.mon) + ' · ' + re.estado);
     return p.join(' · ') || 'Descontado del saldo';
   }

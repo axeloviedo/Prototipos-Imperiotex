@@ -100,7 +100,7 @@ const CM04 = {
         '<tr><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '<br>' + UI.esc(m.usuario) + '</td><td>' + UI.esc(m.desc) + '</td><td>' + M.metodo(m.met).nom + (m.banco ? ' · ' + m.banco : '') + (m.nop ? '<br><span class="mini">' + UI.esc(m.nop) + '</span>' : '') + '</td>' +
         '<td class="num err-t">−' + UI.m(m.monto, s.mon) + '</td><td>' + UI.estado(m.estado) + '</td>' +
         '<td>' + (m.estado === 'Procesado' && Store.puede('editar_caja') ? '<button class="btn-link" onclick="CM04.anularMov(\'' + m.id + '\')">Anular</button>' : '') + '</td></tr>'), { vacio: 'Sin devoluciones de dinero en esta caja' }) +
-      '<p class="hint">Se generan al anular una venta cobrada o al finalizar una devolución cuando el cliente ya había pagado. Es un movimiento propio (no un egreso de caja chica), así el reporte los distingue.</p>';
+      '<p class="hint">Se generan al anular una venta cobrada (lo pagado con saldo a favor vuelve al saldo, no a caja) y, solo si CL-45 tiene «Se devuelve en caja», al aceptar una devolución o un cambio en el que sobra dinero; con «Saldo a favor» ese dinero queda en la ficha del cliente. Es un movimiento propio (no un egreso de caja chica), así el reporte los distingue.</p>';
   },
 
   /* ---------- acciones ---------- */

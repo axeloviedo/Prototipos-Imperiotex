@@ -3,7 +3,7 @@ const CM10 = {
   PERMISOS: [
     ['ver_cotizacion', 'Ver cotizaciones'], ['crear_cotizacion', 'Crear cotizaciones'], ['editar_cotizacion', 'Editar cotizaciones (línea por línea)'], ['eliminar_cotizacion', 'Anular cotizaciones'],
     ['ver_venta', 'Ver ventas, listas y artículos de venta'], ['crear_venta', 'Registrar ventas y pagos'], ['anular_venta', 'Anular ventas'], ['asignar_vendedor', 'Asignar el vendedor'],
-    ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar y anular devoluciones'], ['editar_devolucion_venta', 'Finalizar devoluciones'],
+    ['ver_devolucion_venta', 'Ver devoluciones'], ['crear_devolucion_venta', 'Registrar y anular cambios y devoluciones pendientes'], ['editar_devolucion_venta', 'Aceptar cambios y devoluciones (ingresa el stock, abona el saldo a favor y registra la venta del cambio)'],
     ['ver_caja', 'Ver caja e historial'], ['crear_caja', 'Abrir caja, ingresos, egresos y devolver dinero'], ['editar_caja', 'Cerrar caja y editar o anular movimientos'], ['valid_payments', 'Validar o rechazar pagos (validar el que completa el total saca el stock de la venta)'],
     ['ver_cliente', 'Ver clientes'], ['crear_cliente', 'Crear clientes'], ['editar_cliente', 'Editar y desactivar clientes'],
     ['ver_existencias', 'Ver existencias de las tiendas de la empresa, y movimientos y Kardex de los almacenes de su sede'], ['editar_precios', 'Editar listas de precios y datos de venta'], ['configurar_comercial', 'Configuración comercial (ve costos y efectivo esperado)'],
@@ -22,6 +22,7 @@ const CM10 = {
       UI.campo('Validez de la cotización (días)', '<input id="cf-dv" type="number" min="1" max="90" value="' + c.diasValidez + '"' + dis + '>') +
       UI.campo('Plazo para anular una venta (días)', '<input id="cf-da" type="number" min="0" max="30" value="' + c.diasAnulacion + '"' + dis + '>', { hint: 'Se congela en cada venta al registrarla; pasado el plazo se corrige con una devolución' }) +
       UI.campo('Almacén para devoluciones en mal estado', '<select id="cf-alm"' + dis + '>' + UI.opts(M.ALMACENES.map(a => ({ v: a.cod, t: a.cod + ' · ' + a.nom })), c.almMalEstado) + '</select>') +
+      UI.campo('Dinero de una devolución', '<select id="cf-ddev"' + dis + '>' + UI.opts([{ v: 'SALDO', t: 'Saldo a favor del cliente (solo cambios)' }, { v: 'CAJA', t: 'Se devuelve en caja' }], c.dineroDev || 'SALDO') + '</select>', { hint: 'También lo que sobra en un cambio. En un cambio, lo devuelto siempre paga primero lo que se lleva' }) +
       UI.dato('Verificar el precio mínimo en toda la empresa', ((BD.d.maestros.configLogistica || {}).precioMinGlobal ? 'Sí' : 'No'), { hint: 'Se define en Inventarios · Configuración General (el precio mínimo vive en el artículo)' }) +
       '</div></div>';
 
@@ -36,7 +37,7 @@ const CM10 = {
         '<td class="mini">' + M.CAJAS.filter(k => k.sede === s.cod).map(k => k.cod + (Caja.abierta(s.cod, k.mon) ? ' (abierta)' : '')).join('<br>') + '</td>' +
         '<td>' + ['NV', 'BV', 'FA'].map(k => M.SERIES[s.cod][k]).join(' · ') + '</td></tr>'));
     html += '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:1;min-width:360px"><div class="sec">Medios de pago</div>' +
-      UI.tabla(['Medio', 'Cuenta en el arqueo', 'Bancos / procesadores', 'Monedas'], M.METODOS.map(m => '<tr><td>' + m.nom + '</td><td class="mini">' + (m.efectivo ? 'Efectivo: se cuenta' : 'Se valida con voucher o abono') + '</td><td class="mini">' + (m.bancos.join(', ') || '—') + '</td><td>' + m.monedas.join(', ') + '</td></tr>')) + '</div>' +
+      UI.tabla(['Medio', 'Cuenta en el arqueo', 'Bancos / procesadores', 'Monedas'], M.METODOS.map(m => '<tr><td>' + m.nom + '</td><td class="mini">' + (m.saldo ? 'No entra a caja: usa el saldo a favor del cliente y se valida solo' : m.efectivo ? 'Efectivo: se cuenta' : 'Se valida con voucher o abono') + '</td><td class="mini">' + (m.bancos.join(', ') || '—') + '</td><td>' + m.monedas.join(', ') + '</td></tr>')) + '</div>' +
       '<div style="flex:1;min-width:300px"><div class="sec">Comprobantes · lugares de entrega</div>' +
       UI.tabla(['Comprobante', 'Exige'], M.COMPROBANTES.map(x => '<tr><td>' + x.nom + '</td><td class="mini">' + (x.ruc ? 'Cliente con RUC' : '—') + '</td></tr>')) +
       UI.tabla(['Lugar de entrega', 'Pide'], M.LUGARES_ENTREGA.map(x => '<tr><td>' + x.nom + '</td><td class="mini">' + (x.propio ? 'Nada más' : 'Ubigeo, dirección y quién recibe' + (x.agencia ? ', agencia' : '')) + '</td></tr>')) + '</div></div>';
@@ -50,7 +51,7 @@ const CM10 = {
     return html;
   },
   guardar() {
-    const x = { igv: UI.v('cf-igv'), tc: UI.v('cf-tc'), diasValidez: UI.v('cf-dv'), diasAnulacion: UI.v('cf-da'), almMalEstado: UI.v('cf-alm') };
+    const x = { igv: UI.v('cf-igv'), tc: UI.v('cf-tc'), diasValidez: UI.v('cf-dv'), diasAnulacion: UI.v('cf-da'), almMalEstado: UI.v('cf-alm'), dineroDev: UI.v('cf-ddev') };
     if (App.accion(() => Cfg.guardar(x), 'Parámetros guardados')) App.refrescar();
   },
   agregarCat(tipo) { if (App.accion(() => Cfg.agregarCat(tipo, UI.v('cat-' + tipo)), 'Categoría agregada')) App.refrescar(); },

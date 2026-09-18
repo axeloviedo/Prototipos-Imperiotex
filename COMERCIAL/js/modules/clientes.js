@@ -77,10 +77,12 @@ const CM07F = {
     let html = '<div class="screen-head"><h1>' + (nuevo ? 'Nuevo cliente' : UI.esc(c.nom)) + '</h1>' + (nuevo ? '' : UI.estado(Cli.estadoComercial(c)) + (c.activo ? '' : ' ' + UI.estado('Inactivo')) + ' <span class="mini">' + c.cod + '</span>') +
       '<span class="code">CL-35</span><div class="spacer"></div>' + b.join('') + '</div>';
     if (!nuevo) {
-      const tabs = [['datos', 'Datos'], ['ven', 'Ventas (' + vs.length + ')'], ['cot', 'Cotizaciones (' + cs.length + ')'], ['dev', 'Devoluciones (' + ds.length + ')']];
+      const saf = Saldo.porMoneda(c.cod), safTxt = saf.map(x => UI.m(x.saldo, x.mon)).join(' · ');
+      const tabs = [['datos', 'Datos'], ['ven', 'Ventas (' + vs.length + ')'], ['cot', 'Cotizaciones (' + cs.length + ')'], ['dev', 'Cambios y devoluciones (' + ds.length + ')'], ['saf', 'Saldo a favor' + (safTxt ? ' (' + safTxt + ')' : '')]];
       html += UI.kpis([
         { l: 'Comprado (neto)', v: CM02.sumaMon(vs.filter(v => v.estado === 'Registrada'), Ventas.neto) },
         { l: 'Saldo por cobrar', v: CM02.sumaMon(vs, Ventas.deuda), color: 'var(--pendiente)' },
+        { l: 'Saldo a favor', v: safTxt || UI.s(0), s: 'por cambios y devoluciones · no vence', color: 'var(--prp)' },
         { l: 'Última compra', v: vs.filter(v => v.estado === 'Registrada').length ? vs.filter(v => v.estado === 'Registrada')[0].fecha.slice(0, 10) : '—', color: 'var(--borrador)' },
         { l: 'Cliente desde', v: (c.alta || '').slice(0, 10) || '—', color: 'var(--borrador)' }
       ]);
@@ -93,8 +95,16 @@ const CM07F = {
       html += UI.tabla(['Venta', 'Fecha de creación', 'Tienda', ['Total', 'num'], ['Saldo', 'num'], 'Pago', 'Estado'], vs.map(v => '<tr class="clickable" onclick="App.go(\'cm02v\',{id:\'' + v.id + '\'})"><td><b>' + v.id + '</b><br><span class="mini">' + v.compNum + '</span></td><td class="mini">' + v.fecha + '</td><td class="mini">' + UI.esc(v.sedeNom) + '</td><td class="num">' + UI.m(v.total, v.mon) + '</td><td class="num">' + UI.m(Ventas.deuda(v), v.mon) + '</td><td>' + UI.estado(Ventas.estadoPago(v)) + '</td><td>' + UI.estado(v.estado) + '</td></tr>'), { vacio: 'Sin ventas' });
     } else if (CM07F.tab === 'cot') {
       html += UI.tabla(['Cotización', 'Fecha de creación', 'Válida hasta', ['Total', 'num'], 'Estado'], cs.map(x => '<tr class="clickable" onclick="App.go(\'cm01f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.validez + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cotizaciones' });
+    } else if (CM07F.tab === 'dev') {
+      html += UI.tabla(['N°', 'Fecha de creación', 'Tipo', 'Venta', ['Devuelve', 'num'], 'Dinero', 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + Dev.tipo(x) + '</td><td>' + x.venta + (x.ventaCambio ? ' → ' + x.ventaCambio : '') + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td class="mini">' + UI.esc(Dev.dineroTxt(x)) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin cambios ni devoluciones' });
     } else {
-      html += UI.tabla(['Devolución', 'Fecha de creación', 'Venta', ['Total', 'num'], 'Estado'], ds.map(x => '<tr class="clickable" onclick="App.go(\'cm03f\',{id:\'' + x.id + '\'})"><td><b>' + x.id + '</b></td><td class="mini">' + x.fecha + '</td><td>' + x.venta + '</td><td class="num">' + UI.m(x.total, x.mon) + '</td><td>' + UI.estado(x.estado) + '</td></tr>'), { vacio: 'Sin devoluciones' });
+      /* saldo a favor: de dónde vino (devolución, anulación) y en qué venta se usó; los movimientos no se borran */
+      const ms = Saldo.movs(c.cod), ir = o => !o ? '' : o.doc === 'Devolución' ? '<button class="btn-link" style="padding:0" onclick="App.go(\'cm03f\',{id:\'' + o.id + '\'})">' + o.id + '</button>'
+        : (o.doc === 'Venta' || o.doc === 'Anulación') && Store.venta(o.id) ? '<button class="btn-link" style="padding:0" onclick="App.go(\'cm02v\',{id:\'' + o.id + '\'})">' + o.id + '</button>' : UI.esc(o.id || '');
+      html += '<div class="chips" style="margin-bottom:8px">' + M.MONEDAS.map(m => '<span class="chip" style="font-size:13px;padding:5px 12px">Saldo ' + m.cod + ': <b>' + UI.m(Saldo.de(c.cod, m.cod), m.cod) + '</b></span>').join('') + '</div>' +
+        UI.tabla(['Movimiento', 'Fecha de creación', 'Tipo', 'Origen', 'Detalle', ['Monto', 'num'], 'Usuario'], ms.map(m => '<tr><td><b>' + m.id + '</b></td><td class="mini">' + m.fecha + '</td><td>' + UI.badge(m.tipo, m.tipo === 'Abono' ? 'var(--confirmado)' : 'var(--parcial)') + '</td>' +
+          '<td>' + (m.origen ? UI.esc(m.origen.doc) + ' ' + ir(m.origen) : '') + '</td><td class="mini">' + UI.esc(m.obs) + '</td><td class="num">' + (m.tipo === 'Abono' ? '+ ' : '− ') + UI.m(m.monto, m.mon) + '</td><td class="mini">' + UI.esc(m.usuario) + '</td></tr>'), { vacio: 'Sin saldo a favor' }) +
+        '<p class="hint">El saldo a favor nace de una devolución o de lo que sobra en un cambio (el negocio hace solo cambios: no se devuelve el dinero) y vuelve si se anula una venta pagada con él. Se usa como medio de pago «Saldo a favor» en cualquier venta de este cliente, en la misma moneda. No vence.</p>';
     }
     return html;
   },

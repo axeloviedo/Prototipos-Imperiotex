@@ -65,7 +65,7 @@ prueba('devolución sin «Se lleva»: todo queda como saldo a favor, nada por de
     falla(() => Dev.finalizar(d), 'editar_devolucion_venta');
     T('31/07/2026 15:32', 'USER10'); Dev.finalizar(d);
     igual([UI.r2(Saldo.de('CLI-000001', 'PEN') - saldo0), act('PT-0002') - a2, Caja.reembolsosPendientes('TDA-01', 'PEN').length - pend0], [119.9, 1, 0], 'saldo, stock y caja');
-    igual([Ventas.neto(v), Ventas.pagado(v), Ventas.estadoPago(v), Dev.dineroTxt(d)], [0, 0, 'Pagado', 'Saldo a favor S/ 119.90'], 'venta original');
+    igual([Ventas.neto(v), Ventas.pagado(v), Ventas.estadoPago(v), Dev.dineroTxt(d)], [0, 0, 'Pagado', 'A favor S/ 119.90'], 'venta original');
     igual(Saldo.movs('CLI-000001', 'PEN')[0].origen, { doc: 'Devolución', id: d.id }, 'el abono sabe de dónde vino');
   } finally { fin(); }
 });
