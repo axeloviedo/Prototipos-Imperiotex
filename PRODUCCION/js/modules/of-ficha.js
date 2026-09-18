@@ -69,7 +69,7 @@ const PR02 = {
   tercerizar() {
     const of = PR02.of(), servs = M.recActivos(r => r.tipo === 'SERVICIO DE TERCEROS'), actual = Prod.serviciosDe(of);
     const recSel = actual[0] || (servs[0] || {}).cod || '', provSel = Prod.provServicio(of) || (M.rec(recSel) || {}).prov || '';
-    const provs = M.PROVEEDORES.filter(p => p.servicio || p.grupo === 'SRV' || p.cod === provSel);
+    const provs = M.PROVEEDORES.filter(p => p.servicio || p.tipo === 'SRV' || p.cod === provSel);
     UI.modal({
       titulo: (actual.length ? 'Cambiar servicio · ' : 'Tercerizar fase · ') + of.id,
       cuerpo: '<div class="formgrid">' +
