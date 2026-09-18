@@ -38,10 +38,12 @@
 
 | Operación | Ruta sugerida | Permiso | Reglas | Errores |
 |---|---|---|---|---|
-| Listar filas de un artículo | `GET /price-lists?article=` | ver_venta | — | — |
-| Crear / editar fila | `POST /price-lists` · `PUT /price-lists/{id}` | editar_precios | UM de venta del artículo; precio > 0; única (artículo, UM, sede, tipoCliente, moneda) | 400, 409 DUPLICATE |
-| Quitar fila | `DELETE /price-lists/{id}` | editar_precios | Los documentos creados no cambian | 404 |
-| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Cascada sede+tipo → sede → tipo → general → sugerido (solo PEN). Devuelve `{price, source}` | 404 NO-PRICE |
+| Listar listas y ofertas | `GET /price-lists?type=&currency=` | ver_venta | — | — |
+| Crear / editar lista u oferta | `POST /price-lists` · `PUT /price-lists/{code}` | editar_precios | Nombre único; moneda; sede y segmento opcionales; oferta con fecha desde ≤ hasta | 400, 409 DUPLICATE |
+| Agregar artículos o grupo | `POST /price-lists/{code}/rows` | editar_precios | Precio > 0 **o** % entre 0 y 100; grupo solo con %; única (artículo, UM) o (grupo) | 400, 409 DUPLICATE |
+| Cambiar / quitar fila | `PUT` · `DELETE /price-lists/{code}/rows/{id}` | editar_precios | Los documentos creados no cambian | 404 |
+| Quitar lista | `DELETE /price-lists/{code}` | editar_precios | Los documentos creados no cambian | 404 |
+| **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Oferta vigente → sede+tipo → sede → tipo → general → sugerido (solo PEN); `&date=` opcional. Devuelve `{price, source, list, offer, listPrice}` | 404 NO-PRICE |
 | Datos de venta del artículo | `PUT /sale-articles/{code}` | editar_precios | precioMínimo ≤ sugerido; dctoMín ≤ dctoMáx ≤ 100 | 400, 422 |
 | Disponibilidad | `GET /stock/availability?article=&warehouse=&quantity=` | ver_existencias | `{onHand, committed, available, control}` desde logística | 503 |
 

@@ -1,5 +1,5 @@
 /* COMERCIAL — acceso a la BASE COMPARTIDA (BD, clave 'imperiotex.bd'). Comercial ya no guarda una copia propia:
-   Store.d ES BD.d (maestros, stock y movimientos comunes + colecciones de Comercial: clientes, listas, cots, ventas, devs, sesiones, cmovs, comercial).
+   Store.d ES BD.d (maestros, stock y movimientos comunes + colecciones de Comercial: clientes, listasPrecio, cots, ventas, devs, sesiones, cmovs, comercial).
    El usuario activo de la demo no va en la base: se recuerda en localStorage 'imperiotex.comercial.usuario' (el reinicio global lo borra). */
 const Store = {
   KEY_USUARIO: 'imperiotex.comercial.usuario',

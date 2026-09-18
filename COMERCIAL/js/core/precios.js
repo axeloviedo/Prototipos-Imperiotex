@@ -1,14 +1,6 @@
-/* COMERCIAL V9 — resolución de precios (listas en cascada) y cálculo de importes (un solo lugar para el dinero).
+/* COMERCIAL V9 — resolución de precios (listas de precios y ofertas, decisión LP 2026-09-18) y cálculo de importes (un solo lugar para el dinero).
    Los precios de venta INCLUYEN IGV (como en la documentación): del total de la línea se separan base e impuesto. */
 const Precios = {
-  /* de la más específica a la general; la tienda y el tipo de cliente son opcionales en cada fila de la lista */
-  NIVELES: [
-    { t: 'Tienda y tipo de cliente', f: (l, s, c) => !!s && !!c && l.sede === s && l.tipo === c },
-    { t: 'Tienda', f: (l, s) => !!s && l.sede === s && !l.tipo },
-    { t: 'Tipo de cliente', f: (l, s, c) => !!c && !l.sede && l.tipo === c },
-    { t: 'General', f: l => !l.sede && !l.tipo }
-  ],
-
   /* unidades por UM de venta respecto a la UM de inventario (A1: factor global por par). La UM de venta es referencial (L5):
      se puede usar cualquier unidad con conversión a la de inventario; sin conversión no se realiza la operación */
   factor(art, um) {
@@ -28,16 +20,85 @@ const Precios = {
   /* verificación del precio mínimo: la de Configuración General de Inventarios (L1) o la del artículo */
   verificaMin(a) { return !!((BD.d.maestros.configLogistica || {}).precioMinGlobal || (a && a.verifMin)); },
 
-  /* -> {precio, origen, fila} o null si no hay precio en esa moneda */
-  resolver(art, um, sede, tipoCli, mon) {
-    const cands = Store.d.listas.filter(l => l.art === art && l.um === um && l.mon === mon);
-    for (const n of Precios.NIVELES) {
-      const x = cands.find(l => n.f(l, sede, tipoCli));
-      if (x) return { precio: x.precio, origen: 'Lista · ' + n.t, fila: x.id };
+  /* ===== LISTAS DE PRECIOS Y OFERTAS (decisiones LP1–LP5, 12-prototipo-diseno.md §12) =====
+     Store.d.listasPrecio = [{ cod, nom, mon, sede ('' = todas), tipo ('' = todos los segmentos), desde, hasta, activa,
+                               filas: [{ art, um, precio | pct }  ó  { grupo, pct }] }]
+     Una lista SIN fechas es una lista de precios; CON fechas es una oferta. Cada fila lleva precio fijo O % de descuento. */
+  listas() { return Store.d.listasPrecio || (Store.d.listasPrecio = []); },
+  lista(cod) { return Precios.listas().find(l => l.cod === cod); },
+  esOferta(L) { return !!(L && (L.desde || L.hasta)); },
+  /* 0 = tienda y segmento · 1 = tienda · 2 = segmento · 3 = general (de lo más específico a lo general) */
+  NIVELES: ['Tienda y segmento', 'Tienda', 'Segmento', 'General'],
+  espec(L) { return L.sede && L.tipo ? 0 : L.sede ? 1 : L.tipo ? 2 : 3; },
+  nivel(L) { return Precios.NIVELES[Precios.espec(L)]; },
+  enFechas(L, fecha) {
+    const f = UI.aFecha((fecha || UI.hoy()).slice(0, 10));
+    return !(L.desde && f < UI.aFecha(L.desde)) && !(L.hasta && f > UI.aFecha(L.hasta));
+  },
+  /* Activa · Inactiva, y en las ofertas Programada · Vigente · Vencida */
+  estado(L, fecha) {
+    if (!L.activa) return 'Inactiva';
+    if (!Precios.esOferta(L)) return 'Activa';
+    const f = UI.aFecha((fecha || UI.hoy()).slice(0, 10));
+    if (L.desde && f < UI.aFecha(L.desde)) return 'Programada';
+    if (L.hasta && f > UI.aFecha(L.hasta)) return 'Vencida';
+    return 'Vigente';
+  },
+  /* ¿la lista vale para este documento? misma moneda, su tienda (o todas), su segmento (o todos), activa y en fecha */
+  aplica(L, sede, tipo, mon, fecha) {
+    return !!L.activa && L.mon === mon && (!L.sede || L.sede === sede) && (!L.tipo || L.tipo === tipo) && Precios.enFechas(L, fecha);
+  },
+  /* fila de la lista para el artículo y la unidad: la del artículo en esa unidad → la del artículo en su unidad de inventario (× factor)
+     → la del artículo con % para todas las unidades → la de su grupo. -> {f, por} o null */
+  filaDe(L, art, um) {
+    const a = Store.art(art), fs = (L.filas || []).filter(f => f.precio > 0 || f.pct > 0);
+    if (!a) return null;
+    const exacta = fs.find(f => f.art === art && f.um === um);
+    if (exacta) return { f: exacta, factor: 1 };
+    const inv = um !== a.u && fs.find(f => f.art === art && f.um === a.u);
+    if (inv) return { f: inv, factor: Precios.factor(art, um) };
+    const todas = fs.find(f => f.art === art && !f.um && f.pct > 0);
+    if (todas) return { f: todas, factor: 1 };
+    const grupo = fs.find(f => f.grupo && f.grupo === a.grupo && f.pct > 0);
+    return grupo ? { f: grupo, factor: 1 } : null;
+  },
+  pctTxt(p) { return '−' + UI.n(p, Number.isInteger(p) ? 0 : 2) + ' %'; },
+  /* listas y ofertas que tienen el artículo para ese documento, de la más específica a la general */
+  candidatos(art, um, sede, tipo, mon, fecha) {
+    return Precios.listas().filter(L => Precios.aplica(L, sede, tipo, mon, fecha))
+      .map(L => ({ L, x: Precios.filaDe(L, art, um) })).filter(c => c.x)
+      .sort((p, q) => Precios.espec(p.L) - Precios.espec(q.L));
+  },
+  /* precio sin ofertas: la lista más específica; si su fila es un %, se aplica sobre la siguiente (y al final sobre el precio sugerido) */
+  _normal(cands, i, art, um, mon) {
+    const c = cands[i];
+    if (!c) {
+      const a = Store.art(art);
+      if (a && mon === 'PEN' && a.precioVenta > 0) return { precio: UI.r2(a.precioVenta * Precios.factor(art, um)), origen: 'Precio sugerido del artículo' };
+      return null;
     }
-    const a = Store.art(art);
-    if (a && mon === 'PEN' && a.precioVenta > 0) return { precio: UI.r2(a.precioVenta * Precios.factor(art, um)), origen: 'Precio sugerido del artículo', fila: null };
-    return null;
+    const f = c.x.f;
+    if (f.precio > 0) return { precio: UI.r2(f.precio * c.x.factor), origen: c.L.nom, lista: c.L.cod };
+    const b = Precios._normal(cands, i + 1, art, um, mon);
+    return b ? { precio: UI.r2(b.precio * (1 - f.pct / 100)), origen: c.L.nom + ' ' + Precios.pctTxt(f.pct), lista: c.L.cod } : null;
+  },
+  /* -> {precio, origen («de dónde sale el precio»), lista, oferta: {cod, nom, pct} | null, precioLista} o null si no hay precio en esa moneda.
+     Una oferta vigente manda sobre la lista; su % se aplica sobre el precio de lista. Entre ofertas: la más específica y, a igual nivel, el menor precio. */
+  resolver(art, um, sede, tipo, mon, fecha) {
+    const cands = Precios.candidatos(art, um, sede, tipo, mon, fecha);
+    const normal = Precios._normal(cands.filter(c => !Precios.esOferta(c.L)), 0, art, um, mon);
+    const ofertas = cands.filter(c => Precios.esOferta(c.L)).map(c => {
+      const f = c.x.f;
+      const precio = f.precio > 0 ? UI.r2(f.precio * c.x.factor) : normal ? UI.r2(normal.precio * (1 - f.pct / 100)) : 0;
+      return { c, precio };
+    }).filter(o => o.precio > 0).sort((p, q) => Precios.espec(p.c.L) - Precios.espec(q.c.L) || p.precio - q.precio);
+    const o = ofertas[0];
+    if (o) {
+      const L = o.c.L, f = o.c.x.f;
+      return { precio: o.precio, origen: 'Oferta ' + L.nom + (f.pct > 0 ? ' ' + Precios.pctTxt(f.pct) : ''), lista: L.cod,
+        oferta: { cod: L.cod, nom: L.nom, pct: f.pct > 0 ? f.pct : null }, precioLista: normal ? normal.precio : null };
+    }
+    return normal ? Object.assign(normal, { oferta: null, precioLista: normal.precio }) : null;
   },
 
   tasa(art) {

@@ -44,19 +44,34 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 
 > Sin condición de pago: solo contado.
 
-### Lista de precios (wallet)
+### Listas de precios y ofertas
+
+> 2026-09-18: se carga **por lista** y no por artículo (decisiones LP1–LP5 en `12-prototipo-diseno.md` §12). Colección `BD.d.listasPrecio`.
+
+**lista_precio**
 
 | Campo | Tipo | Notas | Doc actual |
 |---|---|---|---|
-| id | PK | | `wallet.id` |
-| articulo | FK → Artículo | | `product_id` / `service_id` |
-| um | FK → UM | Unidad de **venta** (UND, DOC…) | `unit_id` |
-| sede | FK → Sede, nulo | Nulo = todas las tiendas | `sucursale_id` |
-| tipo_cliente | FK, nulo | Nulo = todos | `client_segment_id` |
+| codigo | PK | `LP-01` | — |
+| nombre | texto, único | | — |
 | moneda | enum | PEN / USD | `coin_id` |
-| precio | decimal | Incluye IGV | `coin_price_multiple` |
+| sede | FK → Sede, nulo | Nulo = todas las tiendas | `sucursale_id` |
+| tipo_cliente | FK, nulo | Segmento; nulo = todos | `client_segment_id` |
+| valida_desde · valida_hasta | fecha, nulo | Con fechas es una **oferta**; hasta nulo = sin fin | — |
+| activa | bool | | — |
 
-La combinación (articulo, um, sede, tipo_cliente, moneda) es única. Resolución: sede+tipo → sede → tipo → general → `articulo.precio_sugerido` (solo PEN). *Equivale a una lista de precios de SAP B1 (`OPLN`/`ITM1`) con niveles.*
+**lista_precio_fila** · una por (lista, articulo, um) o por (lista, grupo)
+
+| Campo | Tipo | Notas | Doc actual |
+|---|---|---|---|
+| lista | FK → lista_precio | | — |
+| articulo | FK → Artículo, nulo | | `product_id` / `service_id` |
+| grupo | FK → Grupo de artículo, nulo | Solo con % | — |
+| um | FK → UM, nulo | Nulo = todas las unidades (solo con %) | `unit_id` |
+| precio | decimal, nulo | Incluye IGV. Precio **o** % | `price_general` |
+| pct_descuento | decimal, nulo | Sobre el precio de la lista menos específica (o de lista, en una oferta) | — |
+
+Resolución: oferta vigente → sede+tipo → sede → tipo → general → `articulo.precio_sugerido` (solo PEN). La línea del documento guarda `precio`, `origen`, `lista`, `oferta` y `precio_lista`.
 
 ### Artículo: datos de venta (pestaña Venta de GI-02)
 

@@ -1,0 +1,98 @@
+/* Listas de precios y ofertas (12-prototipo-diseno.md §12, LP1–LP5). Corre dentro de probar-comercial.js. */
+const R = (art, um, sede, tipo, mon, fecha) => Precios.resolver(art, um, sede, tipo, mon, fecha);
+const P = (...a) => { const r = R(...a); return r ? r.precio : null; };
+const dia = f => { BD.reloj = f + ' 10:00'; UI.reloj = f + ' 10:00'; };
+
+prueba('lista general en soles y en dólares', () => {
+  igual(P('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 119.90, 'general S/');
+  igual(R('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026').origen, 'Precios generales S/', 'origen');
+  igual(P('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'USD', '15/08/2026'), 32.00, 'general US$');
+});
+prueba('segmento de cliente: Mayorista y Exportación', () => {
+  igual(P('PT-0001', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026'), 89.00, 'mayorista');
+  igual(P('PT-0001', 'UND', 'MAY-01', 'EXPORTACIÓN', 'USD', '15/08/2026'), 24.50, 'exportación');
+});
+prueba('tienda: la lista de la tienda manda sobre la del segmento; tienda y segmento sobre todo', () => {
+  igual(P('PT-0001', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '15/08/2026'), 115.00, 'Damero');
+  igual(P('PT-0001', 'UND', 'TDA-02', 'MAYORISTA', 'PEN', '15/08/2026'), 115.00, 'Damero mayorista');
+  igual(P('PT-0004', 'UND', 'TDA-01', 'MAYORISTA', 'PEN', '15/08/2026'), 90.00, 'Tienda #1 mayorista');
+  igual(P('PT-0004', 'UND', 'TDA-02', 'MAYORISTA', 'PEN', '15/08/2026'), 92.00, 'Damero no tiene PT-0004: mayorista');
+});
+prueba('unidad: precio propio por docena, o el de la unidad × conversión', () => {
+  igual(P('PT-0001', 'DOC', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026'), 1020.00, 'docena mayorista');
+  igual(P('PT-0001', 'DOC', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 1438.80, 'docena general = 119.90 × 12');
+});
+prueba('sin precio en la moneda: no se convierte; sin lista: precio sugerido solo en soles', () => {
+  igual(R('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'USD', '15/08/2026'), null, 'PT-0004 en US$');
+});
+prueba('oferta vigente con % para un segmento', () => {
+  const r = R('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/09/2026');
+  igual(r.precio, 99.92, 'Primavera −20 %'); igual(r.oferta.cod, 'LP-08', 'oferta'); igual(r.precioLista, 124.90, 'precio de lista');
+  igual(P('PT-0003', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/09/2026'), 92.00, 'no es para mayoristas');
+  igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '01/10/2026'), 124.90, 'ya venció');
+});
+prueba('oferta programada por grupo y con precio fijo; el % va sobre la lista de cada cliente', () => {
+  igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '10/12/2026'), 101.92, 'grupo PT −15 %');
+  igual(P('PT-0002', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '10/12/2026'), 75.65, 'mayorista −15 %');
+  igual(P('PT-0001', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '10/12/2026'), 99.90, 'precio fijo de la oferta');
+  igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '30/11/2026'), 119.90, 'todavía no empieza');
+});
+prueba('lista inactiva no se usa', () => {
+  const L = Precios.lista('LP-05'); L.activa = false;
+  try { igual(P('PT-0001', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '15/08/2026'), 119.90, 'sin Damero'); } finally { L.activa = true; }
+});
+
+prueba('mantenimiento: nueva oferta, agregar artículos y grupo, precio o %', () => {
+  const L = Listas.guardar({ nom: 'Prueba Cyber', mon: 'PEN', sede: 'TDA-01', tipo: '', oferta: true, desde: '01/11/2026', hasta: '03/11/2026', activa: true });
+  igual(Precios.esOferta(L), true, 'es oferta');
+  igual(Listas.agregarArts(L.cod, ['PT-0003', 'PT-0004'], { pct: 30 }), 2, 'agregados');
+  igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 87.43, '124.90 − 30 %');
+  const i = L.filas.findIndex(f => f.art === 'PT-0004');
+  Listas.fila(L.cod, i, 'um', 'UND'); Listas.fila(L.cod, i, 'precio', 80);
+  igual([L.filas[i].precio, L.filas[i].pct], [80, undefined], 'el precio borra el %');
+  igual(P('PT-0004', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 80, 'precio fijo');
+  igual(P('PT-0004', 'UND', 'TDA-02', 'MINORISTA', 'PEN', '02/11/2026'), 124.90, 'solo en Tienda #1');
+  falla(() => Listas.agregarGrupo(L.cod, 'PT', 0), '% de descuento');
+  Listas.agregarGrupo(L.cod, 'PT', 5);
+  igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 113.91, 'grupo −5 %');
+  falla(() => Listas.agregarArts(L.cod, ['PT-0003'], { pct: 30 }), 'No hay artículos nuevos');
+  Listas.quitar(L.cod);
+});
+prueba('validaciones y permiso', () => {
+  falla(() => Listas.guardar({ nom: 'Mayorista', mon: 'PEN' }), 'Ya existe');
+  falla(() => Listas.guardar({ nom: 'Oferta sin fecha', mon: 'PEN', oferta: true }), 'fecha de inicio');
+  falla(() => Listas.guardar({ nom: 'Fechas al revés', mon: 'PEN', oferta: true, desde: '10/11/2026', hasta: '01/11/2026' }), 'anterior');
+  const u = Store.usuario().cod;
+  Store.fijarUsuario('USER10', false);
+  try { if (!Store.puede('editar_precios')) falla(() => Listas.guardar({ nom: 'Sin permiso', mon: 'PEN' }), 'permiso'); } finally { Store.fijarUsuario(u, false); }
+});
+
+prueba('documento: toma la oferta, no suma descuento manual y el precio a mano la quita', () => {
+  dia('15/09/2026');
+  try {
+    const d = Cot.borrador('TDA-01');
+    Doc.cambiarCliente(d, 'CLI-000001');
+    const l = Doc.agregar(d, 'PT-0003');
+    igual([l.precio, l.lista, l.oferta && l.oferta.cod, l.precioLista], [99.92, 'LP-08', 'LP-08', 124.90], 'línea con oferta');
+    falla(() => Doc.cambiar(d, 0, 'dcto', 5), 'no se suma');
+    Doc.cambiar(d, 0, 'precio', 110);
+    igual([l.origen, l.oferta, l.lista], ['Precio modificado a mano', undefined, undefined], 'a mano');
+    Doc.cambiarCliente(d, 'CLI-000003');
+    igual(l.precio, 110, 'cambiar cliente no toca lo escrito a mano');
+    const l2 = Doc.agregar(d, 'PT-0001');
+    igual([l2.precio, l2.lista], [89.00, 'LP-03'], 'mayorista en Tienda #1 para PT-0001');
+  } finally { BD.reloj = null; UI.reloj = null; }
+});
+prueba('la venta queda en la base compartida con la oferta aplicada', () => {
+  dia('15/09/2026');
+  try {
+    const u = Store.usuario().cod;
+    Store.fijarUsuario('USER12', false);
+    try { Caja.abrir('CJ-TDA01-PEN', 100); } catch (e) { if (e.message.indexOf('ya está abierta') < 0) throw e; }
+    if (Stock.disp('SB-TIENDA01', 'PT-0003') < 1) throw new Error('la historia no dejó PT-0003 en Tienda #1');
+    const v = Demo.venta({ sede: 'TDA-01', cli: 'CLI-000001', comp: 'BV', lineas: [['PT-0003', 1]], pagos: [{ met: 'EFE', monto: 'resto' }] });
+    const g = BD.d.ventas.find(x => x.id === v.id);
+    igual([g.lineas[0].precio, g.lineas[0].lista, g.lineas[0].oferta.nom, g.total], [99.92, 'LP-08', 'Primavera', 99.92], 'venta guardada');
+    Store.fijarUsuario(u, false);
+  } finally { BD.reloj = null; UI.reloj = null; }
+});

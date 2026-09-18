@@ -55,7 +55,7 @@ Cada pantalla muestra este flujo arriba y el **mapa de relaciones** del document
 | K10 | **Devolución de una venta Pagada** | Registrar = efecto inmediato. Por línea: cantidad ≤ vendido − devuelto y estado **Normal** o **Mal estado**. Motivo obligatorio. Ingreso GI-09 «Devoluciones de Clientes» (concepto **23**) al costo con que salió; mal estado va a `SB-ALM-REM`. El dinero queda **por devolver** en caja. Un cambio es una devolución más una venta nueva. |
 | K11 | **Un documento para productos y servicios** | La línea es un artículo: si no es inventariable (grupo SERVICIOS) no lleva almacén ni stock y admite descripción personalizada. |
 | K12 | **Sin stock no se vende** *(L6, 2026-09-16)* | Ya no hay control de stock por artículo. En la cotización solo avisa (no reserva stock). La orden y la venta directa **siempre** impiden pasar del Disponible. Al completar el cobro se revisa el Actual. |
-| K13 | **Listas de precios en cascada** | Artículo + unidad de venta + moneda, con tienda y tipo de cliente opcionales. Orden: tienda y tipo → tienda → tipo → general → precio sugerido de GI-02 (solo PEN). IGV incluido. Descuento en rango, precio mínimo y obsequio con motivo. Si al cambiar la moneda falta un precio, **se revierte**. |
+| K13 | ~~Listas de precios en cascada por artículo~~ **Reemplazada el 2026-09-18 por LP1–LP5 (§12)** | Ahora se crea la **lista** (moneda; tienda y segmento de cliente opcionales; con fechas = **oferta**) y se le agregan artículos o grupos con precio fijo o % de descuento. Se mantienen: IGV incluido, orden tienda y segmento → tienda → segmento → general → precio sugerido (solo PEN), descuento manual en rango, precio mínimo, obsequio con motivo y la **reversión** si falta precio en la moneda. |
 | K14 | **La caja es de la tienda** | Una caja abierta por tienda y moneda. Pestañas **Por cobrar**, **Cobros**, **Ingresos y egresos** y **Devoluciones de dinero**. Cierre con **conteo ciego**: el esperado solo lo ve el supervisor y la diferencia aparece al confirmar. Los movimientos no se borran: se anulan. |
 | K15 | **Fecha de creación** | Todos los listados y fichas dicen «Fecha de creación». La fecha la pone el sistema: no se registra con fecha pasada. |
 | K16 | **Permisos por acción** | `ver_*`, `crear_*`, `anular_venta`, `crear_devolucion_venta`, `crear_caja`, `editar_caja`, `asignar_vendedor`, `editar_precios`, `configurar_comercial`. Se exigen en las reglas, no solo ocultando botones. Perfiles de la demo: Vendedor, Cajero y Supervisor comercial. |
@@ -79,7 +79,7 @@ Códigos **CL-xx** desde 2026-09-16: la tabla completa, con fichas y modales, es
 | CL-32 | Existencias y movimientos | Stock de **todas las tiendas de la empresa** (Actual, Comprometido con lo de ventas pendientes, Disponible, Pedido). Movimientos y Kardex **solo de los almacenes de su sede** (R7) |
 | CL-47 | Recepción de mercadería | Las Solicitudes de Transferencia que llegan a su sede: **Por recibir** / **Recibidas**, y **Recibir mercadería** (CL-48, total o incompleta). Misma ST y misma operación que GI-11 (R7) |
 | CL-34 · CL-35 | Clientes · ficha | Listado, ficha (ventas, cotizaciones, devoluciones) y alta rápida |
-| CL-40 | Listas de precios | Filas por nivel, simulador de la cascada |
+| CL-40 | Listas de precios y ofertas | Una sola vista: listado de listas y ofertas, detalle de la elegida (artículos o grupos con precio fijo o %) y **Probar precio** (§12) |
 | CL-43 | Artículos de venta | Precio sugerido, mínimo, descuento, IGV, control de stock |
 | CL-45 | Configuración | Parámetros, categorías de caja, tiendas/cajas/series, medios de pago, perfiles y permisos |
 
@@ -292,3 +292,28 @@ Ya no crea el estado: trabaja sobre la base (normalmente después de la historia
 | PN2 | ~~Agregar `verifMin` a la pestaña Venta del artículo~~ Hecho (L1). |
 | PN3 | Aclarar en el contrato si el local mayorista vende desde SB-CENTRAL o desde un almacén propio. |
 | PN4 | `Docs.trf.recibir` fija `modulo: 'Inventarios'`; convendría aceptar el módulo que llama (p. ej. Comercial en la reposición o en la devolución a liquidación). |
+
+---
+
+## 12. Listas de precios y ofertas (2026-09-18)
+
+> Pedido del usuario: «trabajar por sedes, opcionalmente por segmento de cliente, por moneda, grupo de artículo y unidad, **creando una lista y agregando artículos**; las ofertas, igual, agregando la validez y un % de descuento o un precio; en una sola vista, más fácil». Referencia: precios múltiples por artículo de `multiservicios-erp-small` (`edit-product` → wallets y `getWalletPrice`), que se cargan artículo por artículo; aquí se cargan **por lista**.
+> Reemplaza a K13. Una versión «como SAP B1» (lista base × factor, redondeos, lista en la ficha del cliente, descuentos por periodo y cantidad en pantallas aparte) quedó en la rama `feat/comercial-cambios-promociones` y **no se usa** por compleja.
+
+| # | Decisión | Detalle |
+|---|---|---|
+| LP1 | **La lista se crea y se le agregan artículos** | Cabecera: nombre, **moneda**, **tienda** (vacío = todas), **segmento de cliente** (el tipo de cliente; vacío = todos) y **Activa**. Filas: artículo + **unidad** con **precio fijo** o **% de descuento** (uno u otro), o un **grupo de artículos** entero con %. «Agregar artículos» por grupo o búsqueda, varios a la vez, con un precio o % para todos (opcional). Un precio en la unidad de inventario sirve para las mayores (× conversión); un % puede valer para «Todas» las unidades. |
+| LP2 | **El documento no elige lista** | La cotización y la venta toman el precio según su **tienda**, el **segmento** del cliente y su **moneda**: tienda y segmento → tienda → segmento → general → precio sugerido de GI-02 (solo PEN). El % de una lista se aplica sobre la siguiente menos específica. Sin precio en la moneda, el cambio de moneda se revierte (no se convierte). |
+| LP3 | **Oferta = lista con fechas** | Mismo formulario con **Desde** (obligatoria) y **Hasta** (vacío = sin fin): Programada · Vigente · Vencida. Mientras está vigente **manda sobre las listas**; su % se aplica sobre el precio de lista del cliente. Entre ofertas: la más específica y, a igual nivel, el menor precio. |
+| LP4 | **La oferta no se suma al descuento manual** | La línea con oferta no admite descuento manual y no revisa el rango de descuento ni el precio mínimo (la configura quien tiene `editar_precios`; CL-40 avisa «bajo el mínimo»). Un precio escrito a mano quita la oferta. |
+| LP5 | **El precio queda en la base compartida** | Las listas viven en `BD.d.listasPrecio` (base compartida, se guardan al editar). Cada línea de cotización y venta guarda `precio`, `origen` (de dónde sale: «Mayorista», «Oferta Primavera −20 %», «Precio sugerido del artículo», «Precio modificado a mano»), `lista` y, si hubo oferta, `oferta {cod, nom, pct}` y `precioLista`. Cambiar o quitar una lista no toca lo ya cotizado o vendido; la venta desde cotización respeta el precio cotizado. |
+
+**Datos de ejemplo (a confirmar):** LP-01 Precios generales S/ · LP-02 Precios generales US$ · LP-03 Mayorista (UND y docena) · LP-04 Exportación (US$) · LP-05 Tienda Damero (solo TDA-02) · LP-06 Mayorista Tienda #1 (TDA-01 + MAYORISTA) · ofertas LP-07 Día del Padre (grupo PT −10 %, vencida), LP-08 Primavera (PT-0003 −20 % solo MINORISTA, setiembre), LP-09 Navidad (grupo PT −15 % y PT-0001 a 99.90, programada). Las ventas de la historia de julio no cambian de precio.
+
+| Qué | Dónde |
+|---|---|
+| Cálculo | `js/core/precios.js` (`Precios.resolver`, `candidatos`, `filaDe`, `estado`) |
+| Mantenimiento | `js/core/config.js` (`Listas.guardar`, `agregarArts`, `agregarGrupo`, `fila`, `quitarFila`, `quitar`) |
+| Documento | `js/core/ventas.js` (`Doc.precio`, `Doc.cambiar`, `Doc.revisarLinea`) |
+| Pantalla | `js/modules/listas.js` (CL-40, modales CL-41, CL-42, CL-49) |
+| Pruebas sin navegador | `node COMERCIAL/pruebas/probar-comercial.js` (`casos-precios.js`) |

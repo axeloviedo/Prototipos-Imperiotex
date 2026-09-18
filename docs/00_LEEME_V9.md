@@ -36,7 +36,7 @@
   - **Cobro** en caja.
 
   La devolución sale de una venta Pagada (Ingreso GI-09). En tienda se hace venta directa sin orden. Solo contado.
-- Un solo documento para productos y servicios (el servicio es un artículo no inventariable). Listas de precios en cascada (tienda + tipo de cliente → tienda → tipo → general → precio sugerido de GI-02), descuento en rango, precio mínimo y multimoneda con reversión.
+- Un solo documento para productos y servicios (el servicio es un artículo no inventariable). Listas de precios y ofertas: se crea la lista (moneda, tienda y segmento opcionales; con fechas = oferta) y se le agregan artículos o grupos con precio o % (tienda + segmento → tienda → segmento → general → precio sugerido de GI-02; la oferta vigente manda), descuento en rango, precio mínimo y multimoneda con reversión.
 - Cobros contra la **caja de la tienda** (una abierta por tienda y moneda). Registrar el cobro ya es cobrado, sin validación. Cierre con conteo ciego.
 - La documentación `COMERCIAL/01`–`11` es el lineamiento funcional de un sistema existente. Las decisiones K1–K17 están en `COMERCIAL/12-prototipo-diseno.md`.
 - Igual que Producción, conviene servir la carpeta con un servidor local y entrar a `/COMERCIAL/index.html`.
