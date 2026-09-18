@@ -15,7 +15,8 @@ Object.assign(BC,{
  gi08:"Movimientos / <b>Detalle de Movimiento</b> · GI-08",
  gi09:"Movimientos / <b>Crear Ingreso</b> · GI-09",
  gi10:"Movimientos / <b>Crear Salida</b> · GI-10",
- gi11:"Movimientos / <b>Solicitud de Transferencia</b> · GI-11",
+ gi11:"Transferencias / <b>Solicitud de Transferencia</b> · GI-11",
+ gi24:"<b>Transferencias</b> · GI-24",
  gi13:"<b>Solicitudes de Materiales</b> · GI-13",
  gi13f:"Solicitudes de Materiales / <b>Solicitud</b> · GI-13",
  gi14:"<b>Guías de Remisión Electrónicas</b> · GI-14",
@@ -37,5 +38,5 @@ Object.assign(BC,{
  gi22:"Solicitudes / <b>Nueva Solicitud de Fabricación</b> · GI-22",
  gi23:"Solicitudes / <b>Solicitud de Fabricación</b> · GI-23"
 });
-Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi07",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",mtmov:"mtmov",gi21:"gi21",gi22:"gi21",gi23:"gi21"});
+Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi24",gi24:"gi24",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",mtmov:"mtmov",gi21:"gi21",gi22:"gi21",gi23:"gi21"});
 Object.assign(MST_KEYS,{mtipos:"tipos",mcat:"cat",msub:"sub",mum:"um",mconv:"conv",matr:"atr",mbc:"bc",msede:"sede"});

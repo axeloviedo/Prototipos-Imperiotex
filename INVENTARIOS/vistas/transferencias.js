@@ -1,12 +1,33 @@
-/* INVENTARIOS · GI-11 Solicitud de Transferencia entre almacenes en dos pasos (BD.d.trfs con Docs.trf) — HTML */
+/* INVENTARIOS · GI-24 Transferencias (listado) y GI-11 Solicitud de Transferencia entre almacenes en dos pasos (BD.d.trfs con Docs.trf) — HTML.
+   Las solicitudes son pedidos, no movimientos: se listan aquí y no en GI-07 (2026-09-18). */
 Vistas.pantallas(String.raw`
+  <!-- ==================================================== GI-24 · Transferencias -->
+  <section class="screen" id="scr-gi24">
+    <div class="screen-head">
+      <h1>Transferencias</h1><span class="code">GI-24</span>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="resetTRF()">+ Nueva transferencia</button>
+    </div>
+    <div class="card">
+      <div class="filters">
+        <div class="field"><label>Buscar (N° / almacén / documento)</label><input id="f-st-q" placeholder="Ej. ST-000001, SB-TIENDA01…" oninput="renderST()"></div>
+        <div class="field"><label>Estado</label><select id="f-st-e" onchange="renderST()"><option value="">Todas</option><option>Borrador</option><option>Aprobada</option><option>Parcial</option><option>Recibida</option><option>Cancelada</option></select></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="grid"><thead><tr><th>N°</th><th>Fecha</th><th>Tipo</th><th>Origen → Destino</th><th>Artículos</th><th>Vinculada a</th><th>Movimientos</th><th>Estado</th></tr></thead><tbody id="st-body"></tbody></table>
+      <div class="pager"><span id="st-count"></span></div>
+    </div>
+    <p class="hint">Solicitudes de Transferencia entre almacenes, en dos pasos: al <b>aprobar</b> se compromete el stock en el origen y se suma como Pedido en el destino (no hay movimiento todavía); al <b>confirmar la recepción</b> (total o parcial) se registra el movimiento de transferencia, que aparece en Movimientos (GI-07) y en el Kardex. La recepción la confirma Logística aquí o la tienda en Comercial (CL-47): es el mismo documento.</p>
+  </section>
+
   <!-- ==================================================== GI-11 · Solicitud de Transferencia -->
   <section class="screen" id="scr-gi11">
     <div class="screen-head">
       <h1 id="trf-titulo">SOLICITUD DE TRANSFERENCIA</h1><span class="code">GI-11</span>
       <span class="badge" id="trf-badge" style="background:var(--borrador)">Nuevo</span>
       <div class="spacer"></div>
-      <button class="btn btn-secondary" onclick="go('gi07')">Volver</button>
+      <button class="btn btn-secondary" onclick="go('gi24')">Volver</button>
       <button class="btn btn-danger" id="trf-b-cancelar" onclick="cancelarST()">Cancelar</button>
       <button class="btn btn-secondary" id="trf-b-guardar" onclick="guardarST(false)">Guardar borrador</button>
       <button class="btn btn-primary" id="trf-b-aprobar" onclick="guardarST(true)">Aprobar Transferencia</button>

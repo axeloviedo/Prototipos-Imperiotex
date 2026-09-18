@@ -108,14 +108,16 @@ function cancelarPendientes(){
   const r=intentar(()=>D.cancelar(TRF.id)); closeModal('m-gi11b'); if(!r)return;
   toast("Pendientes cancelados: comprometido y pedido liberados"); abrirST(TRF.id);
 }
-/* listado en GI-07 */
+/* listado en GI-24 Transferencias (antes era un bloque dentro de GI-07 Movimientos) */
 function renderST(){
   const tb=document.getElementById('st-body'); if(!tb)return;
-  const e=document.getElementById('f-st-e').value;
-  const lista=trfs().filter(s=>!e||s.estado===e);
+  const e=document.getElementById('f-st-e').value, q=Fmt.s(document.getElementById('f-st-q').value);
+  const lista=trfs().filter(s=>(!e||s.estado===e)&&(!q||Fmt.s([s.id,s.origen,s.destino,s.tipoMov,s.sol,s.of].join(' ')).includes(q)));
+  const cnt=document.getElementById('st-count'); if(cnt)cnt.textContent=lista.length+" de "+trfs().length+" solicitudes";
   tb.innerHTML=lista.map(s=>{
     const movs=BD.d.movs.filter(m=>m.doc===s.id||m.ndoc===s.id);
     return '<tr class="clickable" onclick="abrirST(\''+s.id+'\')"><td>'+s.id+'</td><td>'+(s.fecha||'')+'</td><td>'+(s.tipoMov||'')+'</td><td>'+s.origen+' → '+s.destino+'</td><td>'+s.lineas.length+'</td>'+
       '<td onclick="event.stopPropagation()">'+(docLink(s.sol||s.of))+'</td><td onclick="event.stopPropagation()">'+(movs.map(m=>docLink(m.id)).join(' ')||hint('-'))+'</td><td>'+badge(s.estado)+'</td></tr>';
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:12px">Sin solicitudes de transferencia</td></tr>';
 }
+RENDER.gi24=renderST;
