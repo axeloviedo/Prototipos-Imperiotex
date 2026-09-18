@@ -7,7 +7,7 @@
    2) SF azul (PT-0001/0002) aprobada y FABRICADA completa: piezas → crudo → lavado tercerizado
       (SOL del servicio → OC de servicio → envío con GRE → retorno → conformidad → factura) → producto final.
    3) SF negro (PT-0003/0004) en curso: usa 10 crudos T28 adelantados en una orden manual (el crudo no tiene color: el color nace en el lavado),
-      crudo T30 a medias, lavado T28 enviado a la lavandería, lavado T30 con el servicio pedido.
+      crudo T30 a medias, lavado T28 devuelto por la lavandería con 4 prendas menos (faltante abierto), lavado T30 con el servicio pedido.
    4) SF de los cuatro PT aprobada sin órdenes (su materia prima queda comprometida). */
 const Demo = {
   USUARIOS: { comercial: 'Comercial 01', logistica: 'USER02 · Logística', compras: 'USER03 · Compras', gerencia: 'Gerencia General', produccion: 'USER05 · Producción' },
@@ -151,6 +151,8 @@ const Demo = {
     const lav28 = f2('PPT-0007');
     Demo._comprarServicio(lav28, '17/07/2026 09:00', '17/07/2026 15:00', '18/07/2026 10:00');
     Demo._en('20/07/2026 08:30', 'produccion'); Prod.enviarProveedor(lav28, { cant: lav28.cant }); BD.guardar();
+    /* la lavandería devuelve 26 de 30: al cerrar, las 4 que no retornaron quedan como faltante abierto (N6); Compras lo reclama (CO-11) */
+    Demo._producir(lav28, '24/07/2026 09:00', { emitir: [lav28.cant], recibir: [lav28.cant - 4], cerrar: true });
     Demo._comprarServicio(f2('PPT-0008'), '17/07/2026 09:05');
 
     /* ---------- 4) SF de los cuatro terminados: aprobada, sin órdenes ---------- */
