@@ -42,7 +42,17 @@
      · Nota de crédito (sin devolución: nota 05 bienes / 09 servicio). El faltante de una orden tercerizada sale del tránsito (SAL-REGULARIZ, 26). */
   const rec = {
     ESTADOS: ['Registrado', 'En proceso', 'Resuelto', 'Anulado'],
-    RESOLUCIONES: ['Reposición', 'Devolución', 'Nota de crédito'],
+    RESOLUCIONES: ['Reposición', 'Devolución', 'Nota de crédito', 'No procedente'],
+    /* avíos: por debajo de este % de lo recibido no se suele reclamar (se trata como merma del proceso). Solo avisa */
+    UMBRAL_AVIOS: 10,
+    esAvio(art) { return /AVIOS/i.test(((BD.art(art) || {}).cat || '').normalize('NFD').replace(/[̀-ͯ]/g, '')); },
+    /* aviso del umbral para una línea: '' si no aplica */
+    avisoUmbral(ocId, art, cant) {
+      if (!rec.esAvio(art)) return '';
+      const it = ((BD.oc(ocId) || {}).items || []).find(i => i.art === art); if (!it || !it.recq) return '';
+      const pct = BD.r2(cant / it.recq * 100);
+      return pct < rec.UMBRAL_AVIOS ? 'Avío: ' + pct + '% de lo recibido (' + it.recq + '), por debajo del ' + rec.UMBRAL_AVIOS + '%: normalmente se trata como merma del proceso y no se reclama' : '';
+    },
     MOTIVOS: ['Faltante en la entrega', 'Producto con defecto de fábrica', 'Tono o color distinto al aprobado', 'Medida o gramaje fuera de especificación',
       'Producto oxidado o deteriorado', 'Servicio mal ejecutado', 'Prendas que no retornaron del servicio', 'Otro'],
     /* lo que se puede reclamar de una OC: lo recibido o con conformidad, menos lo ya reclamado */
@@ -70,7 +80,7 @@
       }
       exigir(o, 'Elija la orden de compra');
       exigir(!['Borrador', 'Pendiente de Validar', 'Cancelada'].includes(o.est), 'La OC ' + o.id + ' no está aprobada');
-      const lineas = (d.lineas || []).filter(l => l.art && Number(l.cant) > 0).map(l => ({ art: l.art, cant: BD.r4(l.cant), motivo: l.motivo || '', resol: '', estado: 'Pendiente', alm: '', docs: [] }));
+      const lineas = (d.lineas || []).filter(l => l.art && Number(l.cant) > 0).map(l => ({ art: l.art, cant: BD.r4(l.cant), motivo: l.motivo || '', lote: l.lote || '', resol: '', estado: 'Pendiente', alm: '', docs: [] }));
       exigir(lineas.length, 'Agregue al menos una línea con cantidad');
       lineas.forEach(l => {
         exigir(o.items.some(i => i.art === l.art), BD.nomArt(l.art) + ' no está en la OC ' + o.id);
@@ -92,6 +102,14 @@
       d = d || {};
       exigir(rec.RESOLUCIONES.includes(d.resol), 'Elija la resolución');
       const servicio = BD.esServicio(l.art), o = BD.oc(r.oc);
+      if (d.resol === 'No procedente') {
+        /* el proveedor no acepta el reclamo: la línea se cierra sin documentos, con el motivo */
+        exigir(String(d.obs || '').trim(), 'Indique por qué no procede');
+        l.resol = 'No procedente'; l.estado = 'Resuelta'; l.obsRes = d.obs;
+        BD.hist(r, 'No procedente · ' + BD.nomArt(l.art), d.obs, 'no');
+        rec._estado(r);
+        g(); return r;
+      }
       exigir(!(servicio && d.resol !== 'Nota de crédito'), 'Un servicio no se devuelve ni se repone: se resuelve con nota de crédito');
       const base = { alm: l.alm, destino: 'Proveedor · ' + BD.provNom(r.prov), ndoc: r.id, doc: 'Reclamo', modulo: 'Compras', fecha: d.fecha };
       if (d.resol === 'Reposición' || d.resol === 'Devolución') {
@@ -100,7 +118,7 @@
         base.alm = l.alm;
         exigir(BD.alm(l.alm), 'Elija el almacén desde donde se devuelve ' + BD.nomArt(l.art));
         const s = Stock.salida(Object.assign({}, base, { det: 'Salida - Devolución a proveedor', tipoMov: 'SAL-DEVPROV', concepto: '11 · Devolución / cambio a proveedor',
-          obs: r.id + ' · ' + l.motivo + (d.resol === 'Reposición' ? ' · el proveedor repone' : ' · con nota de crédito'), lineas: [{ art: l.art, cant: l.cant, bloquear: true }] }));
+          obs: r.id + ' · ' + l.motivo + (d.resol === 'Reposición' ? ' · el proveedor repone' : ' · con nota de crédito'), lineas: [{ art: l.art, cant: l.cant, lote: l.lote || '', bloquear: true }] }));
         exigir(s.ok, s.error);
         l.docs.push(s.mov.id); l.costo = (s.mov.lineas[0] || {}).costo || 0;
       }

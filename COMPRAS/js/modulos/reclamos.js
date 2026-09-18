@@ -45,12 +45,14 @@ function renderRecForm(){
   const show=(id,v)=>{document.getElementById(id).style.display=v?'inline-block':'none'};
   show('rec-b-guardar',nuevo); show('rec-b-oc',nuevo&&!d.of); show('rec-b-additem',nuevo&&!!d.oc&&!d.of); show('rec-b-anular',!nuevo&&r.estado==='Registrado');
   if(nuevo){
-    document.getElementById('rec-head').innerHTML='<tr><th>Código</th><th>Artículo / servicio</th><th>Unidad</th><th style="width:110px;text-align:right">Cantidad</th><th style="width:260px">Motivo</th><th style="width:40px"></th></tr>';
-    document.getElementById('rec-items').innerHTML=d.lineas.map((l,i)=>'<tr><td>'+l.art+'</td><td>'+coEsc(BD.nomArt(l.art))+'</td><td>'+BD.u(l.art)+'</td>'+
+    document.getElementById('rec-head').innerHTML='<tr><th>Código</th><th>Artículo / servicio</th><th>Unidad</th><th style="width:110px;text-align:right">Cantidad</th><th style="width:170px">Lote (opcional)</th><th style="width:260px">Motivo</th><th style="width:40px"></th></tr>';
+    document.getElementById('rec-items').innerHTML=d.lineas.map((l,i)=>{const av=Docs.rec.avisoUmbral(d.oc,l.art,l.cant);
+      return '<tr'+(av?' style="background:#FFFBEB"':'')+'><td>'+l.art+'</td><td>'+coEsc(BD.nomArt(l.art))+(av?'<br><span class="hint" style="color:var(--pendiente)">⚠ '+coEsc(av)+'</span>':'')+'</td><td>'+BD.u(l.art)+'</td>'+
       '<td><input value="'+l.cant+'" style="text-align:right" onchange="REC.lineas['+i+'].cant=Math.min('+l.max+',Math.max(0,parseFloat(this.value)||0));renderRecForm()"><span class="hint">máx. '+fmtQ2(l.max)+'</span></td>'+
+      '<td>'+recLoteSel(l,i)+'</td>'+
       '<td><select onchange="REC.lineas['+i+'].motivo=this.value"><option value="">Seleccionar…</option>'+Docs.rec.MOTIVOS.map(m=>'<option'+(l.motivo===m?' selected':'')+'>'+m+'</option>').join('')+'</select></td>'+
-      '<td>'+(d.of?'':'<button class="btn-link" onclick="REC.lineas.splice('+i+',1);renderRecForm()">✕</button>')+'</td></tr>').join('')||
-      '<tr><td colspan="6" style="text-align:center;color:var(--texto-sec);padding:12px">'+(d.oc?'Agregue lo que se reclama':'Primero vincule la OC')+'</td></tr>';
+      '<td>'+(d.of?'':'<button class="btn-link" onclick="REC.lineas.splice('+i+',1);renderRecForm()">✕</button>')+'</td></tr>';}).join('')||
+      '<tr><td colspan="7" style="text-align:center;color:var(--texto-sec);padding:12px">'+(d.oc?'Agregue lo que se reclama':'Primero vincule la OC')+'</td></tr>';
     document.getElementById('rec-hist').innerHTML='';
     return;
   }
@@ -61,7 +63,7 @@ function renderRecForm(){
     const srv=BD.esServicio(l.art);
     let res;
     if(!l.resol&&abierto){
-      const ops=srv?['Nota de crédito']:Docs.rec.RESOLUCIONES;
+      const ops=srv?['Nota de crédito','No procedente']:Docs.rec.RESOLUCIONES;
       res='<div style="display:flex;gap:6px;flex-wrap:wrap"><select id="rec-res-'+i+'">'+ops.map(o=>'<option>'+o+'</option>').join('')+'</select>'+
         '<button class="btn btn-primary btn-sm" onclick="resolverRec('+i+')">Aplicar</button></div>'+
         (srv?'':'<span class="hint">Reposición y devolución sacan el producto del almacén donde está</span>');
@@ -69,8 +71,8 @@ function renderRecForm(){
       res=l.resol+'<br><button class="btn btn-primary btn-sm" onclick="reponerRec('+i+')">Registrar reposición</button>';
     }else if(l.estado==='Espera nota de crédito'){
       res=l.resol+'<br><button class="btn btn-primary btn-sm" onclick="nuevaNC({rec:\''+r.id+'\',recLinea:'+i+'})">Registrar nota de crédito</button>';
-    }else res=l.resol||'<span class="hint">—</span>';
-    return '<tr><td><b>'+l.art+'</b><br><span class="hint">'+coEsc(BD.nomArt(l.art))+'</span></td><td style="text-align:right">'+fmtQ2(l.cant)+' '+BD.u(l.art)+(l.alm?'<br><span class="hint">'+l.alm+'</span>':'')+'</td>'+
+    }else res=(l.resol||'<span class="hint">—</span>')+(l.obsRes?'<br><span class="hint">'+coEsc(l.obsRes)+'</span>':'');
+    return '<tr><td><b>'+l.art+'</b><br><span class="hint">'+coEsc(BD.nomArt(l.art))+(l.lote?' · lote '+coEsc(l.lote):'')+'</span></td><td style="text-align:right">'+fmtQ2(l.cant)+' '+BD.u(l.art)+(l.alm?'<br><span class="hint">'+l.alm+'</span>':'')+'</td>'+
       '<td>'+coEsc(l.motivo)+'</td><td>'+res+'</td><td>'+l.docs.map(recDocLink).join('<br>')+'</td><td>'+coEsc(l.estado)+'</td></tr>';
   }).join('');
   document.getElementById('rec-hist').innerHTML=(r.hist||[]).slice().reverse().map(h=>'<tr><td style="width:130px">'+h.f+'</td><td style="width:180px">'+coEsc(h.u)+'</td><td>'+coEsc(h.a)+'</td><td class="hint">'+coEsc(h.d)+'</td></tr>').join('');
@@ -102,8 +104,21 @@ function guardarRec(){
   toast('Reclamo '+r.id+' registrado: elija la resolución de cada línea');
   abrirRec(r.id); renderRec();
 }
+/* lote opcional de la línea: solo artículos con control de lote (N7) */
+function recLoteSel(l,i){
+  if(!Stock.conLote(l.art))return '<span class="hint">no aplica</span>';
+  const lotes=Stock.lotes(l.art);
+  return '<select onchange="REC.lineas['+i+'].lote=this.value"><option value="">(sin indicar)</option>'+lotes.map(x=>'<option'+(l.lote===x.id?' selected':'')+'>'+x.id+'</option>').join('')+'</select>';
+}
 function resolverRec(i){
   const resol=document.getElementById('rec-res-'+i).value;
+  if(resol==='No procedente'){
+    coPedirMotivo('No procedente','El proveedor no acepta el reclamo de esta línea: se cierra sin documentos.',obs=>{
+      const r=coTry(()=>Docs.rec.resolver(RECid,i,{resol,obs})); if(!r)return;
+      toast('Línea cerrada como No procedente'); renderRecForm(); renderRec();
+    },'Cerrar como no procedente');
+    return;
+  }
   const r=coTry(()=>Docs.rec.resolver(RECid,i,{resol}));
   if(!r)return;
   const l=r.lineas[i];

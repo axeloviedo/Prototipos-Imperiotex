@@ -104,8 +104,9 @@ function registrarCCD(){
 }
 /* modal de motivo compartido por CO-11, CO-12 y CO-14 */
 let CO_MOTIVO_FN=null;
-function coPedirMotivo(titulo,texto,fn){
+function coPedirMotivo(titulo,texto,fn,txtBoton){
   CO_MOTIVO_FN=fn; document.getElementById('co-motivo-tit').textContent=titulo;
+  document.getElementById('co-motivo-ok').textContent=txtBoton||'Anular';
   document.getElementById('co-motivo-txt').textContent=texto||''; document.getElementById('co-motivo').value='';
   openModal('m-co-motivo');
 }

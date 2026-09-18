@@ -101,7 +101,7 @@ Vistas.modales(String.raw`
       <p class="hint" id="co-motivo-txt" style="margin-bottom:8px"></p>
       <div class="field wide"><label>Motivo (obligatorio)</label><textarea id="co-motivo" rows="3"></textarea></div>
     </div>
-    <div class="modal-f"><button class="btn btn-secondary" onclick="closeModal('m-co-motivo')">Cancelar</button><button class="btn btn-danger" onclick="coMotivoOk()">Anular</button></div>
+    <div class="modal-f"><button class="btn btn-secondary" onclick="closeModal('m-co-motivo')">Cancelar</button><button class="btn btn-danger" id="co-motivo-ok" onclick="coMotivoOk()">Anular</button></div>
   </div>
 </div>
 
