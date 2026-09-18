@@ -40,9 +40,10 @@
 |---|---|---|---|---|
 | Listar listas y ofertas | `GET /price-lists?type=&currency=` | ver_venta | — | — |
 | Crear / editar lista u oferta | `POST /price-lists` · `PUT /price-lists/{code}` | editar_precios | Nombre único; moneda; sede y segmento opcionales; oferta con fecha desde ≤ hasta | 400, 409 DUPLICATE |
-| Agregar artículos o grupo | `POST /price-lists/{code}/rows` | editar_precios | Precio > 0 **o** % entre 0 y 100; grupo solo con %; única (artículo, UM) o (grupo) | 400, 409 DUPLICATE |
-| Cambiar / quitar fila | `PUT` · `DELETE /price-lists/{code}/rows/{id}` | editar_precios | Los documentos creados no cambian | 404 |
-| Quitar lista | `DELETE /price-lists/{code}` | editar_precios | Los documentos creados no cambian | 404 |
+| Agregar artículos o grupo | `POST /price-lists/{code}/rows` | editar_precios | Obligatorio precio > 0 **o** % entre 0 y 100 (nunca 0 y 0, ni los dos); grupo solo con %; única (artículo, UM) o (grupo); lista no cancelada | 400, 409 DUPLICATE, 409 CANCELLED |
+| Cambiar / retirar fila | `PUT` · `DELETE /price-lists/{code}/rows/{id}` | editar_precios | Sin dejar la fila en 0; el retiro queda en el historial con usuario y valor anterior; los documentos creados no cambian | 400, 404, 409 CANCELLED |
+| **Cancelar** lista u oferta (no se borra) | `POST /price-lists/{code}/cancel` `{reason}` | editar_precios | Motivo obligatorio; guarda usuario (del token) y fecha; deja de aplicarse; no se reactiva | 400, 404, 409 CANCELLED |
+| Historial | `GET /price-lists/{code}/history` | ver_venta | Acción, detalle, usuario, fecha | 404 |
 | **Resolver precio** | `GET /prices/resolve?article=&unit=&site=&customerType=&currency=` | ver_venta | Oferta vigente → sede+tipo → sede → tipo → general → sugerido (solo PEN); `&date=` opcional. Devuelve `{price, source, list, offer, listPrice}` | 404 NO-PRICE |
 | Datos de venta del artículo | `PUT /sale-articles/{code}` | editar_precios | precioMínimo ≤ sugerido; dctoMín ≤ dctoMáx ≤ 100 | 400, 422 |
 | Disponibilidad | `GET /stock/availability?article=&warehouse=&quantity=` | ver_existencias | `{onHand, committed, available, control}` desde logística | 503 |

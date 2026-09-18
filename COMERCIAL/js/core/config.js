@@ -4,6 +4,19 @@
 const Listas = {
   _ed() { Store.exigir('editar_precios', 'modificar listas de precios y ofertas'); },
   get(cod) { const L = Precios.lista(cod); if (!L) throw new Error('Lista no encontrada'); return L; },
+  /* una lista cancelada ya no se modifica (LP6) */
+  _abierta(cod) { const L = Listas.get(cod); if (L.cancelada) throw new Error('La lista ' + L.cod + ' está cancelada: no se modifica'); return L; },
+  _desc(f) { return f.grupo ? 'grupo ' + M.grupoNom(f.grupo) : f.art + ' ' + (f.um || 'todas las unidades'); },
+  _val(f) { return f.precio > 0 ? 'precio ' + UI.n(f.precio) : f.pct > 0 ? UI.n(f.pct) + ' %' : 'sin valor'; },
+  /* precio fijo O % de descuento, nunca ninguno (LP7) */
+  _valor(v) {
+    const pct = v.pct === '' || v.pct == null ? null : Number(v.pct), precio = v.precio === '' || v.precio == null ? null : Number(v.precio);
+    if (pct != null && precio != null) throw new Error('Escriba precio fijo O % de descuento, no los dos');
+    if (pct == null && precio == null) throw new Error('Indique el precio fijo o el % de descuento: una lista no guarda artículos con precio 0 y descuento 0');
+    if (pct != null && (isNaN(pct) || !(pct > 0) || pct >= 100)) throw new Error('El descuento debe ser mayor que 0 y menor que 100 %');
+    if (precio != null && (isNaN(precio) || !(precio > 0))) throw new Error('El precio debe ser mayor que cero');
+    return { pct, precio };
+  },
   guardar(x, cod) {
     Listas._ed();
     const nom = String(x.nom || '').trim();
@@ -16,78 +29,95 @@ const Listas = {
     if (x.desde && x.hasta && UI.aFecha(x.hasta) < UI.aFecha(x.desde)) throw new Error('La fecha final no puede ser anterior a la inicial');
     const datos = { nom, mon: x.mon, sede: x.sede || '', tipo: x.tipo || '', desde: x.oferta ? x.desde || '' : '', hasta: x.oferta ? x.hasta || '' : '', activa: x.activa !== false };
     if (cod) {
-      const L = Listas.get(cod);
+      const L = Listas._abierta(cod);
       if (L.mon !== datos.mon && L.filas.some(f => f.precio > 0)) throw new Error('La lista ya tiene precios en ' + L.mon + ': cree otra lista para ' + datos.mon);
-      return Object.assign(L, datos);
+      const cambios = Object.keys(datos).filter(k => String(L[k]) !== String(datos[k])).map(k => k + ': ' + (L[k] === '' ? '—' : L[k]) + ' → ' + (datos[k] === '' ? '—' : datos[k]));
+      Object.assign(L, datos);
+      if (cambios.length) Store.hist(L, 'Datos modificados', cambios.join(' · '));
+      return L;
     }
-    const L = Object.assign({ cod: Store.sig('lpr', 'LP-', 2) }, datos, { filas: [] });
+    const L = Object.assign({ cod: Store.sig('lpr', 'LP-', 2) }, datos, { filas: [], creado: UI.ahora(), creadoPor: Store.usuario().nom });
+    Store.hist(L, Precios.esOferta(L) ? 'Oferta creada' : 'Lista creada', '');
     Precios.listas().push(L);
     return L;
   },
-  quitar(cod) {
+  /* LP6: una lista u oferta NO se borra: se CANCELA con motivo; queda quién, cuándo y por qué. Deja de aplicarse y no se modifica más */
+  cancelar(cod, motivo) {
     Listas._ed();
-    const i = Precios.listas().findIndex(l => l.cod === cod);
-    if (i < 0) throw new Error('Lista no encontrada');
-    return Precios.listas().splice(i, 1)[0];
+    const L = Listas._abierta(cod), m = String(motivo || '').trim();
+    if (m.length < 5) throw new Error('Escriba el motivo de la cancelación');
+    L.cancelada = { u: Store.usuario().nom, f: UI.ahora(), motivo: m };
+    L.activa = false;
+    Store.hist(L, 'Cancelada', m);
+    return L;
   },
-  /* «Agregar artículos»: varios a la vez; v = {um, precio | pct} opcional (un % vale para todas las unidades si no se elige unidad) -> cuántos entraron */
+  /* «Agregar artículos»: varios a la vez con un precio fijo O un % (obligatorio) -> cuántos entraron */
   agregarArts(cod, arts, v) {
     Listas._ed();
-    const L = Listas.get(cod); v = v || {};
-    const pct = v.pct === '' || v.pct == null ? null : Number(v.pct), precio = v.precio === '' || v.precio == null ? null : Number(v.precio);
-    if (pct != null && (!(pct > 0) || pct >= 100)) throw new Error('El descuento debe ser mayor que 0 y menor que 100 %');
-    if (precio != null && !(precio > 0)) throw new Error('El precio debe ser mayor que cero');
-    let n = 0;
+    const L = Listas._abierta(cod); v = v || {};
+    const { pct, precio } = Listas._valor(v);
+    if (precio != null && v.um === '*') throw new Error('Un precio fijo va en una unidad: elija la unidad de venta de cada artículo');
+    const nuevos = [];
     (arts || []).forEach(art => {
       const a = Store.art(art);
       if (!a || !a.venta) return;
-      const um = v.um === '*' ? '' : v.um && Precios.unidades(art).indexOf(v.um) >= 0 ? v.um : (pct != null && !v.um ? '' : Precios.umVenta(art));
+      const um = v.um === '*' ? '' : v.um && Precios.unidades(art).indexOf(v.um) >= 0 ? v.um : Precios.umVenta(art);
       if (L.filas.some(f => f.art === art && (f.um || '') === um)) return;
       const f = { art, um };
-      if (pct != null) f.pct = UI.r2(pct); else if (precio != null && um) f.precio = UI.r2(precio);
-      L.filas.push(f); n++;
+      if (pct != null) f.pct = UI.r2(pct); else f.precio = UI.r2(precio);
+      L.filas.push(f); nuevos.push(f);
     });
-    if (!n) throw new Error('No hay artículos nuevos que agregar con esa selección');
-    return n;
+    if (!nuevos.length) throw new Error('No hay artículos nuevos que agregar con esa selección');
+    Store.hist(L, 'Artículos agregados', nuevos.map(f => Listas._desc(f)).join(', ') + ' · ' + Listas._val(nuevos[0]));
+    return nuevos.length;
   },
-  /* todo un grupo de artículos con un % de descuento */
+  /* todo un grupo de artículos con un % de descuento (vale también para los artículos que se creen después) */
   agregarGrupo(cod, grupo, pct) {
     Listas._ed();
-    const L = Listas.get(cod), p = Number(pct);
+    const L = Listas._abierta(cod), p = pct === '' || pct == null ? NaN : Number(pct);
     if (!grupo) throw new Error('Elija el grupo de artículos');
     if (!(p > 0) || p >= 100) throw new Error('Un grupo entra con % de descuento: mayor que 0 y menor que 100 %');
     if (L.filas.some(f => f.grupo === grupo)) throw new Error('El grupo ya está en la lista: cambie su %');
-    L.filas.push({ grupo, pct: UI.r2(p) });
+    const f = { grupo, pct: UI.r2(p) };
+    L.filas.push(f);
+    Store.hist(L, 'Grupo agregado', Listas._desc(f) + ' · ' + Listas._val(f));
     return L;
   },
-  /* cambia una fila: precio (quita el %), pct (quita el precio) o um */
+  /* cambia una fila: precio (quita el %), pct (quita el precio) o um. La fila nunca queda sin precio ni % (LP7) */
   fila(cod, i, campo, val) {
     Listas._ed();
-    const L = Listas.get(cod), f = L.filas[i];
+    const L = Listas._abierta(cod), f = L.filas[i];
     if (!f) throw new Error('Fila no encontrada');
+    const antes = Listas._desc(f) + ' · ' + Listas._val(f);
     if (campo === 'um') {
       if (f.grupo) throw new Error('Un grupo vale para todas las unidades');
       if (val === '' && !(f.pct > 0)) throw new Error('«Todas las unidades» solo con % de descuento');
       if (L.filas.some((x, k) => k !== i && x.art === f.art && (x.um || '') === val)) throw new Error('El artículo ya está en la lista con esa unidad');
-      f.um = val; return f;
+      f.um = val;
+    } else {
+      const n = val === '' || val == null ? 0 : Number(val);
+      if (isNaN(n) || n < 0) throw new Error('Ingrese un número mayor que cero');
+      if (!(n > 0)) throw new Error('El artículo debe tener precio fijo o % de descuento: no se guarda con 0 (si no va, quítelo de la lista)');
+      if (campo === 'precio') {
+        if (f.grupo) throw new Error('Un grupo lleva % de descuento, no precio');
+        if (!f.um) throw new Error('Elija la unidad del precio');
+        delete f.pct; f.precio = UI.r2(n);
+      } else if (campo === 'pct') {
+        if (n >= 100) throw new Error('El descuento debe ser menor que 100 %');
+        delete f.precio; f.pct = UI.r2(n);
+      }
     }
-    const n = val === '' ? null : Number(val);
-    if (n != null && (isNaN(n) || n < 0)) throw new Error('Ingrese un número mayor o igual a cero');
-    if (campo === 'precio') {
-      if (f.grupo) throw new Error('Un grupo lleva % de descuento, no precio');
-      if (n > 0 && !f.um) throw new Error('Elija la unidad del precio');
-      delete f.pct; if (n > 0) f.precio = UI.r2(n); else delete f.precio;
-    } else if (campo === 'pct') {
-      if (n != null && n >= 100) throw new Error('El descuento debe ser menor que 100 %');
-      delete f.precio; if (n > 0) f.pct = UI.r2(n); else delete f.pct;
-    }
+    Store.hist(L, 'Artículo modificado', antes + ' → ' + Listas._desc(f) + ' · ' + Listas._val(f));
     return f;
   },
+  /* sacar un artículo o grupo de la lista: queda en el historial quién lo sacó y con qué valor estaba */
   quitarFila(cod, i) {
     Listas._ed();
-    const L = Listas.get(cod);
-    if (!L.filas[i]) throw new Error('Fila no encontrada');
-    return L.filas.splice(i, 1)[0];
+    const L = Listas._abierta(cod), f = L.filas[i];
+    if (!f) throw new Error('Fila no encontrada');
+    L.filas.splice(i, 1);
+    Store.hist(L, 'Artículo retirado', Listas._desc(f) + ' · estaba con ' + Listas._val(f));
+    return f;
   }
 };
 

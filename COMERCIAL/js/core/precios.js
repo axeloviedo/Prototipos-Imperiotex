@@ -42,6 +42,7 @@ const Precios = {
   },
   /* Activa · Inactiva, y en las ofertas Programada · Vigente · Vencida */
   estado(L, fecha) {
+    if (L.cancelada) return 'Cancelada';
     if (!L.activa) return 'Inactiva';
     if (!Precios.esOferta(L)) return 'Activa';
     const f = UI.aFecha((fecha || UI.hoy()).slice(0, 10));
@@ -51,11 +52,11 @@ const Precios = {
   },
   /* ¿la lista vale para este documento? misma moneda, su sede (o todas), su segmento (o todos), activa y en fecha */
   aplica(L, sede, tipo, mon, fecha) {
-    return !!L.activa && L.mon === mon && (!L.sede || L.sede === sede) && (!L.tipo || L.tipo === tipo) && Precios.enFechas(L, fecha);
+    return !!L.activa && !L.cancelada && L.mon === mon && (!L.sede || L.sede === sede) && (!L.tipo || L.tipo === tipo) && Precios.enFechas(L, fecha);
   },
   /* fila de la lista para el artículo y la unidad: la del artículo en esa unidad → la del artículo en su unidad de inventario (× factor)
      → la del artículo con % para todas las unidades → la de su grupo. -> {f, por} o null */
-  filaDe(L, art, um) {
+  filaDe(L, art, um) {  /* una fila sin precio ni % no cuenta (LP7) */
     const a = Store.art(art), fs = (L.filas || []).filter(f => f.precio > 0 || f.pct > 0);
     if (!a) return null;
     const exacta = fs.find(f => f.art === art && f.um === um);

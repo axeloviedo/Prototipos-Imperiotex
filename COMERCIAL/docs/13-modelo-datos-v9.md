@@ -59,6 +59,10 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | tipo_cliente | FK, nulo | Segmento; nulo = todos | `client_segment_id` |
 | valida_desde · valida_hasta | fecha, nulo | Con fechas es una **oferta**; hasta nulo = sin fin | — |
 | activa | bool | | — |
+| creada_por · creada_en | usuario · fecha | | — |
+| cancelada_por · cancelada_en · motivo_cancelacion | usuario · fecha · texto, nulos | **No se borra: se cancela** (LP6) | — |
+
+**lista_precio_historial** · lista, accion, detalle (anterior → nuevo), usuario, fecha. Toda modificación de la lista y sus filas (LP6).
 
 **lista_precio_fila** · una por (lista, articulo, um) o por (lista, grupo)
 
@@ -68,7 +72,7 @@ lista_precio >── articulo      caja >── sede      sede >── almacen  
 | articulo | FK → Artículo, nulo | | `product_id` / `service_id` |
 | grupo | FK → Grupo de artículo, nulo | Solo con % | — |
 | um | FK → UM, nulo | Nulo = todas las unidades (solo con %) | `unit_id` |
-| precio | decimal, nulo | Incluye IGV. Precio **o** % | `price_general` |
+| precio | decimal, nulo | Incluye IGV. Precio **o** %: uno de los dos es obligatorio (LP7) | `price_general` |
 | pct_descuento | decimal, nulo | Sobre el precio de la lista menos específica (o de lista, en una oferta) | — |
 
 Resolución: oferta vigente → sede+tipo → sede → tipo → general → `articulo.precio_sugerido` (solo PEN). La línea del documento guarda `precio`, `origen`, `lista`, `oferta` y `precio_lista`.

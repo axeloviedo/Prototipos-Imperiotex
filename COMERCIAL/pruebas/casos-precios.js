@@ -56,7 +56,7 @@ prueba('mantenimiento: nueva oferta, agregar artículos y grupo, precio o %', ()
   Listas.agregarGrupo(L.cod, 'PT', 5);
   igual(P('PT-0002', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '02/11/2026'), 113.91, 'grupo −5 %');
   falla(() => Listas.agregarArts(L.cod, ['PT-0003'], { pct: 30 }), 'No hay artículos nuevos');
-  Listas.quitar(L.cod);
+  Listas.cancelar(L.cod, 'Prueba terminada');
 });
 prueba('validaciones y permiso', () => {
   falla(() => Listas.guardar({ nom: 'Mayorista', mon: 'PEN' }), 'Ya existe');
@@ -116,4 +116,29 @@ prueba('la lista es por sede: el documento lleva su tienda a la sede; no se acep
   const L = Precios.lista('LP-05'); L.sede = 'TDA-02';
   Store.completarBase();
   igual(L.sede, 'DAM', 'una base guardada con la tienda pasa a la sede');
+});
+
+prueba('un artículo no entra ni queda con precio 0 y descuento 0', () => {
+  const L = Listas.guardar({ nom: 'Prueba sin valor', mon: 'PEN' });
+  falla(() => Listas.agregarArts(L.cod, ['PT-0001'], {}), 'precio fijo o el % de descuento');
+  falla(() => Listas.agregarArts(L.cod, ['PT-0001'], { precio: 0 }), 'mayor que cero');
+  falla(() => Listas.agregarArts(L.cod, ['PT-0001'], { precio: 100, pct: 10 }), 'no los dos');
+  igual(Listas.agregarArts(L.cod, ['PT-0001'], { precio: 100 }), 1, 'con precio sí');
+  falla(() => Listas.fila(L.cod, 0, 'precio', 0), 'no se guarda con 0');
+  falla(() => Listas.fila(L.cod, 0, 'pct', ''), 'no se guarda con 0');
+  igual(L.filas[0].precio, 100, 'sigue con su precio');
+  Listas.cancelar(L.cod, 'Prueba terminada');
+});
+prueba('la lista no se borra: se cancela con motivo y queda quién, cuándo y por qué', () => {
+  const L = Listas.guardar({ nom: 'Prueba cancelar', mon: 'PEN', sede: 'YA' });
+  Listas.agregarArts(L.cod, ['PT-0003'], { precio: 50 });
+  igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 50, 'aplica antes de cancelar');
+  falla(() => Listas.cancelar(L.cod, ''), 'motivo');
+  Listas.cancelar(L.cod, 'Precio equivocado');
+  igual([L.cancelada.u, L.cancelada.motivo, Precios.estado(L), !!Precios.lista(L.cod)], [Store.usuario().nom, 'Precio equivocado', 'Cancelada', true], 'evidencia');
+  igual(P('PT-0003', 'UND', 'TDA-01', 'MINORISTA', 'PEN', '15/08/2026'), 124.90, 'ya no aplica');
+  falla(() => Listas.agregarArts(L.cod, ['PT-0004'], { precio: 50 }), 'cancelada');
+  falla(() => Listas.guardar({ nom: 'Prueba cancelar', mon: 'PEN', activa: true }, L.cod), 'cancelada');
+  igual(L.hist.map(h => h.a), ['Lista creada', 'Artículos agregados', 'Cancelada'], 'historial');
+  igual(typeof Listas.quitar, 'undefined', 'no existe borrar');
 });

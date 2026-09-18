@@ -57,7 +57,7 @@
 | CL-39 | Modal | Agregar artículos o servicios | `BUS.articulo` | `js/modules/buscador.js` |
 | CL-40 | Pantalla | Listas de precios y ofertas (listado y Probar precio; el detalle se abre en CL-50) | `cm08` | `js/modules/listas.js` |
 | CL-41 | Modal | Nueva lista, nueva oferta o editar sus datos | `CM08.editar` | `js/modules/listas.js` |
-| CL-42 | Modal | Quitar lista u oferta | `CM08.quitar` | `js/modules/listas.js` |
+| CL-42 | Modal | Cancelar lista u oferta (con motivo; queda quién y cuándo; no se borra) | `CM08.cancelar` | `js/modules/listas.js` |
 | CL-43 | Pantalla | Artículos de venta | `cm09` | `js/modules/listas.js` |
 | CL-44 | Modal | Datos de venta del artículo | `CM09.editar` | `js/modules/listas.js` |
 | CL-45 | Pantalla | Configuración comercial (parámetros, cajas, series, medios de pago, perfiles y permisos) | `cm10` | `js/modules/configuracion.js` |
@@ -65,7 +65,8 @@
 | CL-47 | Pantalla | Recepción de mercadería (Solicitudes de Transferencia que llegan a su sede: Por recibir / Recibidas) | `cm14` | `js/modules/recepciones.js` |
 | CL-48 | Modal | Recibir mercadería (cantidades que llegaron, total o incompleta; llama a `Docs.trf.recibir`, igual que GI-11) | `CM14.recibir` | `js/modules/recepciones.js` |
 | CL-49 | Modal | Agregar artículos (varios a la vez) o un grupo completo a una lista u oferta | `CM08.agregar` | `js/modules/listas.js` |
-| CL-50 | Modal | Detalle de la lista u oferta: datos, artículos o grupos con precio fijo o %, agregar y quitar | `CM08.ver` | `js/modules/listas.js` |
+| CL-50 | Modal | Detalle de la lista u oferta: datos, artículos o grupos con precio fijo o %, agregar, retirar, cancelar e historial | `CM08.ver` | `js/modules/listas.js` |
+| CL-51 | Modal | Agregar un grupo de artículos completo con % de descuento | `CM08.agregarGrupo` | `js/modules/listas.js` |
 
 ## Equivalencia con los códigos anteriores
 
@@ -87,4 +88,4 @@
 
 ## Regla para pantallas nuevas
 
-Se toma el siguiente número libre (CL-51, CL-52, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.
+Se toma el siguiente número libre (CL-52, CL-53, …). No se reutiliza un código dado de baja. Toda pantalla o modal nuevo se agrega a esta tabla.
