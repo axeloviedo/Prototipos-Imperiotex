@@ -179,12 +179,35 @@ const Stock = {
   },
   /* diferencia de costo al cerrar una orden: se reparte en el costo promedio de lo que hay */
   revalorizar(alm, art, monto) { const f = Stock.fila(alm, art); if (f.act > 0) f.costo = BD.r4(f.costo + monto / f.act); },
+  /* Revalorización (C-3): cambia el VALOR de lo que hay en el almacén sin mover cantidades (costos de destino, descuento del proveedor).
+     Queda como movimiento REV-000001 en el Kardex. Lo que no se puede aplicar porque ya no hay stock va a Variación de existencias (concepto 04).
+     o = {det, alm, ndoc, doc, modulo, obs, concepto, fecha, lineas:[{art, monto}]} → {ok, mov, variacion:[{art, monto}]} */
+  revalorizacion(o) {
+    if (!BD.alm(o.alm)) return { ok: false, error: 'Almacén no válido: ' + o.alm };
+    const lin = (o.lineas || []).filter(l => Math.abs(Number(l.monto) || 0) > 0.004 && Stock.inventariable(l.art));
+    if (!lin.length) return { ok: false, error: 'No hay importes que revalorizar' };
+    const mov = {
+      tipoMov: 'REV-COSTO', grupoMov: 'REV', tipoMovNom: 'Revalorización del costo', id: BD.sig('rev', 'REV-', 6), emp: BD.empresaDe(o.alm), tipo: 'Revalorización',
+      det: o.det || 'Revalorización del costo', concepto: o.concepto || '', fecha: o.fecha || BD.ahora(), usuario: o.usuario || BD.usuario, modulo: o.modulo || '',
+      est: 'Confirmado', alm: o.alm, od: o.alm, ndoc: o.ndoc || '', doc: o.doc || '', obs: o.obs || '', lineas: [], valor: 0
+    };
+    const variacion = [];
+    lin.forEach(l => {
+      const f = Stock.fila(o.alm, l.art), monto = BD.r2(l.monto);
+      if (f.act <= 0.00005) { variacion.push({ art: l.art, monto }); return; }
+      f.costo = BD.r4(Math.max(0, f.costo + monto / f.act));
+      mov.lineas.push({ art: l.art, cant: 0, costo: f.costo, valor: monto, alm: o.alm, signo: monto >= 0 ? 1 : -1, saldo: f.act, reval: true });
+      mov.valor = BD.r2(mov.valor + monto);
+    });
+    if (mov.lineas.length) BD.d.movs.unshift(mov);
+    return { ok: true, mov: mov.lineas.length ? mov : null, variacion };
+  },
 
   kardex(art, alm) {
     const filas = [];
     BD.d.movs.slice().reverse().forEach(m => m.lineas.forEach(l => {
       if (l.art !== art || (alm && l.alm !== alm)) return;
-      filas.push({ fecha: m.fecha, id: m.id, tipo: m.tipo, det: m.det, ndoc: m.ndoc, alm: l.alm, lote: l.lote || '', ent: l.signo > 0 ? l.cant : 0, sal: l.signo < 0 ? l.cant : 0, costo: l.costo, valor: l.valor, saldo: l.saldo });
+      filas.push({ fecha: m.fecha, id: m.id, tipo: m.tipo, det: m.det, ndoc: m.ndoc, alm: l.alm, lote: l.lote || '', ent: l.signo > 0 ? l.cant : 0, sal: l.signo < 0 ? l.cant : 0, costo: l.costo, valor: l.valor, saldo: l.saldo, reval: !!l.reval });
     }));
     return filas;
   },

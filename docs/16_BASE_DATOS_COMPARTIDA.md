@@ -36,7 +36,8 @@ Cada módulo, al arrancar: `BD.iniciar('USER05 · Producción')` (fija el usuari
 
 ```
 { version, escenario: 'maestros'|'operacion', creado, seq: {serie: siguiente},
-  maestros: {...}, stock: [], movs: [], lotes: [], sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], config: {nombreRef},
+  maestros: {...}, stock: [], movs: [], lotes: [], sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [],
+  recs: [], ncs: [], ccds: [], config: {nombreRef},
   ...colecciones propias de un área (declaradas en BD_LOGISTICA / BD_COMERCIAL) }
 ```
 
@@ -99,6 +100,7 @@ Al crear órdenes, Producción junta en una sola orden de crudo (y de piezas cor
 - `stock`: `{alm, art, act, comp, ped, costo}` — Actual, Comprometido y Pedido (T1). Disponible = `act − comp` (el Pedido es informativo). Costo promedio ponderado por almacén. `Stock.pedido(alm, art, cant, signo)`, `Stock.ped(alm, art)`.
 - `movs`: `{id:'ING-000001'|'SAL-…'|'TRF-…', emp, tipo:'Ingreso'|'Salida'|'Transferencia', det, concepto, fecha, usuario, modulo, est, alm, destino?, od, ndoc, doc, obs, valor, lineas:[{art, cant, costo, valor, alm, signo:+1|-1, saldo, lote?}]}`.
 - `lotes` (N7): `{id:'L2026-MP-0070-0001', art, emp, fecha, vence, origen, saldos:{almacén: cantidad}}`. Solo de artículos con control «Lote»: cada **ingreso** crea su lote; salidas, emisiones y transferencias consumen el lote elegido o **el más antiguo**. El costo sigue siendo el promedio del almacén: el lote es trazabilidad. `Stock.conLote(art)`, `Stock.lotes(art, alm)`, `Stock.lote(id)`, `Stock.saldoLote(id, alm)`.
+- **Revalorización** (P5): `movs` con `tipo:'Revalorización'`, id `REV-000001`, grupo `REV`: líneas con `cant: 0`, `valor` (+/−) y el nuevo `costo`. `Stock.revalorizacion({alm, lineas:[{art, monto}], …})` devuelve `{ok, mov, variacion}`: lo que no se aplica por falta de stock va a variación de existencias (04).
 - **Empresa** (N3): cada movimiento y cada documento nace con `emp`, la empresa de su almacén (`BD.empresaDe(alm)`) o, si no tiene almacén, la empresa activa `BD.empresa`, que fija el selector de la barra superior.
 - Cada movimiento lleva `tipoMov` (código de `tiposMovimiento`), `grupoMov` y `tipoMovNom`. Se pasa en `o.tipoMov`; si falta se usa ING-INICIAL / SAL-USOPROD / TRF-INTERNO. **No existe el grupo Ajuste (J1)**: regularizar es ING-REGULARIZ o SAL-REGULARIZ con motivo y observación; producto fallado es SAL-FALLADO + ING-FALLADO (J2).
 - Tipos por paso: compra recibida **ING-COMPRA** (extranjero **ING-IMPORT**) · recepción no conforme **ING-OBSERV** · emisión a producción **SAL-USOPROD** · consumo de material en poder del proveedor **SAL-MAQUILA** · recibo de producción **ING-PROD** · envío al servicio tercerizado **TRF-FABRIC** · abastecimiento o traslado entre sedes **TRF-INTERNO** · reposición a tienda **TRF-REPTIENDA** · entre tiendas **TRF-ENTRETIENDA** · a liquidación **TRF-LIQUID** · venta **SAL-VENTA** · devolución de cliente **ING-DEVCLI** · devolución a proveedor **SAL-DEVPROV** · reposición del proveedor **ING-CAMBIO** · cancelación de servicio **ING-CANCEL** · carga inicial **ING-INICIAL**.
@@ -115,7 +117,7 @@ Estados: Borrador → Pendiente → Aprobada (Logística define el propósito po
 `Docs.sol.crear(d, enviar)/guardar/enviar/aprobar(id, [{prop, origen}])/rechazar/anular/transferir(id, origen)` (crea una Solicitud de Transferencia aprobada) `/crearOC(id, {prov, precios})`.
 Una línea puede ser un **servicio** (SRV-xxxx): solo se compra.
 
-**Orden de Compra** `ocs`: `{id:'OC-000001', est, tipo:'Bienes'|'Servicio', fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer, items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}`
+**Orden de Compra** `ocs`: `{id:'OC-000001', emp, est, fecha, prov, cond, mon, tc, ref, obs, sol, of, sf, almDestino, valLog, valGer, items:[{art, cant, pu, igv, recq, facq}], recepciones:[{tipo:'Ingreso'|'Conformidad', fecha, mov?, alm?, lineas}], facturas:[ids], hist}` — sin tipo, organización ni grupo de compras (N14, N16): una OC puede llevar bienes y servicios; la moneda es libre (N15)
 Estados: Borrador → Pendiente de Validar → Para Recibir y Pagar (V°B° + aprobación) → Para Pagar | Para Recibir → Completada · Cancelada.
 `Docs.oc.crear/guardar/enviar/validar/aprobar/cancelar/recibir(id, {alm, lineas})` (bienes: Ingreso) `/conformidad(id, {lineas, conforme})` (servicio: sin stock) `/avance/totales`.
 Si la OC tiene `of` y es de servicio: al aprobarse se agrega `{tipo:'OC'}` a `of.compras`; al facturarse `{tipo:'Factura'}` (pestaña Costo de la orden, contraste con el estándar).
@@ -157,7 +159,13 @@ Correlativos compartidos (`BD.sig`): `sf, sol, oc, fac, gre, ing, sal, trf, of, 
 - Producción: todas (PR-01 … PR-12).
 - Comercial: todas; el stock y los artículos de venta salen de la base.
 
-**Fuera de este alcance** (siguen con sus datos de ejemplo, marcadas «Datos de ejemplo · no conectado a la base»): CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino y CO-15 sugerido, que se conectan en la revisión N9. GI-18 rotación y GI-19 series ya trabajan sobre la base (N8).
+Todas las pantallas trabajan sobre la base: GI-18 rotación y GI-19 series (N8) y CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino y CO-15 sugerido (N9, decisiones P1–P6).
+
+**Postventa de Compras** (`COMPARTIDO/bd/compras.js`, se carga después de `documentos.js`):
+- `recs` · `Docs.rec`: `{id:'RCL-000001', emp, fecha, prov, oc, of, obs, estado, lineas:[{art, cant, motivo, resol:'Reposición'|'Devolución'|'Nota de crédito', estado, alm, costo, docs:[]}], hist}` — `crear`, `resolver(id, i, {resol, alm?})`, `reponer(id, i)`, `anular`, `reclamable(oc, art)`.
+- `ncs` · `Docs.nc`: `{id:'NC-000001', emp, prov, fac, oc, ndoc, fecha, motivo:'07'|'05'|'09', rec, recLinea, mon, tc, lineas:[{art, cant, pu, igv}], total, aplicacion:'Factura'|'Saldo a favor', usos:[{fac, monto}], estado, movs, variacion}` — `crear`, `anular`, `saldoFactura(fac)` (descuenta notas y créditos aplicados), `saldoFavor(prov, mon)`, `aplicarSaldo(fac)`; la factura guarda `creditos:[{nc, monto}]`.
+- `ccds` · `Docs.ccd`: `{id:'CD-000001', emp, fecha, ocs:[], base:'Valor'|'Cantidad', costos:[{tipo:'05'..'09', prov, ndoc, mon, tc, monto}], estado, reparto, movs, variacion}` — `crear`, `guardar`, `registrar`, `anular`, `repartir`.
+- `Docs.sug.calcular()` → filas `{art, min, ordenes, ofs, disp, ped, sug, prov, alm}`; `Docs.sug.crearOC(prov, filas, alm)`.
 
 ## 6. Reglas
 

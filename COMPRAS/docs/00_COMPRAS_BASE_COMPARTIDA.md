@@ -17,8 +17,13 @@ Se elige en la barra superior («Datos») y **↺ Reiniciar** deja los 4 módulo
 | CO-07 OC de **servicio** | «Conformidad del servicio» (`Docs.oc.conformidad`), sin movimiento de stock. Si tiene orden de fabricación, la OC aprobada y su factura pasan a la pestaña Costo de la orden (contraste con el costo estándar). |
 | CO-09/10 Facturas | `Docs.fac.crear` desde una OC aprobada (número del proveedor, cantidades pendientes de facturar, precio editable) y `Docs.fac.pagar`. Detracción y retención informativas según el proveedor. |
 
-## Fuera de alcance (datos de ejemplo, con aviso visible «Datos de ejemplo · no conectado a la base»)
-CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerido de compras.
+## Postventa sobre la base (C-3, decisiones P1–P6)
+| Pantalla | Qué hace sobre la base |
+|---|---|
+| CO-11 Reclamos | Reclamo sobre lo recibido de una OC o sobre el **faltante de una orden tercerizada** (aviso en la bandeja con botón «Reclamar»). Resolución por línea: reposición (salida + reingreso), devolución (salida + nota 07), nota de crédito o no procedente (cierra sin documentos, con motivo). Lote opcional por línea. Aviso (no bloquea) si un avío reclamado es menos del 10 % de lo recibido. Cada línea muestra los documentos que generó. |
+| CO-12 Notas de crédito | Contra una factura con motivo SUNAT 07/05/09; desde un reclamo se prellena. Rebaja la factura o, si ya se pagó, queda como saldo a favor (resumen por proveedor en la bandeja). El 05 revaloriza a la baja lo que sigue en stock. |
+| CO-14 Costos de destino | Comprobante sobre OC recibidas con costos 05–09 en S/. o USD, reparto por valor o cantidad; registrar revaloriza (REV-) y anular lo revierte. |
+| CO-15 Sugerido | Cálculo al momento, agrupado por proveedor por defecto, con «Crear OC». |
 
 ## Funciones globales que expone Compras
 `renderProv`, `fillGrupoSelects`, `renderOCS`, `renderFac`, `renderRec`, `renderNC`, `renderPanelCompras`, `renderCCD`, `renderSugerido`, `nuevaOC`, `loadOC(id)` (recibe `OC-000001`), `abrirOC(id)`, `abrirFactura(id)`, `crearFacDesdeOC()`, `elegirProvOC(cod)`, `openCT09()`, `loadProv(cod, modo)`, `eliminarProv(cod)`.
@@ -29,5 +34,5 @@ CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerid
 - **Empresa (N3)**: la OC, la factura y sus movimientos guardan `emp` (coincide con la organización de compras).
 
 ## Pendientes y propuestas
-- Conectar CO-11 reclamos, CO-12 notas de crédito, CO-14 costos de destino y CO-15 sugerido a la base compartida (N9).
+- Saldo a favor (P3): CO-10 avisa en la ficha de una factura impaga si el proveedor tiene saldo a favor y lo aplica con un botón (`Docs.nc.aplicarSaldo`); CO-12 muestra en qué factura se usó cada nota.
 - El código de proveedor sigue siendo «mayor + 1»: el usuario lo dio por bueno para el prototipo (N13).

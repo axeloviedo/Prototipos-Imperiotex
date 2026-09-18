@@ -117,7 +117,7 @@ El maestro de recursos pasó de Gestión de Pedido a Producción y se edita en l
 - **Compra de materia prima**: dos OC de bienes (PROV-0001 telas, PROV-0002 avíos) → V°B° → aprobación → ingreso en SB-CENTRAL-MP → factura; abastecimiento a SB-ZARATE-MP **en dos pasos** (Solicitud de Transferencia TRF-INTERNO: creada y aprobada el 04/07, recepción confirmada el 05/07) con GRE.
 - **SF-000001** (PT-0001 × 40, PT-0002 × 30): **Fabricada**. Piezas, crudo, lavado tercerizado completo (SOL → OC de servicio → envío con GRE → retorno → conformidad → factura, una con S/ 3,00 de diferencia) y terminado en SB-CENTRAL.
 - **Crudo sin color**: una orden manual adelanta 10 crudos T28 (con sus piezas cortadas); la SF-000002 los usa y su orden de crudo T28 es solo por 20.
-- **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 enviado a la lavandería con OC aprobada; lavado T30 con el servicio pedido (SOL pendiente en Logística).
+- **SF-000002** (PT-0003 × 30, PT-0004 × 24): **en curso**. Crudo T30 con 16 de 24 recibidos; lavado T28 devuelto por la lavandería con 26 de 30 prendas y cerrado: el faltante de 4 lo reclama Compras (CO-11) y se cierra con una nota de crédito 09; lavado T30 **cambiado a Lavandería Ecotex**: se enviaron 16 prendas, volvieron las 16 y 6 se reclasificaron como fallado (Compras reclama y Ecotex da un crédito que se aplica a su siguiente factura; guía 17 §4).
 - **SF-000003** (PT-0001..0004 × 20): **aprobada sin órdenes**, con su materia prima comprometida.
 
 ## 10. Revisión N (2026-09-17)

@@ -38,6 +38,7 @@ Vistas.pantallas(String.raw`
     </div>
 
     <div class="card" id="fac-aviso-of" style="display:none;border-left:4px solid var(--primario-claro)"></div>
+    <div class="card" id="fac-favor" style="display:none;border-left:4px solid var(--confirmado)"></div>
 
     <div class="card">
       <b style="font-size:13px">Cabecera del comprobante recibido</b>

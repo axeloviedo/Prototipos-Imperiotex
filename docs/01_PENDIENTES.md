@@ -14,12 +14,12 @@
 - ☑ **N6** Faltante del servicio tercerizado al cerrar la orden + aviso al facturar.
 - ☑ **N7** Lotes por ingreso en artículos con control «Lote», con elección opcional al salir.
 - ☑ **N8** GI-18 Rotación y GI-19 Series sobre la base compartida.
-- ◐ **N9** CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerido: conectar a la base compartida.
+- ☑ **N9** CO-11 Reclamos, CO-12 Notas de crédito, CO-14 Costos de destino y CO-15 Sugerido sobre la base compartida (decisiones **P1–P6**).
 
 ## Prototipo · pendiente
 
-- ☐ **N9** Las cuatro pantallas de Compras de arriba. Cada una necesita su documento en la base y su efecto (reclamo → devolución o reposición; nota de crédito → factura y stock; costos de destino → costo promedio; sugerido → stock, consumo y pedidos).
-- ☐ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) cuando CO-11 esté conectado.
+- ☑ El faltante de una orden tercerizada (N6) se cierra desde el reclamo (CO-11) con su nota de crédito.
+- ☑ Saldo a favor del proveedor: se aplica a su siguiente factura desde CO-10 (P3).
 - ☑ Documentar el **proceso del servicio tercerizado** (N13): artículo SRV, recurso con su costo, proveedor del grupo SRV, almacén en tránsito y alta de un servicio nuevo. → decisiones **O1–O5** en `00_DECISIONES_CERRADAS.md` (2026-09-17).
 
 ## Mejoras futuras (N12, acordadas pero no ahora)
@@ -29,6 +29,7 @@
 - ☐ Lote mínimo o múltiplo de fabricación en el artículo o la lista, si en planta se trabaja por tendidos.
 - ☐ Lote y vencimiento pedidos a mano en el recibo y la emisión de producción (hoy el lote es automático por ingreso y sale el más antiguo).
 - ☐ Producción: cantidades con decimales según la unidad de medida (hoy 4 decimales para todo, N1).
+- ☐ Sugerido de compras (CO-15) por **consumo promedio histórico** (3, 6 o 9 meses) con **holgura %**, como tenía la versión de ejemplo; hoy calcula por stock mínimo y órdenes (P6).
 
 ## Fuera del prototipo, para el desarrollo real
 

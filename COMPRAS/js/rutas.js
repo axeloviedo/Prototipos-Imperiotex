@@ -12,6 +12,7 @@ Object.assign(BC,{
  co10:"Facturas / <b>Factura de Compra</b> · CO-10",
  co11:"<b>Reclamos</b> · CO-11",
  co11f:"Reclamos / <b>Reclamo</b> · CO-11",
- co12:"<b>Notas de Crédito</b> · CO-12"
+ co12:"<b>Notas de Crédito</b> · CO-12",
+ co12f:"Notas de Crédito / <b>Nota de Crédito</b> · CO-12"
 });
-Object.assign(NAVMAP,{co15:"co15",co14:"co14",co14f:"co14",co00:"co00",co01:"co01",co02:"co01",co06:"co06",co07:"co06",co09:"co09",co10:"co09",co11:"co11",co11f:"co11",co12:"co12"});
+Object.assign(NAVMAP,{co15:"co15",co14:"co14",co14f:"co14",co00:"co00",co01:"co01",co02:"co01",co06:"co06",co07:"co06",co09:"co09",co10:"co09",co11:"co11",co11f:"co11",co12:"co12",co12f:"co12"});

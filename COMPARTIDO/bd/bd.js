@@ -8,7 +8,7 @@
 const BD = {
   KEY: 'imperiotex.bd',
   KEY_ESCENARIO: 'imperiotex.bd.escenario',
-  VERSION: 4,
+  VERSION: 5,
   ESCENARIOS: { maestros: 'Solo maestros (empezar de cero)', operacion: 'Con operación (movimientos y saldos)' },
   d: null,
   /* texto del usuario activo que firma movimientos e historiales: cada módulo lo fija al iniciar */
@@ -82,7 +82,7 @@ const BD = {
       seq: {},
       maestros: BD.maestrosIniciales(),
       stock: [], movs: [],
-      sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], lotes: [],
+      sfs: [], sols: [], ocs: [], facturas: [], trfs: [], gres: [], ofs: [], lotes: [], recs: [], ncs: [], ccds: [],
       config: { nombreRef: 'N° Referencia' }
     };
     /* colecciones propias de un área (p. ej. clientes y ventas de Comercial) declaradas en su archivo de datos */
@@ -168,6 +168,9 @@ const BD = {
   sol(id) { return BD.d.sols.find(x => x.id === id); },
   oc(id) { return BD.d.ocs.find(x => x.id === id); },
   fac(id) { return BD.d.facturas.find(x => x.id === id); },
+  reclamo(id) { return (BD.d.recs || []).find(x => x.id === id); },
+  nc(id) { return (BD.d.ncs || []).find(x => x.id === id); },
+  ccd(id) { return (BD.d.ccds || []).find(x => x.id === id); },
   of(id) { return BD.d.ofs.find(x => x.id === id); },
   gre(id) { return BD.d.gres.find(x => x.id === id); },
   trf(id) { return (BD.d.trfs || []).find(x => x.id === id); },

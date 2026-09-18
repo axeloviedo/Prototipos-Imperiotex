@@ -113,6 +113,28 @@ function renderFacForm(){
   document.getElementById('fac-items-hint').style.display=nuevo?"block":"none";
   renderFacItems();
   renderFacDocs();
+  renderFacFavor();
+}
+/* saldo a favor del proveedor (notas de crédito de facturas ya pagadas): se aplica a esta factura impaga (P3) */
+function renderFacFavor(){
+  const bx=document.getElementById('fac-favor'); if(!bx)return;
+  const nuevo=!!FAC.nuevo, favor=Docs.nc.saldoFavor(FAC.prov,FAC.mon), creditos=(!nuevo&&FAC.creditos)||[];
+  if(!favor&&!creditos.length){bx.style.display='none';return}
+  let html='';
+  if(creditos.length)html+='<b style="font-size:12.5px">Saldo a favor aplicado</b><p class="hint" style="margin-top:4px">'+creditos.map(c=>c.nc+' · '+coMon(FAC.mon)+fmtM(c.monto)).join(' · ')+' · queda por pagar <b>'+coMon(FAC.mon)+fmtM(Docs.nc.saldoFactura(FAC.id))+'</b></p>';
+  if(favor>0.004){
+    html+='<b style="font-size:12.5px">'+coEsc(BD.provNom(FAC.prov))+' tiene saldo a favor: '+coMon(FAC.mon)+fmtM(favor)+'</b>'+
+      '<p class="hint" style="margin-top:4px">Viene de notas de crédito de facturas que ya se pagaron ('+Docs.nc.favorDe(FAC.prov,FAC.mon).map(n=>n.id).join(', ')+').'+
+      (nuevo?' Registre la factura y luego aplíquelo.':'')+'</p>'+
+      (!nuevo&&FAC.est==='Impagado'&&Docs.nc.saldoFactura(FAC.id)>0.004?'<button class="btn btn-primary btn-sm" style="margin-top:6px" onclick="aplicarFavorFac()">Aplicar saldo a favor a esta factura</button>':'');
+  }
+  bx.innerHTML=html; bx.style.display='block';
+}
+function aplicarFavorFac(){
+  const r=coTry(()=>Docs.nc.aplicarSaldo(FAC.id)); if(!r)return;
+  FAC=BD.fac(FAC.id);
+  toast('Saldo a favor aplicado: '+coMon(FAC.mon)+fmtM(r.usado)+' · queda por pagar '+coMon(FAC.mon)+fmtM(r.saldo)+(FAC.est==='Pagado'?' (factura cancelada)':''));
+  loadFacForm(true); renderFac(); if(typeof renderNC==='function')renderNC();
 }
 function renderFacItems(){
   const nuevo=!!FAC.nuevo;
