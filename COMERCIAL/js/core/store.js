@@ -27,6 +27,11 @@ const Store = {
       else if (d.maestros[k] === undefined) d.maestros[k] = BD.copia(v);
     });
     Object.keys(X.colecciones || {}).forEach(k => { if (d[k] === undefined) d[k] = BD.copia(X.colecciones[k]); });
+    /* listasPrecio de otra versión (la de estilo SAP B1 guardaba cabeceras sin «filas» y los precios aparte): vuelven a las listas iniciales */
+    if (!Array.isArray(d.listasPrecio) || d.listasPrecio.some(l => !l || !Array.isArray(l.filas))) {
+      d.listasPrecio = BD.copia((X.colecciones || {}).listasPrecio || []);
+      ['precios', 'dctosPC'].forEach(k => { delete d[k]; });
+    }
     const cfg0 = ((X.colecciones || {}).comercial || {}).cfg || {};
     d.comercial = d.comercial || {};
     d.comercial.cfg = Object.assign(BD.copia(cfg0), d.comercial.cfg || {});

@@ -96,3 +96,14 @@ prueba('la venta queda en la base compartida con la oferta aplicada', () => {
     Store.fijarUsuario(u, false);
   } finally { BD.reloj = null; UI.reloj = null; }
 });
+
+prueba('una base guardada con las listas de otra versión (sin filas) se repara al abrir', () => {
+  const antes = BD.copia(BD.d.listasPrecio);
+  BD.d.listasPrecio = [{ cod: 'LP-01', nom: 'Lista Minorista', base: '', factor: 1, redondeo: 'NINGUNO', activa: true }];
+  BD.d.precios = [{ lista: 'LP-01', art: 'PT-0001', p: { PEN: 119.9 } }];
+  try {
+    Store.completarBase();
+    igual([BD.d.listasPrecio.every(l => Array.isArray(l.filas)), BD.d.precios], [true, undefined], 'reparada');
+    igual(P('PT-0001', 'UND', 'MAY-01', 'MAYORISTA', 'PEN', '15/08/2026'), 89.00, 'precio con las listas iniciales');
+  } finally { BD.d.listasPrecio = antes; }
+});
