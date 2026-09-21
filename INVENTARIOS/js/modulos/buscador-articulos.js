@@ -44,7 +44,7 @@ function renderCT03(){
     html+='<tr><td colspan="6" style="background:#F8FAFC;font-weight:600;font-size:12px;color:var(--texto-sec)">'+g+' · '+Fmt.e(grupoNom(g))+'</td></tr>';
     grupos[g].slice(0,150).forEach(a=>{
       const inv=a.inv!==false, d=inv?(ctxAlm?Stock.disp(ctxAlm,a.cod):Stock.totalDisp(a.cod)):null, sin=inv&&d<=0;
-      const attr=a.attrs?' <span class="hint">'+Object.keys(a.attrs).map(k=>k+': '+a.attrs[k]).join(' · ')+'</span>':'';
+      const attr=a.attrs?' <span class="hint">'+BD.attrsOrdenados(a).map(([k,v])=>k+': '+v).join(' · ')+'</span>':'';
       html+='<tr'+(sin&&warn?' style="background:#FEF2F2"':'')+'><td>'+a.cod+'</td><td>'+Fmt.e(a.nom)+attr+(sin&&warn?' <span class="hint">Sin stock disponible</span>':'')+'</td><td>'+a.u+'</td><td>'+(a.ctrl||'Nada')+'</td>'+
        '<td style="text-align:right;'+(sin?'color:var(--stock-cero);font-weight:600':'')+'">'+(inv?Fmt.n(d):hint('No inventariable'))+'</td>'+
        '<td><button class="btn btn-primary btn-sm" onclick="addFromCT03(\''+a.cod+'\')">Agregar</button></td></tr>';

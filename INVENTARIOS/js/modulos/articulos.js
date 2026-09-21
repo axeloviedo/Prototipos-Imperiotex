@@ -2,12 +2,15 @@
    Stock mínimo único del artículo (pestaña Planificación) en stockMin: se compara con el disponible de cada almacén (L9). */
 let ART_ACTUAL=null;                  /* código del artículo abierto ('' = nuevo) */
 let ART_BCS=[], ART_ATR=[];            /* borradores de la ficha: se escriben en la base al Guardar */
+let ART_MOD="";                        /* modelo elegido en la ficha ('' = sin modelo) */
 
 /* ===== GI-01 ===== */
 function fillArtFilters(){
   const g=document.getElementById('f-art-g'), v=g.value;
   g.innerHTML=opcionesLista(M().grupos.map(x=>({v:x.cod,t:x.cod+' · '+x.nom})),v,'Todos');
   fillArtCatFiltro();
+  const md=document.getElementById('f-art-mod'), mv=md.value;
+  md.innerHTML=opcionesLista([{v:'-',t:'(sin modelo)'}].concat((M().modelos||[]).map(x=>({v:x.cod,t:x.cod+' · '+x.nom}))),mv,'Todos');
 }
 function fillArtCatFiltro(){
   const g=document.getElementById('f-art-g').value, c=document.getElementById('f-art-sg'), v=c.value;
@@ -15,20 +18,21 @@ function fillArtCatFiltro(){
 }
 function renderArt(){
   const q=Fmt.s(document.getElementById('f-art-q').value);
-  const g=document.getElementById('f-art-g').value, sg=document.getElementById('f-art-sg').value, e=document.getElementById('f-art-e').value, uso=document.getElementById('f-art-uso').value;
+  const g=document.getElementById('f-art-g').value, sg=document.getElementById('f-art-sg').value, e=document.getElementById('f-art-e').value, uso=document.getElementById('f-art-uso').value, md=document.getElementById('f-art-mod').value;
   const lista=M().articulos.filter(a=>{
     if(q && !(Fmt.s(a.cod).includes(q)||Fmt.s(a.nom).includes(q)))return false;
     if(g && a.grupo!==g)return false; if(sg && a.cat!==sg)return false; if(e && a.estado!==e)return false;
     if(uso && !a[uso])return false;
+    if(md && (md==='-'?!!a.modelo:a.modelo!==md))return false;
     return true;
   });
   document.querySelector('#tbl-art tbody').innerHTML=lista.map(a=>
     '<tr class="clickable" onclick="openArticleForm(\''+a.cod+'\')"><td>'+a.cod+'</td><td>'+Fmt.e(a.nom)+(a.aConfirmar?' <span class="warn" title="Dato del prototipo a confirmar con el usuario">⚠</span>':'')+'</td>'+
-     '<td>'+a.grupo+'</td><td>'+(Fmt.e(a.cat)||hint())+'</td><td>'+badge(a.estado)+'</td><td>'+a.u+'</td><td>'+(a.inv!==false?'Sí':'No')+'</td>'+
+     '<td>'+(a.modelo?'<button class="btn-link" onclick="event.stopPropagation();abrirModelo(\''+a.modelo+'\')">'+a.modelo+'</button>':hint())+'</td><td>'+a.grupo+'</td><td>'+(Fmt.e(a.cat)||hint())+'</td><td>'+badge(a.estado)+'</td><td>'+a.u+'</td><td>'+(a.inv!==false?'Sí':'No')+'</td>'+
      '<td><button class="btn-link" onclick="event.stopPropagation();openArticleForm(\''+a.cod+'\')">Editar</button> '+
      '<button class="btn-link" onclick="event.stopPropagation();openArticleForm(\''+a.cod+'\');duplicarArticulo()">Duplicar</button> '+
      (a.estado==='Activo'?'<button class="btn-link" onclick="event.stopPropagation();pedirDesactivar(\''+a.cod+'\')">Desactivar</button>':'<button class="btn-link" onclick="event.stopPropagation();activarArticulo(\''+a.cod+'\')">Activar</button>')+'</td></tr>'
-  ).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--texto-sec);padding:16px">Ningún artículo coincide con los filtros</td></tr>';
+  ).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--texto-sec);padding:16px">Ningún artículo coincide con los filtros</td></tr>';
   document.getElementById('art-count').textContent=lista.length+" de "+M().articulos.length+" artículos";
 }
 function filterArt(){renderArt()}
@@ -145,16 +149,38 @@ function verEtiqueta(i){
   openModal('m-etq');
 }
 
-/* ===== GI-02 · atributos (tabla editable como V9; se guardan como {atributo: valor}) ===== */
+/* ===== GI-02 · atributos (tabla editable como V9; se guardan como {atributo: valor}) =====
+   Sin modelo: filas libres. Con modelo (U2, opción A): una fila por atributo de la plantilla, en su orden, sin agregar ni quitar.
+   Solo se ofrecen los valores del atributo (U3): un valor antiguo que ya no está en el maestro se marca y hay que cambiarlo. */
 function renderAtributos(){
-  const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px';
+  const st='width:100%;border:1px solid var(--borde);border-radius:5px;padding:5px 8px;font-size:12.5px', mod=ART_MOD?BD.modelo(ART_MOD):null;
+  document.getElementById('atr-b-crear').style.display=mod?'none':'inline-block';
+  document.getElementById('atr-modelo-nota').textContent=mod?'· plantilla del modelo '+mod.cod+' · '+mod.nom+' (todos obligatorios)':'';
   document.getElementById('tbl-atributos').innerHTML=ART_ATR.map((x,i)=>{
-    const at=M().atributos.find(a=>a.nom===x[0]), vals=at?at.vals.concat(x[1]&&!at.vals.includes(x[1])?[x[1]]:[]):[];
+    const at=BD.atributo(x[0]), vals=at?at.vals.slice():[], ajeno=x[1]&&!vals.includes(x[1]);
     return '<tr><td>'+(i+1)+'</td>'+
-     '<td><select onchange="ART_ATR['+i+']=[this.value,\'\'];renderAtributos()" style="'+st+'"><option value=""></option>'+opcionesLista(M().atributos.map(a=>a.nom),x[0],false)+'</select></td>'+
-     '<td><select onchange="ART_ATR['+i+'][1]=this.value" style="'+st+'"><option value=""></option>'+opcionesLista(vals,x[1],false)+'</select></td>'+
-     '<td><button class="btn-link" onclick="ART_ATR.splice('+i+',1);renderAtributos()">Quitar</button></td></tr>';
+     (mod?'<td><b>'+Fmt.e(x[0])+'</b></td>':
+      '<td><select onchange="ART_ATR['+i+']=[this.value,\'\'];renderAtributos()" style="'+st+'"><option value=""></option>'+opcionesLista(M().atributos.map(a=>a.nom),x[0],false)+'</select></td>')+
+     '<td><select onchange="ART_ATR['+i+'][1]=this.value;renderAtributos()" style="'+st+(ajeno?';border-color:#DC2626':'')+'"><option value=""></option>'+
+       (ajeno?'<option value="'+Fmt.e(x[1])+'" selected>'+Fmt.e(x[1])+' (no es valor de '+Fmt.e(x[0])+')</option>':'')+opcionesLista(vals,x[1],false)+'</select></td>'+
+     '<td>'+(mod?'':'<button class="btn-link" onclick="ART_ATR.splice('+i+',1);renderAtributos()">Quitar</button>')+'</td></tr>';
   }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--texto-sec);padding:14px">Sin atributos (opcional): use "+ Crear"</td></tr>';
+}
+/* al elegir un modelo, las filas pasan a ser las de su plantilla (conserva los valores que ya tenía) */
+function cambiarModeloArt(cod){
+  ART_MOD=cod||"";
+  const mod=ART_MOD?BD.modelo(ART_MOD):null;
+  if(mod){
+    const antes={}; ART_ATR.forEach(([k,v])=>{if(k)antes[k]=v});
+    const fuera=Object.keys(antes).filter(k=>antes[k]&&!mod.attrs.includes(k));
+    ART_ATR=mod.attrs.map(k=>[k,antes[k]||""]);
+    if(fuera.length)toast("El modelo "+mod.cod+" no usa "+fuera.join(", ")+": se quitan de este artículo al guardar");
+  }
+  renderAtributos();
+}
+function fillModelosArt(sel){
+  document.getElementById('sel-modelo').innerHTML='<option value="">(sin modelo)</option>'+
+    opcionesLista((M().modelos||[]).filter(x=>x.estado!=='Inactivo'||x.cod===sel).map(x=>({v:x.cod,t:x.cod+' · '+x.nom})),sel,false);
 }
 function addAtributoRow(){ART_ATR.push(["",""]);renderAtributos()}
 
@@ -206,7 +232,9 @@ function openArticleForm(cod){
   set('inp-stockmin',a?a.stockMin:'');
   /* barras y atributos */
   ART_BCS=((a&&a.bcs)||[]).map(b=>Object.assign({},b));
-  ART_ATR=Object.entries((a&&a.attrs)||{});
+  ART_MOD=(a&&a.modelo)||""; fillModelosArt(ART_MOD);
+  const modA=ART_MOD?BD.modelo(ART_MOD):null;
+  ART_ATR=modA?modA.attrs.map(k=>[k,((a&&a.attrs)||{})[k]||""]):Object.entries((a&&a.attrs)||{});
   renderBarcodes(); renderAtributos();
   document.getElementById('gi02-b-dup').style.display=a?'inline-block':'none';
   document.getElementById('gi02-b-des').style.display=a&&a.estado==='Activo'?'inline-block':'none';
@@ -233,6 +261,8 @@ function guardarArticulo(){
   if(dmin!==undefined&&dmax!==undefined&&dmin>dmax){toast("El descuento mínimo no puede ser mayor que el máximo");return}
   const atr={};
   for(const [k,val] of ART_ATR){ if(!k)continue; if(k in atr){toast("El atributo "+k+" está repetido");return} if(val)atr[k]=val; }
+  const errAtr=BD.erroresArticuloModelo(ART_ACTUAL||cod,atr,ART_MOD);
+  if(errAtr.length){toast(errAtr[0]);tab(document.querySelector('#gi02-tabs .tab[data-t=atr]'));return}
   const a=ART_ACTUAL?BD.art(ART_ACTUAL):{cod,costo:0,origen:'Inventarios'};
   const ctrl=v('sel-ctrl');
   Object.assign(a,{
@@ -245,6 +275,7 @@ function guardarArticulo(){
   if(smin>0)a.stockMin=smin; else delete a.stockMin;
   if(!a.vence)delete a.vence;
   if(!Object.keys(a.attrs).length)delete a.attrs;
+  if(ART_MOD)a.modelo=ART_MOD; else delete a.modelo;
   if(!ART_ACTUAL)M().articulos.push(a);
   BD.guardar();
   toast("Artículo "+a.cod+" guardado en la base compartida");
@@ -270,10 +301,12 @@ function confirmarDuplicar(){
   if(!cod||BD.art(cod)){toast("Indique un código único");return}
   const base=BD.art(ART_ACTUAL);
   const nuevo=Object.assign(BD.copia(base),{cod,nom,estado:"Activo",origen:'Inventarios',bcs:[]});
-  delete nuevo.aConfirmar; delete nuevo.attrs;
+  /* el duplicado nace sin atributos ni modelo (no puede repetir la combinación); la ficha propone el modelo del original para completarlo */
+  delete nuevo.aConfirmar; delete nuevo.attrs; delete nuevo.modelo;
   M().articulos.push(nuevo); BD.guardar();
   closeModal('m-gi02d');
   openArticleForm(cod);
-  ART_ATR=Object.keys(base.attrs||{}).map(k=>[k,""]); renderAtributos();
-  toast("Artículo duplicado: "+cod+" · "+nom+" (sin códigos de barras; complete los atributos y guarde)");
+  if(base.modelo){document.getElementById('sel-modelo').value=base.modelo; cambiarModeloArt(base.modelo);}
+  else{ART_ATR=Object.keys(base.attrs||{}).map(k=>[k,""]); renderAtributos();}
+  toast("Artículo duplicado: "+cod+" · "+nom+" (sin códigos de barras; complete los atributos"+(base.modelo?" del modelo "+base.modelo:"")+" y guarde)");
 }

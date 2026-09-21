@@ -56,7 +56,8 @@ Nombres de colecciones reservados para Comercial: `clientes, listas, cots, venta
 | `conversiones` | `{de:'DOC', a:'UND', factor:12}` | complemento |
 | `grupos` | `{cod:'MP'\|'SRV'\|'PPT'\|'PT'\|'MERC', nom, prefijo, asignacion, inv, grupoCompra?}` — el grupo de compras lo heredan sus artículos (`BD.grupoCompra(art)`, K10) | complemento |
 | `categorias` / `subcategorias` | `{cod, nom, grupo}` / `{cat, nom}` | plantillas + PANTALON |
-| `atributos` | `{nom:'Color', vals:[...]}` | plantilla + valores |
+| `atributos` | `{nom:'Color', vals:[...]}` — el orden de `vals` es el orden de presentación (U4) | plantilla + valores; por ahora solo Color, Talla, Material y Género (U7) |
+| `modelos` | `{cod:'MOD-0001', nom, desc, attrs:['Color','Talla',…] (plantilla ordenada, U2), pred? (artículo preseleccionado), estado:'Activo'\|'Inactivo', hist?}` — agrupa artículos; no se vende ni tiene stock, precio ni LDM (U1) | complemento: MOD-0001 terminado ZULEIKA (U7) |
 | `tiposCodigoBarra` | `'GTIN / EAN'` … | plantilla |
 | `articulos` | ver 3.2 | 101 MP + 17 SRV de plantilla; 6 avíos MP-0102..0107 y 16 ZULEIKA de complemento |
 | `ldms` | `{id:'LDM-0001', art, nom, desc, obs?, almProd? (almacén donde entra lo producido, opcional, Q5), base, pred, items:[{tipo:'Artículo', cod, cant, alm, metodo:'Manual'\|'Notificación'} \| {tipo:'Recurso', cod, cant, metodo?} \| {tipo:'Texto', txt}]}` | complemento |
@@ -79,7 +80,8 @@ Todo lo inventado lleva `aConfirmar: true` (p. ej. RUC/DNI de proveedores de ser
 { cod, nom, desc, grupo:'MP'|'SRV'|'PPT'|'PT'|'MERC', cat, subcat, u (UM inventario), ctrl:'Nada'|'Lote'|'Serie', vence?,
   inv (maneja stock), compra, venta, produccion, igv:'Gravado'|'Exonerado'|'Inafecto', estado:'Activo'|'Inactivo',
   stockMin? (stock mínimo único: se compara con el disponible de cada almacén, L9), costo (costo inicial de referencia), precioCompra?, uCompra? (una, referencial), provDef?,
-  attrs? {Color, Talla, Acabado, Material, Género},
+  attrs? {Color, Talla, Material, Género}  (cada valor debe estar en maestros.atributos, U3),
+  modelo? ('MOD-0001': con modelo, attrs = exactamente la plantilla, sin repetir combinación, U2),
   precioVenta?, precioMin?, verifMin?, uVenta? (una, referencial: L5), dctoMin?, dctoMax?,   ← pestaña Venta
   origen:'plantilla'|'complemento'|..., aConfirmar? }
 ```
@@ -174,3 +176,4 @@ Todas las pantallas trabajan sobre la base: GI-18 rotación y GI-19 series (N8) 
 3. Los scripts `core`/`datos` no tocan el DOM al cargarse (el generador de escenarios los ejecuta en node).
 4. Lo que en una pantalla es solo simulación de otro módulo se marca «⚙ Simular …» y no se desarrolla ahí.
 5. Textos en español con tildes. Fechas `dd/mm/aaaa hh:mm`.
+6. Modelos y atributos (U1–U7): las reglas viven en `BD.erroresArticuloModelo(cod, attrs, modelo)`; `BD.revisarModelos()` revisa toda la base y la corre el generador del escenario (falla si hay errores). Pruebas: `node INVENTARIOS/pruebas/probar-modelos.js`. Base `VERSION` 8.

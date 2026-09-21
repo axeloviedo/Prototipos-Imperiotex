@@ -24,7 +24,7 @@ const BUS = {
       (!q || (a.cod + ' ' + a.nom + ' ' + Object.keys(a.attrs || {}).map(k => a.attrs[k]).join(' ')).toLowerCase().includes(q)));
     document.getElementById('bus-body').innerHTML = UI.tabla(['Código', 'Artículo', 'Grupo', 'UM venta', ['Precio', 'num'], ['Disponible ' + alm, 'num'], ['Disponible total', 'num'], ['', '', '90px']], lista.map(a => {
       const um = Precios.umVenta(a.cod), r = Precios.resolver(a.cod, um, d.sede, tipo, d.mon);
-      const attrs = Object.keys(a.attrs || {}).map(k => k + ': ' + a.attrs[k]).join(' · ');
+      const attrs = BD.attrsOrdenados(a).map(([k, v]) => k + ': ' + v).join(' · ');
       const en = d.lineas.filter(l => l.art === a.cod).length;
       return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + '</td><td>' + (a.uVenta || a.u) + '</td>' +
         '<td class="num">' + (r ? '<b>' + UI.m(r.precio, d.mon) + '</b><br><span class="mini">' + r.origen + '</span>' : '<span class="err-t">Sin precio en ' + d.mon + '</span>') + '</td>' +

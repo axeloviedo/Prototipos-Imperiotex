@@ -36,7 +36,9 @@ Object.assign(BC,{
  mtmov:"Configuraciones / <b>Tipos de Movimiento</b>",
  gi21:"<b>Solicitudes de Fabricación</b> · GI-21",
  gi22:"Solicitudes / <b>Nueva Solicitud de Fabricación</b> · GI-22",
- gi23:"Solicitudes / <b>Solicitud de Fabricación</b> · GI-23"
+ gi23:"Solicitudes / <b>Solicitud de Fabricación</b> · GI-23",
+ gi25:"Maestros / <b>Modelos</b> · GI-25",
+ gi26:"Maestros / Modelos / <b>Modelo</b> · GI-26"
 });
-Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi24",gi24:"gi24",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",mtmov:"mtmov",gi21:"gi21",gi22:"gi21",gi23:"gi21"});
+Object.assign(NAVMAP,{gi19:"gi19",gi00:"gi00",gi18:"gi18",gi17:"gi17",gi17f:"gi17",gi01:"gi01",gi02:"gi01",gi03:"gi03",gi04:"gi03",gi05:"gi05",gi06:"gi06",gi07:"gi07",gi08:"gi07",gi09:"gi07",gi10:"gi07",gi11:"gi24",gi24:"gi24",gi13f:"gi13",gi15:"gi14",gi16:"gi14",gi13:"gi13",gi14:"gi14",gi20:"gi20",mcfg:"mcfg",mtipos:"mtipos",grupo:"mtipos",mcat:"mcat",msub:"msub",mum:"mum",mconv:"mconv",matr:"matr",mbc:"mbc",msede:"msede",mtmov:"mtmov",gi21:"gi21",gi22:"gi21",gi23:"gi21",gi25:"gi25",gi26:"gi25"});
 Object.assign(MST_KEYS,{mtipos:"tipos",mcat:"cat",msub:"sub",mum:"um",mconv:"conv",matr:"atr",mbc:"bc",msede:"sede"});
