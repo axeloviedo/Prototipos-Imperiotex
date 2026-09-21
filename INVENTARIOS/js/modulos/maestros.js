@@ -29,7 +29,7 @@ const MST={
   enUso:r=>M().almacenes.filter(a=>a.sede===r.nom).length},
  atr:{sing:"Atributo",lista:()=>M().atributos,valores:true,
   cols:[{k:"nom",t:"text",l:"Nombre del atributo"}],nuevo:()=>({nom:"",vals:[]}),
-  enUso:r=>M().articulos.filter(a=>a.attrs&&a.attrs[r.nom]).length}
+  enUso:r=>M().articulos.filter(a=>a.attrs&&a.attrs[r.nom]).length+(M().modelos||[]).filter(x=>x.attrs.includes(r.nom)).length}
 };
 /* fila como objeto (los tipos de código de barra se guardan como texto) */
 function mstFila(m,row){return m.texto?{nom:row}:row}
@@ -77,7 +77,7 @@ function crudOpen(key,idx){
   document.getElementById('crud-title').textContent=(idx>=0?"Editar ":"Nuevo ")+m.sing;
   document.getElementById('crud-code').textContent=m.sing;
   document.getElementById('crud-body').innerHTML=m.cols.map(c=>'<div class="field full"><label>'+c.l+'</label>'+crudFieldEditor(c,row[c.k])+'</div>').join('');
-  document.getElementById('crud-hint').textContent=(key==="atr")?"Guarde el atributo y luego administre sus valores con el botón Valores del listado.":(idx>=0&&m.enUso&&m.enUso(row)?"Registro en uso: cambiar el código o el nombre no actualiza los artículos que ya lo usan.":"");
+  document.getElementById('crud-hint').textContent=(key==="atr")?"Guarde el atributo y luego administre sus valores con el botón Valores del listado."+(idx>=0?" Cambiar el nombre lo actualiza también en los artículos y en las plantillas de modelo que lo usan.":""):(idx>=0&&m.enUso&&m.enUso(row)?"Registro en uso: cambiar el código o el nombre no actualiza los artículos que ya lo usan.":"");
   openModal('m-crud');
 }
 function crudSave(){
@@ -91,6 +91,14 @@ function crudSave(){
   const clave=r=>{r=mstFila(m,r);return m.cols.some(c=>c.k==="cod")?r.cod:CRUD_KEY==="sub"?r.cat+'|'+r.nom:CRUD_KEY==="conv"?r.de+'|'+r.a:r.nom};
   if(lista.some((r,i)=>i!==CRUD_IDX&&clave(r)===clave(obj))){toast("Ya existe un registro con ese código o nombre");return}
   const guardado=m.texto?obj.nom:obj;
+  /* atributo renombrado (U3): los artículos y las plantillas de modelo lo guardan por nombre, se actualizan juntos */
+  if(CRUD_KEY==="atr"&&!nuevo){
+    const antes=lista[CRUD_IDX].nom;
+    if(antes!==obj.nom){
+      M().articulos.forEach(a=>{if(a.attrs&&antes in a.attrs){const n={};Object.keys(a.attrs).forEach(k=>n[k===antes?obj.nom:k]=a.attrs[k]);a.attrs=n;}});
+      (M().modelos||[]).forEach(x=>{x.attrs=x.attrs.map(k=>k===antes?obj.nom:k)});
+    }
+  }
   if(nuevo)lista.push(guardado); else if(m.texto)lista[CRUD_IDX]=guardado; else Object.assign(lista[CRUD_IDX],obj);
   BD.guardar();
   closeModal('m-crud'); renderMst(CRUD_KEY);
@@ -117,12 +125,22 @@ function abrirAttrVals(i){
   document.getElementById('attrval-title').textContent="Valores de "+(M().atributos[i].nom||"atributo");
   renderAttrVals(); openModal('m-attrval');
 }
+/* el orden de la lista es el orden en que se muestran los valores (U4: 28 → 30 → 32); un valor en uso no se quita (U3) */
+function usoValor(nom,v){return M().articulos.filter(a=>a.attrs&&a.attrs[nom]===v).length}
 function renderAttrVals(){
-  const a=M().atributos[ATTR_IDX], tb=document.getElementById('attrval-body');
-  tb.innerHTML=a.vals.map((v,j)=>'<tr><td>'+Fmt.e(v)+'</td><td><button class="btn-link" onclick="attrValDel('+j+')">Quitar</button></td></tr>').join('');
+  const a=M().atributos[ATTR_IDX], tb=document.getElementById('attrval-body'), n=a.vals.length;
+  tb.innerHTML=a.vals.map((v,j)=>{const uso=usoValor(a.nom,v);
+    return '<tr><td>'+(j+1)+'. '+Fmt.e(v)+(uso?' <span class="hint">('+uso+' artículo(s))</span>':'')+'</td><td style="white-space:nowrap">'+
+      '<button class="btn-link" '+(j?'':'disabled ')+'onclick="attrValMover('+j+',-1)" title="Subir">↑</button> <button class="btn-link" '+(j<n-1?'':'disabled ')+'onclick="attrValMover('+j+',1)" title="Bajar">↓</button> '+
+      '<button class="btn-link" onclick="attrValDel('+j+')">Quitar</button></td></tr>'}).join('');
   if(!a.vals.length)tb.innerHTML='<tr><td colspan="2" style="text-align:center;color:var(--texto-sec);padding:12px">Sin valores</td></tr>';
 }
-function attrValDel(j){M().atributos[ATTR_IDX].vals.splice(j,1);BD.guardar();renderAttrVals();renderMst('atr')}
+function attrValMover(j,d){const v=M().atributos[ATTR_IDX].vals, k=j+d; if(k<0||k>=v.length)return; [v[j],v[k]]=[v[k],v[j]]; BD.guardar(); renderAttrVals();}
+function attrValDel(j){
+  const a=M().atributos[ATTR_IDX], uso=usoValor(a.nom,a.vals[j]);
+  if(uso){toast("No se puede quitar «"+a.vals[j]+"»: lo usan "+uso+" artículo(s). Cambie primero su valor.");return}
+  a.vals.splice(j,1);BD.guardar();renderAttrVals();renderMst('atr');
+}
 function attrValAdd(){
   const inp=document.getElementById('attrval-input'), v=inp.value.trim().toUpperCase();
   if(!v)return;

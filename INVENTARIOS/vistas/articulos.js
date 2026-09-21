@@ -13,12 +13,13 @@ Vistas.pantallas(String.raw`
         <div class="field"><label>Grupo de Artículo</label><select id="f-art-g" onchange="fillArtCatFiltro();renderArt()"><option value="">Todos</option></select></div>
         <div class="field"><label>Categoría</label><select id="f-art-sg" onchange="renderArt()"><option value="">Todas</option></select></div>
         <div class="field"><label>Uso</label><select id="f-art-uso" onchange="renderArt()"><option value="">Todos</option><option value="compra">Se compra</option><option value="venta">Se vende</option><option value="produccion">Producción</option></select></div>
+        <div class="field"><label>Modelo</label><select id="f-art-mod" onchange="renderArt()"><option value="">Todos</option></select></div>
         <div class="field"><label>Estado</label><select id="f-art-e" onchange="renderArt()"><option value="">Todos</option><option>Activo</option><option>Inactivo</option></select></div>
       </div>
     </div>
     <div class="tbl-wrap">
       <table class="grid" id="tbl-art">
-        <thead><tr><th>Código</th><th>Nombre</th><th>Grupo</th><th>Categoría</th><th>Estado</th><th>UM Inventario</th><th>Inventariable</th><th style="width:200px">Acciones</th></tr></thead>
+        <thead><tr><th>Código</th><th>Nombre</th><th>Modelo</th><th>Grupo</th><th>Categoría</th><th>Estado</th><th>UM Inventario</th><th>Inventariable</th><th style="width:200px">Acciones</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="pager"><span id="art-count"></span></div>
@@ -73,6 +74,8 @@ Vistas.pantallas(String.raw`
           <div class="field full"><label>Descripción</label><textarea id="inp-desc" rows="2"></textarea></div>
           <div class="field"><label>Estado</label>
             <select id="sel-estado" onchange="refreshTitle()"><option>Activo</option><option>Inactivo</option></select></div>
+          <div class="field"><label>Modelo <span class="hint">(opcional · agrupa y ordena los atributos)</span></label>
+            <select id="sel-modelo" onchange="cambiarModeloArt(this.value)"></select></div>
         </div>
         <div style="margin-top:16px;border-top:1px solid var(--borde);padding-top:14px">
           <b style="font-size:13px">¿Para qué se usa este artículo?</b>
@@ -166,14 +169,15 @@ Vistas.pantallas(String.raw`
       <div class="tabpane" id="pane-atr">
         <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px">
           <b style="font-size:13px">Atributos del artículo</b>
+          <span class="hint" id="atr-modelo-nota"></span>
           <div style="flex:1"></div>
-          <button class="btn btn-secondary btn-sm" onclick="addAtributoRow()">+ Crear</button>
+          <button class="btn btn-secondary btn-sm" id="atr-b-crear" onclick="addAtributoRow()">+ Crear</button>
         </div>
         <table class="grid subtable">
           <thead><tr><th style="width:50px">#</th><th>Atributo</th><th>Valor de Atributo</th><th style="width:70px"></th></tr></thead>
           <tbody id="tbl-atributos"></tbody>
         </table>
-        <p class="hint" style="margin-top:8px">Los atributos son opcionales y se eligen del <button class="btn-link" onclick="go('matr')">maestro de Atributos</button> (cada atributo tiene sus valores). No dependen de un producto padre: son una característica más de este artículo. Para crear artículos parecidos con distintos valores, use <b>Duplicar</b>.</p>
+        <p class="hint" style="margin-top:8px">Los atributos son opcionales y se eligen del <button class="btn-link" onclick="go('matr')">maestro de Atributos</button> (cada atributo tiene sus valores) y cada valor solo se usa bajo su atributo. Sin modelo son libres. Con <b>modelo</b>, la plantilla del modelo fija qué atributos lleva y en qué orden: todos con valor, ninguno ajeno y sin repetir la combinación dentro del modelo. El modelo no se vende ni tiene stock, precio ni lista de materiales: todo sigue por artículo. Para crear varios artículos de un modelo use <button class="btn-link" onclick="go('gi25')">Modelos → Generar combinaciones</button>.</p>
       </div>
     </div>
     <p class="hint">La cuenta contable no se define en el artículo: se configura en la pestaña <b>Finanzas</b> de su <button class="btn-link" onclick="go('mtipos')">Grupo de Artículo</button> (todos los artículos del grupo comparten esas cuentas). El grupo SERVICIOS oculta las pestañas de Inventario, Planificación y Producción. La numeración de código depende del grupo de artículo (asignación interna o externa).</p>

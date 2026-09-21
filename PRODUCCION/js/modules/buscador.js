@@ -18,7 +18,7 @@ const BUS = {
     const lista = M.ARTICULOS.filter(BUS._filtro).filter(a => (!g || a.grupo === g) && (!q || a.cod.toLowerCase().includes(q) || a.nom.toLowerCase().includes(q)));
     document.getElementById('bus-body').innerHTML = UI.tabla(['Código', 'Artículo', 'Unidad', 'Grupo', ['Stock Disponible', 'num'], ['', '', '100px']], lista.map(a => {
       const disp = Stock.totalDisp(a.cod);
-      const attrs = Object.keys(a.attrs || {}).map(k => k + ': ' + a.attrs[k]).join(' · ');
+      const attrs = BD.attrsOrdenados(a).map(([k, v]) => k + ': ' + v).join(' · ');
       return '<tr><td>' + a.cod + '</td><td>' + UI.esc(a.nom) + (attrs ? '<br><span class="mini">' + UI.esc(attrs) + '</span>' : '') + '</td><td>' + a.u + '</td><td class="mini">' + UI.esc(M.grupoNom(a.grupo)) + '</td>' +
         '<td class="num">' + (a.inv !== false ? UI.n(disp) : '—') + '</td><td><button class="btn btn-primary btn-sm" onclick="BUS.elegir(\'' + a.cod + '\')">Seleccionar</button></td></tr>';
     }), { vacio: 'Sin resultados' });

@@ -105,7 +105,7 @@ function renderBuscarMP(){
     if(fa){const v=(a.attrs||{})[fa]; if(!v||(fv&&v!==fv))return false;}
     return true;
   });
-  document.getElementById('gi17a-body').innerHTML=lista.slice(0,200).map(a=>'<tr><td>'+a.cod+'</td><td>'+Fmt.e(a.nom)+(a.attrs?' <span class="hint">'+Object.keys(a.attrs).map(k=>k+': '+a.attrs[k]).join(' · ')+'</span>':'')+'</td><td>'+a.u+'</td><td>'+Fmt.e(a.cat||a.grupo)+'</td>'+
+  document.getElementById('gi17a-body').innerHTML=lista.slice(0,200).map(a=>'<tr><td>'+a.cod+'</td><td>'+Fmt.e(a.nom)+(a.attrs?' <span class="hint">'+BD.attrsOrdenados(a).map(([k,v])=>k+': '+v).join(' · ')+'</span>':'')+'</td><td>'+a.u+'</td><td>'+Fmt.e(a.cat||a.grupo)+'</td>'+
     '<td><button class="btn btn-primary btn-sm" onclick="addMPLDM(\''+a.cod+'\')">Agregar</button></td></tr>').join('')||'<tr><td colspan="5" style="text-align:center;color:var(--texto-sec);padding:14px">Sin resultados (o ya están en la lista)</td></tr>';
 }
 function addMPLDM(cod){
