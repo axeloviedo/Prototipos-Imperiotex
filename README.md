@@ -60,5 +60,6 @@ Producción y Comercial tienen su propia estructura (`js/core`, `js/data`, `js/m
 
 - `docs/16_BASE_DATOS_COMPARTIDA.md`: contrato de la base (maestros, stock, documentos, quién hace qué).
 - `docs/17_GUIA_PRODUCCION_MASIVA.md`: guía paso a paso para probar la producción masiva con los dos escenarios de datos.
+- `docs/18_MODELOS_Y_ATRIBUTOS.md`: modelos (agrupador opcional de artículos, GI-25/26) y reglas de atributos (U1–U7); pruebas con `node INVENTARIOS/pruebas/probar-modelos.js`.
 - `docs/00_DECISIONES_CERRADAS.md` sección K y los documentos de cada módulo: `INVENTARIOS/docs`, `COMPRAS/docs`, `PRODUCCION/docs`, `COMERCIAL/docs`.
 - Herramientas: `COMPARTIDO/herramientas/importar_plantillas.py` (maestros desde los Excel), `actualizar_estructura_word.py` (Word actualizado desde los Excel) y `generar-escenario.js` (escenario «Con operación»).

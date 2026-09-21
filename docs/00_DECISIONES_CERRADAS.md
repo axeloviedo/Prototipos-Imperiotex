@@ -95,7 +95,7 @@
 | I3 | **V10 y V12 en la rama `feat/modelo-datos-v7`; V11 apartada** | La V11 (cuentas por grupo) va a `docs/fase-2/`: se rehace en Fase 2 sobre la Clase de Valoración. |
 | I4 | **Recursos viven en Producción** | La LDM de logística guarda solo `id_resource` como referencia lógica. |
 | I5 | **Alcance actual: solo logística, sin capa contable** | Asientos, dimensiones, plan de cuentas y Clase de Valoración con cuentas → Fase 2. |
-| M1 | **Todo por ARTÍCULO: no hay modelo ni plantilla** | La LDM cuelga del artículo (SKU). Se retiran `article_model` y la excepción por talla; la marca pasa al artículo. |
+| M1 | **Todo por ARTÍCULO: no hay modelo ni plantilla** | La LDM cuelga del artículo (SKU). Se retiran `article_model` y la excepción por talla; la marca pasa al artículo. *(2026-09-19: sigue vigente para LDM, stock, precio y documentos; el **modelo de U1** es otra cosa: solo agrupa y ordena atributos.)* |
 | M2 | **Solicitud de Pedido mixta** | Admite cualquier artículo; explota en varias Órdenes de Fabricación (una por artículo, en Producción). La Orden de Pedido de logística sigue siendo una por solicitud. |
 | M3/M4 | **Resumen x Artículo** (`Tablas.xlsx`) | Tabla artículo × almacén con Actual, **Comprometido**, **Pedido**, Mín, Máx y Costo promedio. Reemplaza `article_min_stock`. Los documentos (requerimientos de la SP, líneas de OC) explican los números. Disponible = Actual − Comprometido. |
 | M5–M7 | *Por defecto (recomendado)* | Rehacer V12 sin `batch_movement`; catálogo `object_type` manteniendo las FK explícitas; en la OC solo moneda/TC/importación ahora. |
@@ -237,6 +237,21 @@
 | S1 | **Proveedor: Grupo = Nacional / Internacional · Tipo = Telas, Avíos, Servicios, Generales** *(revisa K4)* | `proveedor.grupo` = `Nacional` \| `Internacional` (obligatorio; Internacional = importación: USD, IGV en la nacionalización) y `proveedor.tipo` = código de `maestros.tiposProveedor` (TEL, AVI, SRV, GEN; antes `gruposProveedor`). CO-03 pasa a «Tipos de proveedor». El importador toma la columna «Tipo (*)» del Excel como grupo y la columna «Grupo» (hoja «GRUPO DE PROVEEDORES») como tipo: **conviene corregir los nombres en la plantilla Excel**. `BD.migrar` corrige las bases guardadas antes (intercambia los campos y renombra el catálogo). |
 | S2 | **Cliente: Grupo = Nacional / Internacional** | Campo nuevo `cliente.grupo` (obligatorio, por defecto Nacional; los clientes de la demo son todos Nacional). El **Tipo de cliente** (Minorista, Mayorista, Exportación, Servicios) no cambia: es el segmento de precios. Catálogo común `BD.GRUPOS_SOCIO`. |
 | S3 | **Maestro de clientes con el estilo del de proveedores** | CL-34 con las columnas y filtros de CO-01 (Código, Nombre, Grupo, Tipo, Documento, Condición de pago, Estado comercial, Estado, acciones Ver / Editar / Desactivar; se conservan los indicadores). CL-35 como CO-02: modo **Ver** (solo lectura, botón Editar) y **Editar** (Cancelar / Guardar), datos en tarjetas «Detalles generales», «Contacto y dirección», «Condiciones comerciales» y pestañas «Datos del cliente», «Historial de ventas», «Cotizaciones», «Devoluciones». El cliente no se borra: se desactiva. |
+
+## U · Modelos y atributos (2026-09-19, rama `feat/modelos-atributos`, ver `18_MODELOS_Y_ATRIBUTOS.md`; U7 ajusta U1–U6)
+
+| # | Decisión | Detalle |
+|---|---|---|
+| U1 | **Modelo = agrupador opcional de artículos** | Maestro nuevo `modelos` (GI-25/26). Sirve para **cualquier grupo de artículo** y **no afecta el flujo**: no se vende ni se mueve, no tiene stock, precio, lista de materiales ni documentos; todo eso sigue por artículo (M1 intacta). El artículo lo referencia con `modelo` (opcional). |
+| U2 | **Opción A: la plantilla lleva TODOS los atributos** | La plantilla del modelo (`modelo.attrs`) lista todos los atributos de sus artículos, en orden. Cada artículo del modelo tiene **uno y solo un valor por atributo de la plantilla**, **ninguno ajeno** y una **combinación que no se repite** dentro del modelo. Sin modelo, los atributos siguen libres. |
+| U3 | **El valor pertenece a su atributo** | Siempre, con o sin modelo: GI-02 solo ofrece los valores del atributo y no guarda un valor ajeno. El maestro de Atributos no deja quitar un valor en uso, y renombrar un atributo lo actualiza en artículos y plantillas. En el desarrollo: FK compuesta `(value_id, attribute_id) → attribute_values(id, attribute_id)`. |
+| U4 | **Los atributos del modelo son solo para ordenar** | Orden de los atributos = orden de la plantilla; orden de los valores = orden de la lista del atributo (↑↓ en Configuraciones → Atributos). Los buscadores de Inventarios, Producción y Comercial muestran los atributos en ese orden. |
+| U5 | **Se respeta el nombre del artículo** | El nombre no se genera a partir de los atributos. «Generar combinaciones» solo **sugiere** el nombre de los artículos nuevos (editable, único). |
+| U6 | **Fuera de alcance** | Imágenes por color, selector de tienda, `stock` como columna del producto (el stock sigue por almacén) y clave de combinación guardada (se calcula). El modelo no se borra: se **desactiva** (cancelar, no borrar). |
+
+| U7 | **Ajustes del 2026-09-19** | Por ahora **solo el producto terminado** tiene modelo (MOD-0001 ZULEIKA: Color, Talla, Material, Género); piezas cortadas, crudo y lavado quedan sin modelo. **Solo 4 atributos: Color, Talla, Material y Género.** Se quitan «Acabado» (la etapa ya la dicen la sub categoría y el nombre) y «Composición» (sin valores), que venían de la plantilla, y «Estado» (el fallado se reconoce por su código «…F» y su nombre «… FALLADO»). La ficha del modelo no muestra los valores disponibles de cada atributo. |
+
+El atributo «Estado» (FALLADO) que usaban los fallados no estaba en el maestro; con U7 se quitó de los artículos.
 
 ---
 
