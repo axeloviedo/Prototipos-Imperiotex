@@ -32,8 +32,11 @@ const BD_COMPLEMENTOS = (() => {
   ];
   const atributoValores = {
     Color: ['AZUL', 'NEGRO', 'CELESTE', 'BLANCO'], Talla: ['26', '28', '30', '32', '34'],
-    Acabado: ['PIEZAS CORTADAS', 'CRUDO', 'LAVADO', 'TERMINADO'], Material: ['DENIM CONFORT', 'DENIM RIGIDO', 'DENIM STRECH'], Composición: [], Género: ['DAMA', 'CABALLERO']
+    Material: ['DENIM CONFORT', 'DENIM RIGIDO', 'DENIM STRECH'], Género: ['DAMA', 'CABALLERO']
   };
+  /* atributos de la plantilla que por ahora no se usan (U7): «Acabado» (la etapa ya la dicen la sub categoría y el nombre)
+     y «Composición» (sin valores). El fallado se reconoce por su código «…F» y su nombre «… FALLADO», no por un atributo. */
+  const atributosQuitados = ['Acabado', 'Composición'];
 
   /* Almacén de producto en proceso: creado el 2026-09-16 por decisión del usuario (las plantillas no lo traían);
      figura en ESTRUCTURA_ORGANIZATIVA_LOGISTICA_INVENTARIOS_ERP_ACTUALIZADO.docx */
@@ -79,19 +82,24 @@ const BD_COMPLEMENTOS = (() => {
 
   /* productos en proceso sin color hasta el lavado: clave en zuleika.ppt = etapa + talla (lavado: etapa + color + talla) */
   const zuleika = { pt: {}, ppt: {} };
+  /* modelos (decisión U1, opción A): agrupan artículos y ordenan sus atributos; la plantilla lleva TODOS los atributos de sus artículos.
+     Por ahora solo el producto terminado tiene modelo (U7): piezas cortadas, crudo, lavado y fallados quedan sueltos. */
+  const modelos = [
+    { cod: 'MOD-0001', nom: 'PANTALON WIDE LEG ZULEIKA', desc: 'Pantalón wide leg Zuleika terminado', attrs: ['Color', 'Talla', 'Material', 'Género'], pred: 'PT-0001', estado: 'Activo', origen: C }
+  ];
   const ppt = (clave, nom, et, attrs) => {
     const cod = 'PPT-' + pad(Object.keys(zuleika.ppt).length + 1);
     zuleika.ppt[clave] = cod;
     articulos.push({ cod, nom, desc: 'Pantalón Zuleika en proceso: ' + et.toLowerCase(), grupo: 'PPT', cat: 'PANTALON EN PROCESO', subcat: et, u: 'UND', ctrl: 'Nada',
       inv: true, compra: false, venta: false, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
-      attrs: Object.assign(attrs, { Acabado: et, Material: 'DENIM CONFORT', Género: 'DAMA' }), origen: C });
+      attrs: Object.assign(attrs, { Material: 'DENIM CONFORT', Género: 'DAMA' }), origen: C });
   };
   combos.forEach(({ co, ta }, i) => {
     const pt = 'PT-' + pad(i + 1);
     zuleika.pt[co.c + ta.t] = pt;
     articulos.push({ cod: pt, nom: 'PANTALON WIDE LEG ZULEIKA TALLA ' + ta.t + ' COLOR ' + co.c, desc: 'Pantalón wide leg Zuleika terminado', grupo: 'PT', cat: 'PANTALON', subcat: 'WIDE LEG', u: 'UND', ctrl: 'Nada',
-      inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0,
-      attrs: { Color: co.c, Talla: ta.t, Acabado: 'TERMINADO', Material: 'DENIM CONFORT', Género: 'DAMA' },
+      inv: true, compra: false, venta: true, produccion: true, igv: 'Gravado', estado: 'Activo', costo: 0, modelo: 'MOD-0001',
+      attrs: { Color: co.c, Talla: ta.t, Material: 'DENIM CONFORT', Género: 'DAMA' },
       precioVenta: co.precio, precioMin: co.min, uVenta: 'UND', dctoMin: 0, dctoMax: 15, stockMin: ta.t === '28' ? 15 : 10, origen: C });
   });
   ['PIEZAS CORTADAS', 'CRUDO'].forEach(et => TALLAS.forEach(ta => ppt(et + ta.t, 'PANTALON WIDE LEG ZULEIKA ' + et + ' TALLA ' + ta.t, et, { Talla: ta.t })));
@@ -99,7 +107,7 @@ const BD_COMPLEMENTOS = (() => {
 
   /* artículos «… FALLADO» de crudo (por talla) y lavado (por color y talla) (decisión J2: producto fallado = salida del artículo + ingreso del fallado al mismo costo) */
   articulos.filter(a => a.grupo === 'PPT' && (a.subcat === 'CRUDO' || a.subcat === 'LAVADO')).forEach(a => articulos.push(Object.assign({}, a,
-    { cod: a.cod + 'F', nom: a.nom + ' FALLADO', desc: a.desc + ' (fallado)', produccion: false, attrs: Object.assign({}, a.attrs, { Estado: 'FALLADO' }) })));
+    { cod: a.cod + 'F', nom: a.nom + ' FALLADO', desc: a.desc + ' (fallado)', produccion: false, attrs: Object.assign({}, a.attrs) })));
 
   /* ---------- recursos ---------- */
   const tiposRecurso = [
@@ -196,7 +204,7 @@ const BD_COMPLEMENTOS = (() => {
     A('MP-0106', 1, MP_ALM, 'Notificación'), A('MP-0107', 1, MP_ALM, 'Notificación'), R('REC-0006', 0.10), T('Sin parche: pedido especial')], false);
 
   return {
-    NOMBRES_UM, unidades, conversiones, grupos, categorias, subcategorias, atributoValores, almacenes,
+    NOMBRES_UM, unidades, conversiones, grupos, categorias, subcategorias, atributoValores, atributosQuitados, almacenes, modelos,
     ajustesArticulos: Object.assign(ajustesArticulos, ajustesArticulosSrv), articulos, tiposRecurso, recursos, proveedores, operarios, ldms, zuleika
   };
 })();

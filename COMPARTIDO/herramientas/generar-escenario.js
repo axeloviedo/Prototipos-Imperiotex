@@ -144,6 +144,8 @@ const d = JSON.parse(almacen['imperiotex.bd']);
 const errores = [];
 d.stock.forEach(s => { ['act', 'comp', 'ped'].forEach(k => { if ((s[k] || 0) < -0.0001) errores.push('Negativo ' + k + ' ' + s.alm + ' ' + s.art + ' = ' + s[k]); }); });
 if (d.version !== ev(com, 'BD.VERSION')) errores.push('Versión distinta');
+/* modelos y atributos (U1–U7): cada valor es de su atributo; los artículos de un modelo cumplen su plantilla y no repiten combinación */
+ev(com, 'BD.revisarModelos()').forEach(e => errores.push('Modelos · ' + e));
 if (errores.length) { console.error(errores.join('\n')); process.exit(1); }
 d.escenario = 'operacion';
 const salida = path.join(RAIZ, 'COMPARTIDO/bd/datos/escenario-operacion.js');

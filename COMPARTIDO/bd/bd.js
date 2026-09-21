@@ -8,7 +8,7 @@
 const BD = {
   KEY: 'imperiotex.bd',
   KEY_ESCENARIO: 'imperiotex.bd.escenario',
-  VERSION: 5,
+  VERSION: 8,
   ESCENARIOS: { maestros: 'Solo maestros (empezar de cero)', operacion: 'Con operación (movimientos y saldos)' },
   d: null,
   /* texto del usuario activo que firma movimientos e historiales: cada módulo lo fija al iniciar */
@@ -61,6 +61,7 @@ const BD = {
     if (m.gruposProveedor && !m.tiposProveedor) { m.tiposProveedor = m.gruposProveedor; delete m.gruposProveedor; }
     const nac = { Nacional: 'Nacional', Internacional: 'Internacional', Extranjero: 'Internacional' };
     (m.proveedores || []).forEach(p => { if (nac[p.tipo]) { const g = p.grupo; p.grupo = nac[p.tipo]; p.tipo = g || ''; } });
+    if (!m.modelos) m.modelos = [];
     return d;
   },
   guardar() { try { localStorage.setItem(BD.KEY, JSON.stringify(BD.d)); } catch (e) { /* sin almacenamiento: sigue en memoria */ } },
@@ -119,7 +120,8 @@ const BD = {
       grupos: C.grupos,
       categorias: P.categorias.concat(C.categorias),
       subcategorias: P.subcategorias.concat(C.subcategorias),
-      atributos: P.atributos.map(nom => ({ nom, vals: C.atributoValores[nom] || [] })),
+      atributos: P.atributos.filter(n => !(C.atributosQuitados || []).includes(n)).map(nom => ({ nom, vals: C.atributoValores[nom] || [] })),
+      modelos: C.modelos || [],
       tiposCodigoBarra: P.tiposCodigoBarra,
       articulos,
       ldms: C.ldms,
@@ -175,6 +177,53 @@ const BD = {
   /* grupo de compras del artículo: lo define su Grupo de Artículo (K10) */
   grupoCompra(cod) { const a = BD.art(cod), g = a && BD.d.maestros.grupos.find(x => x.cod === a.grupo); return (g && g.grupoCompra) || ''; },
   attr(cod, nom) { const a = BD.art(cod); return a && a.attrs ? (a.attrs[nom] || '') : ''; },
+
+  /* ---------- modelos y atributos (decisiones U1–U7) ----------
+     modelo = agrupador opcional de artículos; NO se vende, NO tiene stock, precio ni lista de materiales.
+     modelo.attrs = plantilla ordenada: el artículo del modelo lleva exactamente esos atributos, uno por uno con valor (opción A). */
+  atributo(nom) { return (BD.d.maestros.atributos || []).find(a => a.nom === nom); },
+  modelo(cod) { return (BD.d.maestros.modelos || []).find(x => x.cod === cod); },
+  artsDeModelo(cod) { return BD.d.maestros.articulos.filter(a => a.modelo === cod); },
+  /* clave de la combinación en el orden de la plantilla: "Color:AZUL|Talla:28|…" */
+  combinacion(attrs, mod) { return (mod.attrs || []).map(k => k + ':' + ((attrs || {})[k] || '')).join('|'); },
+  /* atributos ordenados para mostrar: primero los de la plantilla del modelo, luego los demás */
+  attrsOrdenados(a) {
+    const at = (a && a.attrs) || {}, mod = a && a.modelo ? BD.modelo(a.modelo) : null, orden = mod ? mod.attrs.slice() : [];
+    Object.keys(at).forEach(k => { if (!orden.includes(k)) orden.push(k); });
+    return orden.filter(k => at[k]).map(k => [k, at[k]]);
+  },
+  /* errores de un artículo (código cod, atributos attrs, modelo modCod); [] si está bien.
+     Reglas: el valor pertenece a su atributo (siempre); con modelo: todos los atributos de la plantilla, ninguno ajeno y sin repetir combinación. */
+  erroresArticuloModelo(cod, attrs, modCod) {
+    const err = [];
+    Object.keys(attrs || {}).forEach(k => {
+      const at = BD.atributo(k);
+      if (!at) err.push('El atributo «' + k + '» no existe en el maestro de Atributos');
+      else if (!at.vals.includes(attrs[k])) err.push('El valor «' + attrs[k] + '» no pertenece al atributo «' + k + '»');
+    });
+    if (!modCod) return err;
+    const mod = BD.modelo(modCod);
+    if (!mod) { err.push('El modelo ' + modCod + ' no existe'); return err; }
+    const falta = mod.attrs.filter(k => !(attrs || {})[k]), sobra = Object.keys(attrs || {}).filter(k => !mod.attrs.includes(k));
+    if (falta.length) err.push('Falta el valor de ' + falta.join(', ') + ' (la plantilla del modelo ' + mod.cod + ' los pide todos)');
+    if (sobra.length) err.push('El modelo ' + mod.cod + ' no usa ' + sobra.join(', ') + ': quítelo o agréguelo a la plantilla del modelo');
+    if (!falta.length) {
+      const clave = BD.combinacion(attrs, mod), otro = BD.artsDeModelo(mod.cod).find(a => a.cod !== cod && BD.combinacion(a.attrs, mod) === clave);
+      if (otro) err.push('La combinación ya existe en el modelo ' + mod.cod + ': ' + otro.cod + ' · ' + otro.nom);
+    }
+    return err;
+  },
+  /* revisión completa de los datos compartidos (generador de escenario y pruebas) */
+  revisarModelos() {
+    const err = [], m = BD.d.maestros;
+    m.articulos.forEach(a => BD.erroresArticuloModelo(a.cod, a.attrs, a.modelo).forEach(e => err.push(a.cod + ': ' + e)));
+    (m.modelos || []).forEach(x => {
+      if (new Set(x.attrs).size !== x.attrs.length) err.push(x.cod + ': atributo repetido en la plantilla');
+      x.attrs.forEach(k => { if (!BD.atributo(k)) err.push(x.cod + ': la plantilla usa «' + k + '», que no existe'); });
+      if (x.pred && (BD.art(x.pred) || {}).modelo !== x.cod) err.push(x.cod + ': el artículo preseleccionado ' + x.pred + ' no es del modelo');
+    });
+    return err;
+  },
 
   /* ---------- lectura de documentos ---------- */
   sf(id) { return BD.d.sfs.find(x => x.id === id); },
